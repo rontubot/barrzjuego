@@ -156,6 +156,9 @@
   justify-content: space-between;
   z-index: 10;
   overflow: hidden;
+  background: #0d0e12 !important; /* Fuerza fondo sólido oscuro opaco */
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(0, 0, 0, 0.7);
+  border-radius: 24px;
 }
 
 .panel-header {

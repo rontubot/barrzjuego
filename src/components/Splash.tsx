@@ -10,10 +10,10 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
   const [showRules, setShowRules] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   
-  // Opciones de presupuesto interactivo
-  const [includeBackend, setIncludeBackend] = useState(false);
-  const [includeDatabase, setIncludeDatabase] = useState(false);
-  const [includePlayStore, setIncludePlayStore] = useState(true);
+  // Opciones de presupuesto interactivo (tildadas por defecto)
+  const [includeBackend, setIncludeBackend] = useState(true);
+  const [includeDatabase, setIncludeDatabase] = useState(true);
+  const includePlayStore = true; // Google Play Store obligatorio como núcleo de la propuesta
 
   // Precios estimados en USD (ejemplo realista de mercado)
   const baseCostWeb = 450; // Prototipo Web + Hosting básico
@@ -146,18 +146,14 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
                     <CheckCircle2 className="teal-text" size={20} />
                   </div>
 
-                  <label className={`config-item clickable ${includePlayStore ? 'active' : ''}`}>
-                    <input 
-                      type="checkbox" 
-                      checked={includePlayStore} 
-                      onChange={(e) => setIncludePlayStore(e.target.checked)} 
-                    />
+                   <div className="config-item disabled-config">
                     <div className="config-info">
-                      <span className="config-title">Publicación en Google Play Store</span>
+                      <span className="config-title">Fase 3: Publicación y Soporte en Google Play Store</span>
                       <span className="config-price">+$150 USD</span>
-                      <span className="config-details">Creación de ficha de Play Store, optimización ASO, empaquetado de release firmado y subida a producción.</span>
+                      <span className="config-details">Creación de ficha de Play Store, optimización ASO, empaquetado de compilación firmada y subida a producción para facilitar actualizaciones y mantenimiento.</span>
                     </div>
-                  </label>
+                    <CheckCircle2 className="teal-text" size={20} />
+                  </div>
 
                   <label className={`config-item clickable ${includeBackend ? 'active' : ''}`}>
                     <input 
