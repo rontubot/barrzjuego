@@ -4,9 +4,10 @@ import './Splash.css';
 
 interface SplashProps {
   onStartGame: () => void;
+  fromGame?: boolean;
 }
 
-export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
+export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false }) => {
   const [showRules, setShowRules] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -30,7 +31,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
       <div className="grunge-overlay"></div>
       
       {/* Cabecera / Logo */}
-      <div className={`logo-section ${isLaunching ? 'launching-logo' : ''}`}>
+      <div className={`logo-section ${isLaunching ? 'launching-logo' : ''} ${fromGame ? 'return-from-game' : ''}`}>
         <h1 className="logo-text">PROTOTIPO</h1>
         <div className="logo-badge">FREESTYLE CARD GAME</div>
         <p className="logo-description">El juego definitivo de improvisación urbana, rimas y beats.</p>
@@ -38,7 +39,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
 
       {/* Menú de Botones Principales */}
       {!showRules && !showBudget && (
-        <div className={`menu-section fade-in ${isLaunching ? 'launching' : ''}`}>
+        <div className={`menu-section ${isLaunching ? 'launching' : ''} ${fromGame ? 'return-from-game' : 'fade-in'}`}>
           <button
             className="btn-play pulse-pink-anim"
             onClick={() => {

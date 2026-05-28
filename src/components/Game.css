@@ -22,6 +22,27 @@
   }
 }
 
+/* Animación de salida del juego (volver al menú) */
+.game-container.exiting {
+  animation: gameExit 0.55s cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
+  pointer-events: none;
+}
+
+@keyframes gameExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100px) scale(0.93);
+  }
+}
+
 /* Cabecera / HUD */
 .game-header {
   width: 100%;

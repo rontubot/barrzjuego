@@ -6,13 +6,24 @@ type GameState = 'splash' | 'game';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>('splash');
+  const [cameFromGame, setCameFromGame] = useState(false);
+
+  const handleStartGame = () => {
+    setCameFromGame(false);
+    setGameState('game');
+  };
+
+  const handleBackToMenu = () => {
+    setCameFromGame(true);
+    setGameState('splash');
+  };
 
   return (
     <div className="app-root">
       {gameState === 'splash' ? (
-        <Splash onStartGame={() => setGameState('game')} />
+        <Splash onStartGame={handleStartGame} fromGame={cameFromGame} />
       ) : (
-        <Game onBackToMenu={() => setGameState('splash')} />
+        <Game onBackToMenu={handleBackToMenu} />
       )}
     </div>
   );
