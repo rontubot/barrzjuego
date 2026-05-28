@@ -1,0 +1,764 @@
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 100vh;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* Cabecera / HUD */
+.game-header {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2vh;
+  z-index: 5;
+}
+
+.btn-back {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-family: var(--font-base);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.turn-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 24px;
+  border-radius: 14px;
+}
+
+.turn-label {
+  font-family: var(--font-base);
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+.player-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-graffiti);
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.btn-reset-game {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-reset-game:hover {
+  background: rgba(255, 0, 127, 0.1);
+  color: var(--neon-pink);
+  border-color: var(--neon-pink);
+}
+
+/* Tablero de Juego */
+.game-board {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 800px;
+  gap: 30px;
+  margin: auto 0;
+  z-index: 5;
+}
+
+@media (min-width: 768px) {
+  .game-board {
+    flex-direction: row;
+    gap: 40px;
+  }
+}
+
+.deck-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.column-title {
+  font-family: var(--font-base);
+  font-weight: 900;
+  font-size: 0.9rem;
+  letter-spacing: 3px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Mazo Apilado (Deck Pile) */
+.deck-pile {
+  width: 100%;
+  max-width: 280px;
+  height: 400px;
+  border-radius: 24px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.deck-pile:hover {
+  transform: translateY(-8px) scale(1.02);
+}
+
+.deck-card-back {
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  border: 3px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  z-index: 5;
+}
+
+.teal-bg {
+  background: #0f1015;
+  border-color: var(--neon-teal);
+  box-shadow: inset 0 0 20px rgba(0, 245, 171, 0.15);
+}
+
+.pink-bg {
+  background: #0f1015;
+  border-color: var(--neon-pink);
+  box-shadow: inset 0 0 20px rgba(255, 0, 127, 0.15);
+}
+
+.card-logo-text {
+  font-family: var(--font-graffiti);
+  font-size: 2.8rem;
+  letter-spacing: 2px;
+  transform: rotate(-5deg);
+  margin-bottom: 20px;
+}
+
+.pink-glow-text {
+  color: var(--neon-pink);
+  text-shadow: 
+    0 0 10px rgba(255, 0, 127, 0.8),
+    0 0 25px rgba(255, 0, 127, 0.3);
+}
+
+.teal-glow-text {
+  color: var(--neon-teal);
+  text-shadow: 
+    0 0 10px rgba(0, 245, 171, 0.8),
+    0 0 25px rgba(0, 245, 171, 0.3);
+}
+
+.tap-instruction {
+  font-family: var(--font-base);
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* Efectos de apilado 3D */
+.stacked-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 24px;
+  background: #08090d;
+  border: 1px solid var(--glass-border);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.beat-pile .stacked-card { border-color: rgba(0, 245, 171, 0.15); }
+.challenge-pile .stacked-card { border-color: rgba(255, 0, 127, 0.15); }
+
+.card-1 {
+  transform: rotate(2deg) translate(3px, 4px);
+  z-index: 2;
+}
+
+.card-2 {
+  transform: rotate(-3deg) translate(-4px, 6px);
+  z-index: 1;
+}
+
+/* Carta Activa / Diseños de Cartas */
+.card-header-pink,
+.card-header-teal {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-base);
+  font-weight: 900;
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-header-pink {
+  color: var(--neon-pink);
+}
+
+.card-header-teal {
+  color: var(--neon-teal);
+}
+
+/* Textura grunge interna de la carta */
+.card-pattern-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.beats-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 30%, var(--neon-pink) 1px, transparent 0),
+    radial-gradient(circle at 75% 85%, var(--neon-pink) 2px, transparent 0);
+  background-size: 20px 20px;
+}
+
+.challenge-pattern {
+  background-image: 
+    radial-gradient(circle at 10% 80%, var(--neon-teal) 1px, transparent 0),
+    radial-gradient(circle at 80% 20%, var(--neon-teal) 2px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Botón Cambiar Carta Redraw */
+.btn-card-redraw {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(22, 24, 33, 0.6);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.btn-card-redraw:hover {
+  background: var(--bg-darker);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* Estilos Cuerpo Beat Card */
+.beat-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.beat-title {
+  font-family: var(--font-graffiti);
+  font-size: 2.1rem;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+  letter-spacing: 1px;
+}
+
+/* Metrónomo visual */
+.bpm-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(7, 8, 10, 0.7);
+  border: 3px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  margin-bottom: 20px;
+}
+
+@keyframes metronome-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(0, 245, 171, 0.1), inset 0 0 10px rgba(0, 245, 171, 0.05);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(0, 245, 171, 0.65), inset 0 0 15px rgba(0, 245, 171, 0.25);
+  }
+}
+
+.bpm-indicator.pulsing {
+  animation: metronome-pulse 1s infinite cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.bpm-number {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.bpm-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.bpm-help-text {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  max-width: 200px;
+  line-height: 1.4;
+}
+
+.beat-card-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: rgba(7, 8, 10, 0.2);
+}
+
+.qr-container-sim {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.qr-container-sim:hover {
+  background: rgba(255, 0, 127, 0.05);
+  border-color: rgba(255, 0, 127, 0.3);
+}
+
+.qr-scan-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.pink-text {
+  color: var(--neon-pink);
+  filter: drop-shadow(0 0 3px var(--neon-pink-glow));
+}
+
+.btn-spotify-link {
+  width: 100%;
+  background: #1ed760; /* Color real de Spotify */
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: var(--font-base);
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(30, 215, 96, 0.2);
+}
+
+.btn-spotify-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(30, 215, 96, 0.4);
+}
+
+/* Estilos Cuerpo Desafío Card */
+.challenge-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.challenge-main-title {
+  font-family: var(--font-graffiti);
+  font-size: 1.6rem;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.challenge-desc-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 0 10px;
+}
+
+.challenge-card-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 12px;
+  text-align: center;
+  background: rgba(7, 8, 10, 0.2);
+}
+
+.card-brand {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+}
+
+/* Modalidades Especiales */
+
+/* 1. Categoría Palabras (Con Rotación) */
+.words-challenge-layout {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center center;
+}
+
+.words-challenge-layout.rotated-180 {
+  transform: rotate(180deg);
+}
+
+.words-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.words-direction-label {
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.words-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 220px;
+}
+
+.word-badge {
+  background: rgba(7, 8, 10, 0.8);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 6px 4px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.words-divider {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;
+  border-top: 1px dashed rgba(255, 255, 255, 0.05);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  z-index: 10;
+}
+
+.btn-rotate-words {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--neon-teal);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-rotate-words:hover {
+  background: rgba(0, 245, 171, 0.1);
+  border-color: var(--neon-teal);
+}
+
+/* 2. Categoría Beatbox (Con Timer) */
+.beatbox-challenge-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.beatbox-keyword-box {
+  background: rgba(0, 245, 171, 0.04);
+  border: 1px dashed var(--neon-teal);
+  border-radius: 12px;
+  padding: 8px 16px;
+  text-align: center;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.keyword-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.keyword-highlight {
+  font-family: var(--font-graffiti);
+  font-size: 1.4rem;
+  color: var(--neon-teal);
+  text-shadow: 0 0 8px var(--neon-teal-glow);
+}
+
+.timer-widget {
+  width: 100%;
+  max-width: 200px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.timer-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(7, 8, 10, 0.9);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  width: 100%;
+  padding: 8px 0;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.timer-digits {
+  font-family: monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--neon-teal);
+  text-shadow: 0 0 8px var(--neon-teal-glow);
+  letter-spacing: 1px;
+}
+
+.timer-display.critical-time {
+  border-color: var(--neon-pink);
+  background: rgba(255, 0, 127, 0.08);
+  animation: critical-flash 1s infinite alternate;
+}
+
+.timer-display.critical-time .timer-digits {
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px var(--neon-pink-glow);
+}
+
+@keyframes critical-flash {
+  from { box-shadow: inset 0 0 10px rgba(255, 0, 127, 0.1); }
+  to { box-shadow: inset 0 0 20px rgba(255, 0, 127, 0.4), 0 0 10px rgba(255, 0, 127, 0.2); }
+}
+
+.timer-controls {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.timer-btn {
+  flex: 1;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-family: var(--font-base);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 6px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.timer-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-secondary);
+}
+
+.btn-play-timer:hover {
+  color: var(--neon-teal);
+  border-color: var(--neon-teal);
+}
+
+.btn-pause-timer:hover {
+  color: var(--neon-pink);
+  border-color: var(--neon-pink);
+}
+
+/* 3. Estilos Concepto Estándar (1v1, Cypher, Terminaciones, Temáticas) */
+.standard-challenge-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.concept-large-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 14px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 90px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+}
+
+.concept-large-text {
+  font-family: var(--font-graffiti);
+  font-size: 1.7rem;
+  line-height: 1.2;
+  letter-spacing: 1px;
+}
+
+.street-sticker {
+  border: 2px solid var(--neon-pink);
+  color: var(--neon-pink);
+  font-weight: 900;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  box-shadow: 0 0 8px rgba(255, 0, 127, 0.15);
+  margin-top: 4px;
+}
+
+/* Acciones Footer del Juego */
+.game-footer-actions {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: center;
+  z-index: 5;
+  margin-top: 3vh;
+}
+
+.btn-next-turn {
+  background: linear-gradient(135deg, var(--neon-pink) 0%, #cc0066 100%);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 16px;
+  padding: 16px 36px;
+  font-family: var(--font-base);
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 0, 127, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-next-turn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-neon-pink);
+}
+
+.btn-next-turn:active:not(:disabled) {
+  transform: translateY(1px);
+}

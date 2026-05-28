@@ -1,0 +1,5 @@
+/* App-specific style reset (styles are handled in index.css, Splash.css, and Game.css) */
+.app-root {
+  min-height: 100vh;
+  width: 100%;
+}
