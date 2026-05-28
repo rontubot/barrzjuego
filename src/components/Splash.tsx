@@ -9,6 +9,7 @@ interface SplashProps {
 export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
   const [showRules, setShowRules] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
   
   // Opciones de presupuesto interactivo (tildadas por defecto)
   const [includeBackend, setIncludeBackend] = useState(true);
@@ -29,7 +30,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
       <div className="grunge-overlay"></div>
       
       {/* Cabecera / Logo */}
-      <div className="logo-section">
+      <div className={`logo-section ${isLaunching ? 'launching-logo' : ''}`}>
         <h1 className="logo-text">PROTOTIPO</h1>
         <div className="logo-badge">FREESTYLE CARD GAME</div>
         <p className="logo-description">El juego definitivo de improvisación urbana, rimas y beats.</p>
@@ -37,18 +38,25 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame }) => {
 
       {/* Menú de Botones Principales */}
       {!showRules && !showBudget && (
-        <div className="menu-section fade-in">
-          <button className="btn-play pulse-pink-anim" onClick={onStartGame}>
+        <div className={`menu-section fade-in ${isLaunching ? 'launching' : ''}`}>
+          <button
+            className="btn-play pulse-pink-anim"
+            onClick={() => {
+              setIsLaunching(true);
+              setTimeout(() => onStartGame(), 700);
+            }}
+            disabled={isLaunching}
+          >
             <Play size={24} fill="currentColor" />
-            JUGAR AHORA
+            {isLaunching ? 'CARGANDO...' : 'JUGAR AHORA'}
           </button>
           
-          <button className="btn-menu-option" onClick={() => setShowRules(true)}>
+          <button className="btn-menu-option" onClick={() => setShowRules(true)} disabled={isLaunching}>
             <BookOpen size={20} />
             Instrucciones y Consejos
           </button>
           
-          <button className="btn-menu-option btn-premium-glow" onClick={() => setShowBudget(true)}>
+          <button className="btn-menu-option btn-premium-glow" onClick={() => setShowBudget(true)} disabled={isLaunching}>
             <DollarSign size={20} />
             Ver Propuesta y Presupuesto
           </button>

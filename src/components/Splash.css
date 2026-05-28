@@ -499,3 +499,40 @@
     transform: translateY(0);
   }
 }
+
+/* Animación de lanzamiento: los botones caen hacia abajo */
+.menu-section.launching {
+  animation: launchExit 0.65s cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
+  pointer-events: none;
+}
+
+@keyframes launchExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-12px) scale(1.03);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(120px) scale(0.9);
+  }
+}
+
+/* Animación de entrada del logo cuando se lanza */
+.logo-section.launching-logo {
+  animation: logoZoom 0.65s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
+
+@keyframes logoZoom {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15) translateY(-30px);
+  }
+}
