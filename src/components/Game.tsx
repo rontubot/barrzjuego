@@ -375,7 +375,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu }) => {
                     </div>
 
                     <div className="challenge-card-footer">
-                      <span className="card-brand">PROTOTIPO ©</span>
+                      <span className="card-brand">BARRZJUEGO ©</span>
                     </div>
 
                     <button className="btn-card-redraw" onClick={(e) => { e.stopPropagation(); drawChallenge(); }}>

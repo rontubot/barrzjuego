@@ -18,7 +18,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
   const includePlayStore = true; // Google Play Store obligatorio como núcleo de la propuesta
 
   // Precios estimados en USD (ejemplo realista de mercado)
-  const baseCostWeb = 450; // Prototipo Web + Hosting básico
+  const baseCostWeb = 450; // Barrzjuego Web + Hosting básico
   const baseCostNative = 850; // Migración completa a React Native Android
   const backendCost = includeBackend ? 350 : 0;
   const dbCost = includeDatabase ? 250 : 0;
@@ -32,7 +32,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
       
       {/* Cabecera / Logo */}
       <div className={`logo-section ${isLaunching ? 'launching-logo' : ''} ${fromGame ? 'return-from-game' : ''}`}>
-        <h1 className="logo-text">PROTOTIPO</h1>
+        <h1 className="logo-text">BARRZJUEGO</h1>
         <div className="logo-badge">FREESTYLE CARD GAME</div>
         <p className="logo-description">El juego definitivo de improvisación urbana, rimas y beats.</p>
       </div>
@@ -129,7 +129,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
           
           <div className="panel-content scrollable">
             <p className="budget-intro">
-              Este prototipo web es la <strong>Fase 1 (MVP)</strong> del proyecto. Está estructurado modularmente para escalar fluidamente a una aplicación móvil nativa en <strong>React Native (Android / iOS)</strong> y servidores en la nube.
+              Este MVP de Barrzjuego es la <strong>Fase 1 (MVP)</strong> del proyecto. Está estructurado modularmente para escalar fluidamente a una aplicación móvil nativa en <strong>React Native (Android / iOS)</strong> y servidores en la nube.
             </p>
             
             <div className="budget-grid">
@@ -141,7 +141,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
                 <div className="config-toggle-list">
                   <div className="config-item disabled-config">
                     <div className="config-info">
-                      <span className="config-title">Fase 1: Prototipo Web Responsivo</span>
+                      <span className="config-title">Fase 1: Barrzjuego Web Responsivo</span>
                       <span className="config-price">+$450 USD</span>
                     </div>
                     <CheckCircle2 className="teal-text" size={20} />
@@ -243,7 +243,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
                 <div className="road-map-info">
                   <h4>🚀 Hoja de Ruta Propuesta:</h4>
                   <ol>
-                    <li><strong>Semana 1:</strong> Aprobación de prototipos visuales (este prototipo) e identidad.</li>
+                    <li><strong>Semana 1:</strong> Aprobación de prototipos visuales (este Barrzjuego) e identidad.</li>
                     <li><strong>Semana 2-3:</strong> Maquetación en React Native y pruebas en emuladores Android reales.</li>
                     <li><strong>Semana 4:</strong> Integración de APIs, Spotify y base de datos local / remota.</li>
                     <li><strong>Semana 5:</strong> Pruebas Beta Cerrada y subida a Railway / Google Play.</li>
@@ -261,7 +261,7 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
       
       {/* Footer corporativo / informativo */}
       <div className="splash-footer">
-        <span>© 2026 Prototipo - Creado para Freestyle Players</span>
+        <span>© 2026 Barrzjuego - Creado para Freestyle Players</span>
       </div>
     </div>
   );
