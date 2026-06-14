@@ -12,14 +12,21 @@
 
 /* Cabecera del logo */
 .logo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
   text-align: center;
   margin-top: 4vh;
   z-index: 5;
 }
 
 .logo-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
   margin: 0 auto;
-  display: inline-block;
   perspective: 1000px;
 }
 
