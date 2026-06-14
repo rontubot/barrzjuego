@@ -17,32 +17,31 @@
   z-index: 5;
 }
 
-.logo-text {
-  font-family: var(--font-graffiti);
-  font-size: clamp(3.5rem, 10vw, 5.5rem);
-  color: var(--text-primary);
-  text-shadow: 
-    0 0 10px rgba(255, 0, 127, 0.8),
-    0 0 30px rgba(255, 0, 127, 0.4),
-    3px 3px 0px var(--bg-darker);
-  letter-spacing: 2px;
-  transform: rotate(-2deg);
-  margin-bottom: 5px;
-  animation: logo-glow 3s infinite alternate ease-in-out;
+.logo-title {
+  margin: 0 auto;
+  display: inline-block;
+  perspective: 1000px;
 }
 
-@keyframes logo-glow {
+.logo-img {
+  max-width: clamp(280px, 45vw, 420px);
+  width: 100%;
+  height: auto;
+  margin: 0 auto 10px auto;
+  display: block;
+  transform: rotate(-2deg);
+  filter: drop-shadow(0 0 15px rgba(255, 0, 127, 0.5)) drop-shadow(2px 2px 2px var(--bg-darker));
+  animation: logo-float 3.5s infinite alternate ease-in-out;
+}
+
+@keyframes logo-float {
   0% {
-    text-shadow: 
-      0 0 8px rgba(255, 0, 127, 0.6),
-      0 0 20px rgba(255, 0, 127, 0.3),
-      3px 3px 0px var(--bg-darker);
+    transform: rotate(-2deg) translateY(0px) scale(1);
+    filter: drop-shadow(0 0 12px rgba(255, 0, 127, 0.4)) drop-shadow(2px 2px 2px var(--bg-darker));
   }
   100% {
-    text-shadow: 
-      0 0 15px rgba(255, 0, 127, 0.9),
-      0 0 40px rgba(255, 0, 127, 0.5),
-      3px 3px 0px var(--bg-darker);
+    transform: rotate(-1.5deg) translateY(-8px) scale(1.02);
+    filter: drop-shadow(0 0 22px rgba(255, 0, 127, 0.7)) drop-shadow(3px 3px 3px var(--bg-darker));
   }
 }
 

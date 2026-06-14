@@ -32,7 +32,9 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
       
       {/* Cabecera / Logo */}
       <div className={`logo-section ${isLaunching ? 'launching-logo' : ''} ${fromGame ? 'return-from-game' : ''}`}>
-        <h1 className="logo-text">BARRZJUEGO</h1>
+        <h1 className="logo-title">
+          <img src="/Barrzjuego.png" alt="BARRZJUEGO" className="logo-img" />
+        </h1>
         <div className="logo-badge">FREESTYLE CARD GAME</div>
         <p className="logo-description">El juego definitivo de improvisación urbana, rimas y beats.</p>
       </div>
