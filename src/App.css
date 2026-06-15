@@ -47,7 +47,7 @@
   height: 100%;
   background: linear-gradient(90deg, var(--neon-pink), var(--neon-teal));
   border-radius: 10px;
-  animation: load 1s ease-in-out forwards;
+  animation: load 2s ease-in-out forwards;
   transform-origin: left;
 }
 
