@@ -1,0 +1,345 @@
+/* Estilos del Reproductor de Sonido Global (Estilo FIFA y Premium) */
+
+:root {
+  --audio-panel-bg: rgba(15, 15, 20, 0.85);
+  --audio-border-teal: rgba(0, 242, 254, 0.3);
+  --audio-border-pink: rgba(255, 0, 127, 0.3);
+  --audio-text: #ffffff;
+  --audio-text-muted: #8e9297;
+}
+
+/* Contenedor principal - se mantiene fijo */
+.menu-audio-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999; /* Por encima de todo */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   1. OVERLAY DE CANCIÓN (Abajo a la Izquierda - Estilo FIFA)
+   ────────────────────────────────────────────────────────────────────────── */
+.song-banner-overlay {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--audio-panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--neon-pink);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 15px rgba(255, 0, 127, 0.25);
+  transform: translateX(-120%);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease;
+  max-width: 320px;
+}
+
+.song-banner-overlay.visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.song-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-teal));
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.4);
+}
+
+.song-banner-icon svg {
+  animation: pulseBeat 1.5s infinite ease-in-out;
+}
+
+.song-banner-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.song-banner-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--neon-pink);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 2px;
+}
+
+.song-banner-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--audio-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes pulseBeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   2. REPRODUCTOR/CONFIGURACIÓN FLOTANTE (Abajo a la Derecha)
+   ────────────────────────────────────────────────────────────────────────── */
+.music-controls-wrapper {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 1.5s ease-out, transform 1.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Efecto de desvanecimiento suave al iniciar partida */
+.music-controls-wrapper.game-faded,
+.song-banner-overlay.game-faded {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(20px) !important;
+  transition: opacity 1.5s ease-out, transform 1.5s ease-out !important;
+}
+
+/* Botón flotante redondo principal */
+.btn-music-trigger {
+  background: var(--audio-panel-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--neon-teal);
+  color: var(--neon-teal);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 10px rgba(0, 242, 254, 0.15);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 2;
+}
+
+.btn-music-trigger:hover,
+.btn-music-trigger.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--neon-teal), rgba(0, 242, 254, 0.4));
+  border-color: #fff;
+  box-shadow: 0 0 20px var(--neon-teal);
+  transform: scale(1.08) rotate(15deg);
+}
+
+.btn-music-trigger.muted {
+  color: var(--text-muted);
+  border-color: var(--text-muted);
+  box-shadow: none;
+}
+
+/* Panel de Ajustes Suplementario (se despliega arriba) */
+.music-controls-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 260px;
+  background: var(--audio-panel-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--audio-border-teal);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 242, 254, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transform: translateY(15px) scale(0.92);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
+  z-index: 1;
+}
+
+/* El panel se muestra cuando tiene la clase open (al dar click / touch) */
+.music-controls-panel.open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Título de pista actual en panel */
+.music-panel-track-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--audio-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Botones de Control (Atrás, Play/Pausa, Adelante) */
+.music-panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.music-ctrl-btn {
+  background: transparent;
+  border: none;
+  color: var(--audio-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+  padding: 4px;
+}
+
+.music-ctrl-btn:hover {
+  color: var(--neon-teal);
+  transform: scale(1.15);
+}
+
+.music-ctrl-btn:active {
+  transform: scale(0.92);
+}
+
+.music-ctrl-btn.play-pause {
+  background: linear-gradient(135deg, var(--neon-teal), #00a8cc);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #0d0e12;
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+}
+
+.music-ctrl-btn.play-pause:hover {
+  color: #fff;
+  transform: scale(1.12);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.7);
+}
+
+/* Sección de Volumen y Mute */
+.volume-control-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.btn-mute-toggle {
+  background: transparent;
+  border: none;
+  color: var(--audio-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.btn-mute-toggle:hover {
+  color: var(--neon-pink);
+}
+
+.volume-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.volume-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: transparent !important;
+}
+
+.volume-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: transparent !important;
+}
+
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--neon-teal);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.9);
+  margin-top: -4px; /* Centrar verticalmente: (6px - 14px) / 2 = -4px */
+  transition: transform 0.1s, background-color 0.2s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.35);
+  background: #fff;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--neon-teal);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.9);
+  transition: transform 0.1s, background-color 0.2s;
+}
+
+.volume-slider::-moz-range-thumb:hover {
+  transform: scale(1.3);
+  background: #fff;
+}
+
+/* Mobile Responsive */
+@media (max-width: 480px) {
+  .song-banner-overlay {
+    bottom: 84px; /* Subir para no tapar barras de navegación nativas de móviles */
+    left: 12px;
+    right: 12px;
+    max-width: calc(100% - 24px);
+  }
+  
+  .music-controls-wrapper {
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .music-controls-panel {
+    bottom: 56px;
+    right: -8px;
+    width: 230px;
+  }
+}
