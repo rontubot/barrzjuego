@@ -362,3 +362,33 @@
 .white-text {
   color: var(--text-primary);
 }
+
+.dev-code-alert {
+  background: rgba(0, 245, 171, 0.05);
+  border: 1px dashed rgba(0, 245, 171, 0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.dev-code-alert strong {
+  color: var(--neon-teal);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.google-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  width: 100%;
+}
+
+#google-signin-btn-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}

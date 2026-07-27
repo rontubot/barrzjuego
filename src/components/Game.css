@@ -725,6 +725,73 @@
   border-color: var(--neon-teal);
 }
 
+/* ── NUEVA CARTA PALABRAS (8 palabras + botón VARIAR) ─────────────────── */
+.words-challenge-layout-new {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  gap: 10px;
+}
+
+.words-grid-8 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 8px;
+  flex: 1;
+}
+
+.word-badge-8 {
+  background: rgba(7, 8, 10, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 10px 6px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  letter-spacing: 0.03em;
+  transition: transform 0.15s ease;
+  word-break: break-word;
+}
+
+.word-badge-8:hover {
+  transform: scale(1.04);
+}
+
+.words-variar-divider {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 2px;
+}
+
+.btn-variar {
+  background: rgba(0, 245, 171, 0.08);
+  border: 1px solid rgba(0, 245, 171, 0.35);
+  color: var(--neon-teal);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.2s ease;
+}
+
+.btn-variar:hover {
+  background: rgba(0, 245, 171, 0.18);
+  border-color: var(--neon-teal);
+  box-shadow: 0 0 10px rgba(0, 245, 171, 0.25);
+  transform: scale(1.04);
+}
+
 /* 2. Categoría Beatbox (Con Timer) */
 .beatbox-challenge-layout {
   display: flex;
@@ -1036,7 +1103,7 @@
   z-index: 5;
 }
 
-.medal-icon-wrapper {
+.scoring-icon-wrapper {
   display: inline-flex;
   padding: 16px;
   border-radius: 50%;
@@ -1109,9 +1176,21 @@
 .gameover-screen-content {
   width: 100%;
   max-width: 600px;
-  padding: 40px 24px;
+  padding: 30px 24px;
   margin: auto 0;
   z-index: 5;
+}
+
+.gameover-logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.gameover-logo-img {
+  max-width: 140px;
+  height: auto;
+  filter: drop-shadow(0 0 8px rgba(255, 0, 127, 0.3));
 }
 
 .gameover-main-title {
@@ -1765,5 +1844,186 @@
   100% {
     transform: translateY(2px);
   }
+}
+
+/* Custom selectors for Personalizado mode */
+.custom-setup-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selector-label {
+  font-family: var(--font-base);
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--neon-teal);
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px rgba(0, 245, 171, 0.3);
+}
+
+.custom-select {
+  width: 100%;
+  background: rgba(7, 8, 10, 0.85);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: var(--font-base);
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.custom-select:focus {
+  border-color: var(--neon-teal);
+  box-shadow: 0 0 10px rgba(0, 245, 171, 0.25);
+}
+
+.custom-select option {
+  background: #0f1115;
+  color: var(--text-primary);
+  padding: 10px;
+}
+
+.btn-comenzar-turno.disabled-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted) !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+/* Voting options list and button styling */
+.voting-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 20px 0;
+}
+
+.voting-option-btn {
+  width: 100%;
+  background: rgba(7, 8, 10, 0.7);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-family: var(--font-base);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voting-option-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--neon-pink);
+  transform: translateY(-1px);
+}
+
+.voting-option-btn.selected {
+  background: rgba(255, 0, 127, 0.15);
+  border-color: var(--neon-pink);
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.3);
+  color: var(--neon-pink);
+  font-weight: 700;
+}
+
+.voting-option-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voting-option-number {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  border-radius: 20px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.voting-option-btn.selected .voting-option-number {
+  background: var(--neon-pink);
+  color: #fff;
+  border-color: var(--neon-pink);
+}
+
+.voting-option-emoji {
+  font-size: 1.2rem;
+}
+
+.voting-option-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.voting-option-label {
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.voting-option-pts {
+  font-weight: 800;
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.voting-option-btn.selected .voting-option-pts {
+  color: var(--neon-pink);
+  background: rgba(255, 0, 127, 0.1);
+  border-color: rgba(255, 0, 127, 0.2);
+}
+
+.star-rating-display {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.star-item {
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.star-item.filled {
+  color: #ffd700;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
+}
+
+.star-item.empty {
+  color: var(--text-muted);
+  opacity: 0.25;
 }
 

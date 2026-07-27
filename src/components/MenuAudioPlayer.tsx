@@ -24,6 +24,14 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     Math.floor(Math.random() * SOUNDTRACKS.length)
   );
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const isPlayingRef = useRef(isPlaying);
+  const setIsPlayingWithRef = (val: boolean) => {
+    setIsPlaying(val);
+    isPlayingRef.current = val;
+  };
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
   const [volume, setVolume] = useState<number>(0.5); // Volumen por defecto: 50%
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [showBanner, setShowBanner] = useState<boolean>(false);
@@ -58,31 +66,68 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
   const bannerTimeoutRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const prevGameStateRef = useRef<string>(gameState);
+
+  // Inicializar el elemento de audio una única vez al montar la aplicación
+  useEffect(() => {
+    const audio = new Audio();
+    audioRef.current = audio;
+
+    return () => {
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        } catch (e) {
+          console.log("Error al limpiar audio:", e);
+        }
+      }
+    };
+  }, []);
   
   const currentTrack = SOUNDTRACKS[currentTrackIndex];
   const volumePercentage = (isMuted ? 0 : volume) * 100;
 
-  // 1. Inicializar y manejar cambios de pista
-  useEffect(() => {
-    // Si ya existe un audio, lo pausamos
-    if (audioRef.current) {
-      audioRef.current.pause();
+  const safePlay = () => {
+    if (!audioRef.current) return;
+    try {
+      audioRef.current.play().catch((err) => {
+        console.log("SafePlay error:", err);
+      });
+    } catch (e) {
+      console.log("SafePlay execution error:", e);
     }
+  };
 
-    const audio = new Audio(currentTrack.url);
-    audio.loop = false;
-    audio.volume = 0; // Iniciar en 0 para fundido de entrada (fade-in)
-    audioRef.current = audio;
+  const safePause = () => {
+    if (!audioRef.current) return;
+    try {
+      audioRef.current.pause();
+    } catch (e) {
+      console.log("SafePause error:", e);
+    }
+  };
+
+  // 1. Manejar cambios de pista reutilizando el mismo elemento
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    // Si ya existe un audio reproduciéndose, lo pausamos
+    safePause();
+
+    // Cambiar la fuente del elemento de audio existente
+    audioRef.current.src = currentTrack.url;
+    audioRef.current.loop = false;
+    audioRef.current.volume = 0; // Iniciar en 0 para fade-in
 
     // Al finalizar la pista, reproducir otra sin repetir en la misma sesión
-    audio.onended = () => {
+    audioRef.current.onended = () => {
       const currentIdx = currentTrackIndexRef.current;
       const pool = playedPoolRef.current;
       
       if (SOUNDTRACKS.length <= 1) {
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(e => console.log(e));
+          safePlay();
         }
         return;
       }
@@ -101,7 +146,7 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
       }
 
       setHistory(prev => [...prev, currentIdx]);
-      setIsPlaying(true);
+      setIsPlayingWithRef(true);
       setCurrentTrackIndex(nextIndex);
     };
 
@@ -114,7 +159,6 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     triggerBanner();
 
     return () => {
-      audio.pause();
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
       if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
     };
@@ -136,47 +180,51 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     if (!audioRef.current) return;
 
     audioRef.current.volume = 0; // Iniciar en silencio
-    audioRef.current.play().then(() => {
-      // Si la reproducción es exitosa, iniciar fade-in
-      if (fadeIntervalRef.current) {
-        clearInterval(fadeIntervalRef.current);
-      }
 
-      const targetVol = isMuted ? 0 : volume;
-      let curVol = 0;
-      const steps = 24; // Aumentado para 600ms total
-      const stepTime = 25; 
-      const volDelta = targetVol / steps;
-
-      fadeIntervalRef.current = setInterval(() => {
-        curVol = Math.min(targetVol, curVol + volDelta);
-        if (audioRef.current) {
-          audioRef.current.volume = curVol;
-        }
-
-        if (curVol >= targetVol) {
+    const p = audioRef.current.play();
+    if (p !== undefined) {
+      p.then(() => {
+        // Si la reproducción es exitosa, iniciar fade-in
+        if (fadeIntervalRef.current) {
           clearInterval(fadeIntervalRef.current);
-          fadeIntervalRef.current = null;
+        }
+
+        const targetVol = isMuted ? 0 : volume;
+        let curVol = 0;
+        const steps = 15; // 300ms total
+        const stepTime = 20; 
+        const volDelta = targetVol / steps;
+
+        fadeIntervalRef.current = setInterval(() => {
+          curVol = Math.min(targetVol, curVol + volDelta);
           if (audioRef.current) {
-            audioRef.current.volume = targetVol;
+            audioRef.current.volume = curVol;
           }
-        }
-      }, stepTime);
-    }).catch(() => {
-      console.log("Autoplay bloqueado temporalmente por el navegador. Esperando interacción.");
-      
-      // Listener para desbloquear audio tras la primera interacción
-      const unlockAudio = () => {
-        if (audioRef.current && isPlaying && gameState !== 'game') {
-          attemptPlayWithFadeIn();
-        }
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('keydown', unlockAudio);
-      };
-      
-      window.addEventListener('click', unlockAudio);
-      window.addEventListener('keydown', unlockAudio);
-    });
+
+          if (curVol >= targetVol) {
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+            if (audioRef.current) {
+              audioRef.current.volume = targetVol;
+            }
+          }
+        }, stepTime);
+      }).catch(() => {
+        console.log("Autoplay bloqueado temporalmente por el navegador. Esperando interacción.");
+        
+        // Listener para desbloquear audio tras la primera interacción
+        const unlockAudio = () => {
+          if (audioRef.current && isPlayingRef.current && gameState !== 'game') {
+            attemptPlayWithFadeIn();
+          }
+          window.removeEventListener('click', unlockAudio);
+          window.removeEventListener('keydown', unlockAudio);
+        };
+        
+        window.addEventListener('click', unlockAudio);
+        window.addEventListener('keydown', unlockAudio);
+      });
+    }
   };
 
   // 2. Controlar volumen y silencio
@@ -190,7 +238,7 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     }
   }, [volume, isMuted]);
 
-  // 3. Manejar transiciones de estados (Menú vs Gameplay)
+  // 3. Manejar transiciones de estados (Menú vs Gameplay/SetupIndividual)
   useEffect(() => {
     const prevGameState = prevGameStateRef.current;
     prevGameStateRef.current = gameState;
@@ -198,17 +246,19 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     if (prevGameState === gameState) return;
     if (!audioRef.current) return;
 
-    // Solo hacemos fade out si pasamos de cualquier menú al combate ('game')
-    if (gameState === 'game' && prevGameState !== 'game') {
+    const isMutedScreen = (state: string) => state === 'game' || state === 'setup_individual';
+
+    // Solo hacemos fade out si pasamos de un menú normal a una pantalla silenciada
+    if (isMutedScreen(gameState) && !isMutedScreen(prevGameState)) {
       if (fadeIntervalRef.current) {
         clearInterval(fadeIntervalRef.current);
       }
 
-      // --- FADE OUT (Transición hacia la partida) ---
+      // --- FADE OUT (Transición hacia la partida o selección de beats) ---
       const startVol = audioRef.current.volume;
       let curVol = startVol;
-      const steps = 30; // 30 pasos
-      const stepTime = 50; // Cada 50ms -> 1.5 segundos total
+      const steps = 15; // 15 pasos
+      const stepTime = 20; // Cada 20ms -> 300ms total
       const volDelta = startVol / steps;
 
       fadeIntervalRef.current = setInterval(() => {
@@ -220,14 +270,12 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
         if (curVol <= 0) {
           clearInterval(fadeIntervalRef.current);
           fadeIntervalRef.current = null;
-          if (audioRef.current) {
-            audioRef.current.pause();
-          }
+          safePause();
         }
       }, stepTime);
     }
-    // Solo hacemos fade in si pasamos del combate ('game') a cualquier menú
-    else if (gameState !== 'game' && prevGameState === 'game') {
+    // Solo hacemos fade in si pasamos de una pantalla silenciada a un menú normal
+    else if (!isMutedScreen(gameState) && isMutedScreen(prevGameState)) {
       if (fadeIntervalRef.current) {
         clearInterval(fadeIntervalRef.current);
       }
@@ -235,14 +283,12 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
       // --- FADE IN (Regreso al Menú) ---
       if (isPlaying) {
         audioRef.current.volume = 0;
-        audioRef.current.play().catch((err) => {
-          console.log("No se pudo auto-reproducir al volver al menú:", err);
-        });
+        safePlay();
 
         const targetVol = isMuted ? 0 : volume;
         let curVol = 0;
-        const steps = 30;
-        const stepTime = 50; // 1.5 segundos total
+        const steps = 20;
+        const stepTime = 20; // 400ms total
         const volDelta = targetVol / steps;
 
         fadeIntervalRef.current = setInterval(() => {
@@ -261,12 +307,6 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
         }, stepTime);
       }
     }
-
-    return () => {
-      if (fadeIntervalRef.current) {
-        clearInterval(fadeIntervalRef.current);
-      }
-    };
   }, [gameState, isPlaying, volume, isMuted]);
 
   // Cambiar canción aplicando un fade-out suave antes de pasar a la siguiente
@@ -293,8 +333,8 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     // --- FADE OUT DE LA CANCIÓN ACTUAL ---
     const startVol = audioRef.current.volume;
     let curVol = startVol;
-    const steps = 20; // Aumentado para 500ms total
-    const stepTime = 25; 
+    const steps = 10; // 200ms total
+    const stepTime = 20; 
     const volDelta = startVol / steps;
 
     fadeIntervalRef.current = setInterval(() => {
@@ -307,7 +347,7 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
         clearInterval(fadeIntervalRef.current);
         fadeIntervalRef.current = null;
         // Al finalizar el fade out, cambiamos el track (esto disparará el useEffect con su respectivo fade-in)
-        setIsPlaying(true);
+        setIsPlayingWithRef(true);
         setCurrentTrackIndex(nextIndex);
       }
     }, stepTime);
@@ -366,11 +406,11 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
 
     if (isPlaying) {
       // --- FADE OUT AL PAUSAR ---
-      setIsPlaying(false); // Respuesta visual instantánea al pausar
+      setIsPlayingWithRef(false); // Respuesta visual instantánea al pausar
       const startVol = audioRef.current.volume;
       let curVol = startVol;
-      const steps = 24; // Aumentado para 600ms total
-      const stepTime = 25; 
+      const steps = 12; // 240ms total
+      const stepTime = 20; 
       const volDelta = startVol / steps;
 
       fadeIntervalRef.current = setInterval(() => {
@@ -382,22 +422,20 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
         if (curVol <= 0) {
           clearInterval(fadeIntervalRef.current);
           fadeIntervalRef.current = null;
-          if (audioRef.current) {
-            audioRef.current.pause();
-          }
+          safePause();
         }
       }, stepTime);
     } else {
       // --- FADE IN AL REPRODUCIR ---
       audioRef.current.volume = 0;
-      audioRef.current.play().catch(e => console.log(e));
-      setIsPlaying(true); // Respuesta visual instantánea al reproducir
+      safePlay();
+      setIsPlayingWithRef(true); // Respuesta visual instantánea al reproducir
       triggerBanner(); // Al darle play, volvemos a mostrar qué está sonando
 
       const targetVol = isMuted ? 0 : volume;
       let curVol = 0;
-      const steps = 24; // Aumentado para 600ms total
-      const stepTime = 25; 
+      const steps = 15; // 300ms total
+      const stepTime = 20; 
       const volDelta = targetVol / steps;
 
       fadeIntervalRef.current = setInterval(() => {
@@ -447,6 +485,29 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     }
   };
 
+  // 4. Escuchar eventos de pre-escucha para pausar/reanudar música de fondo
+  useEffect(() => {
+    const handlePauseLobby = () => {
+      if (audioRef.current && isPlaying) {
+        safePause();
+      }
+    };
+
+    const handleResumeLobby = () => {
+      if (audioRef.current && isPlaying && gameState !== 'game' && gameState !== 'setup_individual') {
+        safePlay();
+      }
+    };
+
+    window.addEventListener('barrz_pause_lobby_music', handlePauseLobby);
+    window.addEventListener('barrz_resume_lobby_music', handleResumeLobby);
+
+    return () => {
+      window.removeEventListener('barrz_pause_lobby_music', handlePauseLobby);
+      window.removeEventListener('barrz_resume_lobby_music', handleResumeLobby);
+    };
+  }, [gameState, isPlaying]);
+
   // Cerrar el panel al hacer clic fuera del contenedor (para touch / mouse click)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -465,12 +526,12 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
     };
   }, [isPanelOpen]);
 
-  const isGame = gameState === 'game';
+  const isGameOrIndividualSetup = gameState === 'game' || gameState === 'setup_individual';
 
   return (
     <div className="menu-audio-container">
       {/* 1. NOTIFICACIÓN DE CANCIÓN - ESTILO FIFA (Abajo Izquierda) */}
-      <div className={`song-banner-overlay ${showBanner && !isGame ? 'visible' : ''} ${isGame ? 'game-faded' : ''}`}>
+      <div className={`song-banner-overlay ${showBanner && !isGameOrIndividualSetup ? 'visible' : ''} ${isGameOrIndividualSetup ? 'game-faded' : ''}`}>
         <div className="song-banner-icon">
           <Music size={20} />
         </div>
@@ -481,9 +542,9 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
       </div>
 
       {/* 2. REPRODUCTOR / CONTROLES DE AUDIO (Abajo Derecha) */}
-      <div className={`music-controls-wrapper ${isGame ? 'game-faded' : ''}`} ref={containerRef}>
+      <div className={`music-controls-wrapper ${isGameOrIndividualSetup ? 'game-faded' : ''}`} ref={containerRef}>
         {/* Panel Flotante Suplementario (Abierto al hacer click / touch) */}
-        <div className={`music-controls-panel ${isPanelOpen && !isGame ? 'open' : ''}`}>
+        <div className={`music-controls-panel ${isPanelOpen && !isGameOrIndividualSetup ? 'open' : ''}`}>
           <div className="music-panel-track-title">{currentTrack.name}</div>
           
           <div className="music-panel-actions">
@@ -548,15 +609,15 @@ export const MenuAudioPlayer: React.FC<MenuAudioPlayerProps> = ({ gameState }) =
         {/* Botón Circular Principal */}
         <button 
           type="button" 
-          className={`btn-music-trigger ${isMuted || volume === 0 ? 'muted' : ''} ${isPanelOpen && !isGame ? 'active' : ''}`}
+          className={`btn-music-trigger ${isMuted || volume === 0 ? 'muted' : ''} ${isPanelOpen && !isGameOrIndividualSetup ? 'active' : ''}`}
           onClick={() => {
-            if (!isGame) {
+            if (!isGameOrIndividualSetup) {
               setIsPanelOpen(!isPanelOpen);
             }
           }}
           title="Configuración de Música"
         >
-          {isPlaying && !isGame && !isMuted && volume > 0 ? (
+          {isPlaying && !isGameOrIndividualSetup && !isMuted && volume > 0 ? (
             <Music size={20} className="pulse-music" />
           ) : (
             <VolumeX size={20} />

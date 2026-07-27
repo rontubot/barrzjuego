@@ -1,31 +1,102 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Play, Plus, Minus, UserPlus, Check, RefreshCw, Volume2, Sparkles, BookOpen, Compass, Radio, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, User, Play, Pause, ArrowLeft, Plus, Minus, UserPlus, Check, RefreshCw, Volume2, Sparkles, BookOpen, Compass, Radio, ArrowRight } from 'lucide-react';
+import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
+import type { BeatCard, ChallengeCard } from '../data/cards';
 import './GameSetup.css';
 
 interface GameSetupProps {
-  step: 'lobby_start' | 'tutorial_ask' | 'link_spotify' | 'mode_selection' | 'setup_players' | 'setup_rounds' | 'setup_deck';
+  step: 'lobby_start' | 'tutorial_ask' | 'link_spotify' | 'mode_selection' | 'setup_individual' | 'setup_players' | 'setup_rounds' | 'setup_deck';
   userSession: any;
   onNext: (nextStep: string, data?: any) => void;
   onBack: () => void;
 }
 
 export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext, onBack }) => {
-  const avatars = ['🎤', '🔥', '🎧', '👑', '👽', '⚡', '🎸', '🚀', '💀', '💥', '🛹', '🕶️'];
+  const avatars = [
+    '🎤', '🔥', '🎧', '👑', '👽', '⚡', '🎸', '🚀', '💀', '💥', '🛹', '🕶️',
+    '/avatars/female_1.png',
+    '/avatars/female_2.png',
+    '/avatars/female_3.png',
+    '/avatars/male_1.png',
+    '/avatars/male_2.png',
+    '/avatars/male_3.png'
+  ];
   
   // Configuración de juego
-  const [players, setPlayers] = useState<string[]>(['Freestyler A', 'Freestyler B']);
-  const [playerAvatars, setPlayerAvatars] = useState<string[]>(['🎤', '🔥']);
+  const [players, setPlayers] = useState<string[]>(() => {
+    const defaultName = userSession?.username || 'Freestyler A';
+    return [defaultName, 'Freestyler B'];
+  });
+  const [playerAvatars, setPlayerAvatars] = useState<string[]>(() => {
+    const defaultAvatar = userSession?.avatar_type === 'custom' && userSession?.custom_avatar_url 
+      ? userSession.custom_avatar_url 
+      : (userSession?.avatar || '🎤');
+    return [defaultAvatar, '🔥'];
+  });
   const [activeAvatarPicker, setActiveAvatarPicker] = useState<number | null>(null);
-  const [roundsCount, setRoundsCount] = useState(5);
+  const [roundsCount, setRoundsCount] = useState(3);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     'palabras',
     'tematicas',
     'cypher',
     'terminaciones',
     'beatbox',
-    '1v1',
     'sacrificio'
   ]);
+
+  // Configuración de modo individual
+  const [individualSubMode, setIndividualSubMode] = useState<'random' | 'custom'>('random');
+  const [selectedBeat, setSelectedBeat] = useState<BeatCard | null>(null);
+  const [selectedChallenge, setSelectedChallenge] = useState<ChallengeCard | null>(null);
+  const [previewingBeatId, setPreviewingBeatId] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [showThemesMosaic, setShowThemesMosaic] = useState(false);
+  const [expandedThemeCard, setExpandedThemeCard] = useState<ChallengeCard | null>(null);
+
+  // Cleanup audio preview when screen changes or sub-mode changes
+  useEffect(() => {
+    return () => {
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current = null;
+      }
+      window.dispatchEvent(new CustomEvent('barrz_resume_lobby_music'));
+    };
+  }, [individualSubMode, step]);
+
+  const handleTogglePreview = (beat: BeatCard) => {
+    if (!beat.audioUrl) return;
+
+    if (previewingBeatId === beat.id) {
+      // Pausar
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+        previewAudioRef.current = null;
+      }
+      setPreviewingBeatId(null);
+      window.dispatchEvent(new CustomEvent('barrz_resume_lobby_music'));
+    } else {
+      // Detener anterior
+      if (previewAudioRef.current) {
+        previewAudioRef.current.pause();
+      }
+      
+      // Despachar evento para pausar música de fondo del lobby
+      window.dispatchEvent(new CustomEvent('barrz_pause_lobby_music'));
+
+      // Reproducir nueva pre-escucha
+      const audio = new Audio(beat.audioUrl);
+      audio.loop = true;
+      previewAudioRef.current = audio;
+      setPreviewingBeatId(beat.id);
+      
+      audio.play().catch(err => {
+        console.log("No se pudo reproducir la pre-escucha del beat:", err);
+        setPreviewingBeatId(null);
+        window.dispatchEvent(new CustomEvent('barrz_resume_lobby_music'));
+      });
+    }
+  };
   
   // Sorteo de quién empieza
   const [startingPlayer, setStartingPlayer] = useState('');
@@ -49,14 +120,37 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
   }, [step]);
 
+  // Sincronizar el competidor 1 con los datos de perfil del usuario logueado
+  useEffect(() => {
+    if (userSession?.username) {
+      setPlayers(prev => {
+        if (prev[0] === 'Freestyler A' || prev[0] === '') {
+          const next = [...prev];
+          next[0] = userSession.username;
+          return next;
+        }
+        return prev;
+      });
+      setPlayerAvatars(prev => {
+        if (prev[0] === '🎤') {
+          const next = [...prev];
+          next[0] = userSession.avatar_type === 'custom' && userSession.custom_avatar_url 
+            ? userSession.custom_avatar_url 
+            : (userSession.avatar || '🎤');
+          return next;
+        }
+        return prev;
+      });
+    }
+  }, [userSession]);
+
   // Categorías de cartas disponibles
   const categoriesList = [
     { id: 'palabras', label: 'Palabras', desc: 'Rimar usando las 4 palabras de tu lado' },
     { id: 'tematicas', label: 'Temáticas', desc: 'Desarrollar rimas sobre un tema profundo' },
     { id: 'cypher', label: 'Cypher', desc: 'Ronda libre en equipo compartiendo micro' },
     { id: 'terminaciones', label: 'Terminaciones', desc: 'Patrones obligatorios como -ER o -AR' },
-    { id: 'beatbox', label: 'Beatbox', desc: 'Base humana con cronómetro de 90 segundos' },
-    { id: '1v1', label: 'Batalla 1v1', desc: 'Duelo conceptual directo entre rivales' },
+    { id: 'beatbox', label: 'Beatbox', desc: 'Base humana con cronómetro de 60 segundos' },
     { id: 'sacrificio', label: 'El Sacrificio', desc: 'Ronda final de máxima entrega y energía' }
   ];
 
@@ -141,7 +235,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   const tutorialSteps = [
     {
       title: "Navegación e Interacción",
-      desc: "Bienvenido al laboratorio de freestyle urbana. Navegá por los diferentes mazos de cartas, desafíos dinámicos y bases instrumentales con cronómetro de rimas incorporado y soporte en tiempo real.",
+      desc: "Bienvenido al laboratorio de freestyle. Navegá por los diferentes mazos de cartas, desafíos dinámicos y bases instrumentales con cronómetro de rimas incorporado y soporte en tiempo real.",
       icon: <Compass size={40} className="teal-text" />
     },
     {
@@ -308,7 +402,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {step === 'mode_selection' && (
         <div className="setup-card glass-panel glow-pink fade-in">
           <h2 className="font-graffiti text-glow-pink text-center mb-20">SELECCIONAR MODO</h2>
-          <p className="step-sub text-center">Elegí la modalidad de improvisación urbana.</p>
+          <p className="step-sub text-center">Elegí la modalidad de improvisación.</p>
 
           <div className="modes-stack">
             <button 
@@ -319,47 +413,248 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 <Users size={20} className="pink-text" />
                 <h3>Multijugador</h3>
               </div>
-              <p>Competencia en equipo o 1v1 con registro de nombres, conteo de rondas, sorteo inicial y tabla de puntuaciones.</p>
+              <p>Competencia en equipo con registro de nombres, conteo de rondas, sorteo inicial y tabla de puntuaciones.</p>
             </button>
 
             <button 
               className="mode-option-card"
-              onClick={() => {
-                onNext('game', {
-                  mode: 'solo',
-                  players: ['Mi Práctica'],
-                  avatars: { 'Mi Práctica': '🎤' },
-                  roundsCount: 3,
-                  selectedCategories: ['palabras', 'tematicas', 'terminaciones']
-                });
-              }}
+              onClick={() => onNext('setup_individual')}
             >
               <div className="mode-option-header">
-                <h3>MODO INDIVIDUAL</h3>
+                <User size={20} className="pink-text" />
+                <h3>Jugar Solo</h3>
               </div>
-              <p>Entrená en solitario con bases y desafíos aleatorios para perfeccionar tus patrones.</p>
-            </button>
-
-            <button 
-              className="mode-option-card glow-pink"
-              onClick={() => {
-                onNext('game', {
-                  mode: 'multiplayer',
-                  players: ['Competidor 1', 'Competidor 2'],
-                  avatars: { 'Competidor 1': '🎤', 'Competidor 2': '🔥' },
-                  roundsCount: 4,
-                  selectedCategories: ['palabras', 'tematicas', '1v1']
-                });
-              }}
-            >
-              <div className="mode-option-header">
-                <h3>DUELO RÁPIDO (1v1)</h3>
-              </div>
-              <p>Iniciá un cara a cara de 2 jugadores de forma rápida con configuración estándar de combate.</p>
+              <p>Entrená en solitario con bases y desafíos para perfeccionar tus patrones. Admite flujo automático o selección a mano.</p>
             </button>
           </div>
         </div>
       )}
+
+      {/* ── SETUP INDIVIDUAL ─────────────────────────────────────────── */}
+      {step === 'setup_individual' && (() => {
+        const availableCategories = categoriesList;
+        const canStart = individualSubMode === 'random' || (selectedBeat !== null && selectedChallenge !== null);
+        
+        return (
+          <div className="setup-individual-screen fade-in">
+            {/* Header */}
+            <div className="individual-header">
+              <button className="btn-back-individual" onClick={onBack}>
+                <ArrowLeft size={18} />
+                <span>Volver</span>
+              </button>
+              <h2 className="font-graffiti text-glow-teal">MODO INDIVIDUAL</h2>
+            </div>
+
+            {/* Sub-mode Tabs */}
+            <div className="individual-mode-tabs">
+              <button
+                className={`individual-tab ${individualSubMode === 'random' ? 'active' : ''}`}
+                onClick={() => {
+                  setIndividualSubMode('random');
+                  setSelectedBeat(null);
+                  setSelectedChallenge(null);
+                }}
+              >
+                🎲 ALEATORIO
+              </button>
+              <button
+                className={`individual-tab ${individualSubMode === 'custom' ? 'active' : ''}`}
+                onClick={() => setIndividualSubMode('custom')}
+              >
+                🎛️ PERSONALIZADO
+              </button>
+            </div>
+
+            {/* Aleatorio mode */}
+            {individualSubMode === 'random' && (
+              <div className="individual-random-content fade-in">
+                <div className="random-mode-card glass-panel">
+                  <div className="random-icon">🎲</div>
+                  <h3>Modo Aleatorio</h3>
+                  <p>El sistema seleccionará un beat y un desafío automáticamente al iniciar cada turno. Perfecto para entrenamientos rápidos y variados.</p>
+                  <div className="random-features">
+                    <span className="feature-chip">🎵 Beat aleatorio</span>
+                    <span className="feature-chip">🃏 Desafío sorpresa</span>
+                    <span className="feature-chip">⚡ Sin configuración</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Personalizado mode */}
+            {individualSubMode === 'custom' && (
+              <div className="individual-custom-content fade-in">
+                {/* Beats column */}
+                <div className="selection-column">
+                  <div className="column-header">
+                    <h3 className="teal-text">🎵 ELEGÍ TU BASE</h3>
+                    {selectedBeat && <span className="selection-badge">✓ {selectedBeat.name}</span>}
+                  </div>
+                  <div className="beats-list scrollable-list">
+                    {BEATS_DECK.map(beat => (
+                      <div
+                        key={beat.id}
+                        className={`beat-item ${selectedBeat?.id === beat.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedBeat(beat)}
+                      >
+                        <div className="beat-info">
+                          <span className="beat-name">{beat.name}</span>
+                          <span className="beat-bpm">{beat.bpm} BPM</span>
+                        </div>
+                        <div className="beat-actions">
+                          {beat.audioUrl && (
+                            <button
+                              className={`btn-preview ${previewingBeatId === beat.id ? 'previewing' : ''}`}
+                              onClick={e => { e.stopPropagation(); handleTogglePreview(beat); }}
+                              title={previewingBeatId === beat.id ? 'Detener' : 'Escuchar'}
+                            >
+                              {previewingBeatId === beat.id ? <Pause size={14} /> : <Play size={14} />}
+                            </button>
+                          )}
+                          <div className={`beat-select-dot ${selectedBeat?.id === beat.id ? 'active' : ''}`} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Challenges column */}
+                <div className="selection-column">
+                  <div className="column-header">
+                    <h3 className="pink-text">🃏 ELEGÍ TU DESAFÍO</h3>
+                    {selectedChallenge && <span className="selection-badge">✓ {selectedChallenge.title || selectedChallenge.category}</span>}
+                  </div>
+                  <div className="challenges-list scrollable-list">
+                    {availableCategories.map(cat => (
+                      <div
+                        key={cat.id}
+                        className={`challenge-item ${selectedChallenge?.category === cat.id ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (cat.id === 'tematicas') {
+                            setShowThemesMosaic(true);
+                          } else {
+                            const categoryCards = CHALLENGES_DECK.filter(c => c.category === cat.id);
+                            if (categoryCards.length > 0) {
+                              const randomCard = categoryCards[Math.floor(Math.random() * categoryCards.length)];
+                              setSelectedChallenge(randomCard);
+                            }
+                          }
+                        }}
+                      >
+                        <div className="challenge-info">
+                          <span className="challenge-category">{cat.label.toUpperCase()}</span>
+                          <span className="challenge-title">{cat.desc}</span>
+                        </div>
+                        <div className={`challenge-select-dot ${selectedChallenge?.category === cat.id ? 'active' : ''}`} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Start button */}
+            <div className="individual-start-footer">
+              <button
+                className={`btn-individual-start ${!canStart ? 'disabled' : 'pulse-teal-anim'}`}
+                disabled={!canStart}
+                onClick={() => {
+                  // Stop preview audio if playing
+                  if (previewAudioRef.current) {
+                    previewAudioRef.current.pause();
+                    previewAudioRef.current = null;
+                    setPreviewingBeatId(null);
+                  }
+                  onNext('game', {
+                    mode: 'solo',
+                    subMode: individualSubMode,
+                    players: ['Mi Práctica'],
+                    avatars: { 'Mi Práctica': '🎤' },
+                    roundsCount: 3,
+                    selectedCategories: ['palabras', 'tematicas', 'terminaciones'],
+                    initialBeat: individualSubMode === 'custom' ? selectedBeat : null,
+                    initialChallenge: individualSubMode === 'custom' ? selectedChallenge : null
+                  });
+                }}
+              >
+                {!canStart ? (
+                  <span>Seleccioná un beat y desafío</span>
+                ) : (
+                  <>
+                    <Play size={18} fill="currentColor" />
+                    <span>ARRANCAR SESIÓN</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* MOSAICO DE TEMÁTICAS MODAL */}
+            {showThemesMosaic && (
+              <div className="themes-mosaic-overlay fade-in">
+                <div className="themes-mosaic-container glass-panel glow-pink">
+                  <div className="themes-mosaic-header">
+                    <h2 className="font-graffiti text-glow-pink">SELECCIONAR TEMÁTICA</h2>
+                    <p className="themes-mosaic-subtitle font-base">Hacé click en una temática para expandirla y leerla antes de confirmar.</p>
+                  </div>
+
+                  <div className="themes-mosaic-grid">
+                    {CHALLENGES_DECK.filter(c => c.category === 'tematicas').map((card) => (
+                      <div 
+                        key={card.id} 
+                        className="theme-mosaic-card glow-pink" 
+                        onClick={() => setExpandedThemeCard(card)}
+                      >
+                        <h4 className="theme-card-title">{card.title}</h4>
+                        <div className="theme-card-preview font-base">{card.highlightText || 'Temática'}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button className="btn-close-mosaic font-base" onClick={() => setShowThemesMosaic(false)}>
+                    CERRAR
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CARD EXPANDED FULLSCREEN MODAL */}
+            {expandedThemeCard && (
+              <div className="theme-expanded-overlay fade-in">
+                <div className="theme-expanded-card glass-panel glow-pink">
+                  <span className="expanded-card-badge">TEMÁTICA</span>
+                  <h2 className="expanded-card-title">{expandedThemeCard.title}</h2>
+                  <p className="expanded-card-desc">{expandedThemeCard.description}</p>
+                  {expandedThemeCard.highlightText && (
+                    <div className="expanded-card-highlight font-base">
+                      {expandedThemeCard.highlightText}
+                    </div>
+                  )}
+
+                  <div className="expanded-card-actions">
+                    <button 
+                      className="btn-expanded-confirm font-base"
+                      onClick={() => {
+                        setSelectedChallenge(expandedThemeCard);
+                        setExpandedThemeCard(null);
+                        setShowThemesMosaic(false);
+                      }}
+                    >
+                      CONFIRMAR SELECCIÓN
+                    </button>
+                    <button 
+                      className="btn-expanded-back font-base"
+                      onClick={() => setExpandedThemeCard(null)}
+                    >
+                      VOLVER AL MOSAICO
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── SETUP PLAYERS ──────────────────────────────────────────────── */}
       {step === 'setup_players' && (
@@ -378,8 +673,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                     className="player-avatar-btn"
                     onClick={() => setActiveAvatarPicker(activeAvatarPicker === index ? null : index)}
                     title="Elegir Avatar"
+                    style={{ padding: (playerAvatars[index]?.startsWith('/') || playerAvatars[index]?.startsWith('data:image/')) ? '0' : '' }}
                   >
-                    {playerAvatars[index] || '🎤'}
+                    {(playerAvatars[index]?.startsWith('/') || playerAvatars[index]?.startsWith('data:image/')) ? (
+                      <img src={playerAvatars[index]} alt="" className="avatar-img" />
+                    ) : (
+                      playerAvatars[index] || '🎤'
+                    )}
                   </button>
 
                   <input
@@ -412,8 +712,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                           setPlayerAvatars(nextAvatars);
                           setActiveAvatarPicker(null);
                         }}
+                        style={{ padding: (av.startsWith('/') || av.startsWith('data:image/')) ? '0' : '' }}
                       >
-                        {av}
+                        {(av.startsWith('/') || av.startsWith('data:image/')) ? (
+                          <img src={av} alt="" className="avatar-img-picker" />
+                        ) : (
+                          av
+                        )}
                       </button>
                     ))}
                   </div>
@@ -512,9 +817,23 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             
             <div className="roulette-display">
               {isSpinning ? (
-                <span className="roulette-name spinning">{players[spinIndex]}</span>
+                <span className="roulette-name spinning" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                  {(playerAvatars[spinIndex]?.startsWith('/') || playerAvatars[spinIndex]?.startsWith('data:image/')) ? (
+                    <img src={playerAvatars[spinIndex]} alt="" style={{ width: '1.5rem', height: '1.5rem', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <span>{playerAvatars[spinIndex] || '🎤'}</span>
+                  )}
+                  <span>{players[spinIndex]}</span>
+                </span>
               ) : startingPlayer ? (
-                <div className="winner-announcement scale-up">
+                <div className="winner-announcement scale-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0, 245, 171, 0.1)', border: '1px solid var(--neon-teal)' }}>
+                    {(playerAvatars[players.indexOf(startingPlayer)]?.startsWith('/') || playerAvatars[players.indexOf(startingPlayer)]?.startsWith('data:image/')) ? (
+                      <img src={playerAvatars[players.indexOf(startingPlayer)]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: '1.8rem' }}>{playerAvatars[players.indexOf(startingPlayer)] || '🎤'}</span>
+                    )}
+                  </div>
                   <span className="winner-name pink-text">{startingPlayer}</span>
                   <span className="winner-tag">¡Rima primero!</span>
                 </div>

@@ -7,6 +7,11 @@ import { MenuAudioPlayer } from './components/MenuAudioPlayer';
 import { UserProfilePanel } from './components/UserProfilePanel';
 import './App.css';
 
+const getApiUrl = (path: string) => {
+  const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+  return `${base}${path}`;
+};
+
 type GameState =
   | 'splash'
   | 'onboarding_1'
@@ -18,6 +23,7 @@ type GameState =
   | 'tutorial_ask'
   | 'link_spotify'
   | 'mode_selection'
+  | 'setup_individual'
   | 'setup_players'
   | 'setup_rounds'
   | 'setup_deck'
@@ -27,15 +33,39 @@ interface UserSession {
   email: string;
   loggedIn: boolean;
   method: string;
+  username?: string;
+  avatar?: string;
+  avatar_type?: string;
+  custom_avatar_url?: string | null;
+  stats?: {
+    totalBattles: number;
+    wins: number;
+    winRate: number;
+    maxPoints: number;
+  };
+  history?: Array<{
+    id: number;
+    mode: string;
+    roundsCount: number;
+    points: number;
+    result: string;
+    playerRank?: number;
+    players: string[];
+    scores: Record<string, number>;
+    battleDate: string;
+  }>;
 }
 
 interface GameSettings {
   mode: 'solo' | 'multiplayer';
+  subMode?: 'random' | 'custom';
   players: string[];
   avatars?: Record<string, string>;
   roundsCount: number;
   selectedCategories: string[];
   startingPlayer: string;
+  initialBeat?: any;
+  initialChallenge?: any;
 }
 
 function App() {
@@ -66,19 +96,59 @@ function App() {
 
   // Restaurar y verificar sesión una vez terminada la carga
   useEffect(() => {
-    if (!isLoading) {
+    const verifyToken = async () => {
+      const token = localStorage.getItem('barrz_token');
       const savedSession = localStorage.getItem('barrz_session');
-      if (savedSession) {
+      
+      if (token) {
         try {
-          const session = JSON.parse(savedSession);
-          setUserSession(session);
-          setGameState('splash'); // Va al inicio (Jugar Ahora)
+          const res = await fetch(getApiUrl('/api/auth/verify-token'), {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            const session: UserSession = {
+              email: data.email,
+              username: data.username,
+              avatar: data.avatar,
+              avatar_type: data.avatar_type,
+              custom_avatar_url: data.custom_avatar_url,
+              stats: data.stats,
+              history: data.history,
+              loggedIn: true,
+              method: savedSession ? JSON.parse(savedSession).method : 'email'
+            };
+            setUserSession(session);
+            localStorage.setItem('barrz_session', JSON.stringify(session));
+            setGameState('splash');
+          } else {
+            localStorage.removeItem('barrz_token');
+            localStorage.removeItem('barrz_session');
+            setGameState('auth_choice');
+          }
         } catch (e) {
-          setGameState('auth_choice');
+          if (savedSession) {
+            setUserSession(JSON.parse(savedSession));
+            setGameState('splash');
+          } else {
+            setGameState('auth_choice');
+          }
         }
       } else {
-        setGameState('auth_choice'); // Login por primera vez
+        if (savedSession) {
+          setUserSession(JSON.parse(savedSession));
+          setGameState('splash');
+        } else {
+          setGameState('auth_choice');
+        }
       }
+    };
+
+    if (!isLoading) {
+      verifyToken();
     }
   }, [isLoading]);
 
@@ -93,13 +163,26 @@ function App() {
     setGameState('splash');
   };
 
+  const handleLogout = () => {
+    setUserSession(null);
+    localStorage.removeItem('barrz_session');
+    localStorage.removeItem('barrz_token');
+    setGameState('auth_choice');
+  };
+
   // Enrutador de avance de pantallas
   const handleNextStep = (nextStep: string, data?: any) => {
     if (data) {
       // Registrar sesión de usuario
       if (data.loggedIn) {
-        const session = {
+        const session: UserSession = {
           email: data.email,
+          username: data.username,
+          avatar: data.avatar,
+          avatar_type: data.avatar_type,
+          custom_avatar_url: data.custom_avatar_url,
+          stats: data.stats,
+          history: data.history,
           loggedIn: true,
           method: data.method
         };
@@ -111,11 +194,14 @@ function App() {
       if (nextStep === 'game' && data.mode) {
         setGameSettings({
           mode: data.mode,
+          subMode: data.subMode,
           players: data.players,
           avatars: data.avatars,
           roundsCount: data.roundsCount,
           selectedCategories: data.selectedCategories,
-          startingPlayer: data.startingPlayer || data.players[0]
+          startingPlayer: data.startingPlayer || data.players[0],
+          initialBeat: data.initialBeat,
+          initialChallenge: data.initialChallenge
         });
       }
     }
@@ -144,6 +230,7 @@ function App() {
         // Log out y volver al registro
         setUserSession(null);
         localStorage.removeItem('barrz_session');
+        localStorage.removeItem('barrz_token');
         setGameState('auth_choice');
         break;
       case 'tutorial_ask':
@@ -154,6 +241,9 @@ function App() {
         break;
       case 'mode_selection':
         setGameState('link_spotify');
+        break;
+      case 'setup_individual':
+        setGameState('mode_selection');
         break;
       case 'setup_players':
         setGameState('mode_selection');
@@ -216,6 +306,7 @@ function App() {
     gameState === 'tutorial_ask' ||
     gameState === 'link_spotify' ||
     gameState === 'mode_selection' ||
+    gameState === 'setup_individual' ||
     gameState === 'setup_players' ||
     gameState === 'setup_rounds' ||
     gameState === 'setup_deck'
@@ -249,6 +340,14 @@ function App() {
         key={`${gameSettings.players.join(',')}-${gameSettings.mode}-${gameSettings.roundsCount}`}
         onBackToMenu={handleBackToMenu}
         gameSettings={gameSettings}
+        onGameSaved={(stats, history) => {
+          setUserSession(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, stats, history };
+            localStorage.setItem('barrz_session', JSON.stringify(updated));
+            return updated;
+          });
+        }}
       />
     );
   }
@@ -257,7 +356,16 @@ function App() {
     <div className="app-root">
       {mainContent}
       <MenuAudioPlayer gameState={gameState} />
-      <UserProfilePanel gameState={gameState} userSession={userSession} />
+      <UserProfilePanel 
+        gameState={gameState} 
+        userSession={userSession} 
+        onLogout={handleLogout} 
+        onProfileUpdate={(updatedSession) => {
+          setUserSession(updatedSession);
+          localStorage.setItem('barrz_session', JSON.stringify(updatedSession));
+        }}
+      />
+      <div className="app-version-tag">v3.1</div>
     </div>
   );
 }

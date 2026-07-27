@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
-import { User, Settings, History, X, LogOut, Sliders, Flame, Award } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2 } from 'lucide-react';
+import { BattleDetailView } from './BattleDetailView';
 import './UserProfilePanel.css';
+
+const getApiUrl = (path: string) => {
+  const isProd = import.meta.env.PROD;
+  const baseUrl = isProd ? window.location.origin : 'http://localhost:3001';
+  return `${baseUrl}${path}`;
+};
 
 interface UserProfilePanelProps {
   gameState: string;
   userSession: any;
+  onLogout?: () => void;
+  onProfileUpdate?: (updatedSession: any) => void;
 }
 
-export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, userSession }) => {
+export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, userSession, onLogout, onProfileUpdate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'settings'>('profile');
 
@@ -19,14 +28,201 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
   const [language, setLanguage] = useState(() => localStorage.getItem('barrz_language') || 'es');
   const [showSavedAlert, setShowSavedAlert] = useState(false);
 
+  // Estados para la edición de perfil
+  const [isEditingUsername, setIsEditingUsername] = useState(false);
+  const [tempUsername, setTempUsername] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Estado para la pantalla de detalle de partida
+  const [selectedBattle, setSelectedBattle] = useState<any | null>(null);
+
   // Avatares disponibles (Emojis estilo Hip-Hop y Urbano)
   const avatars = ['🎤', '🔥', '🎧', '👑', '👽', '⚡', '🎸', '🚀', '💀', '💥', '🛹', '🕶️'];
 
-  // Guardar configuración en localStorage
-  const handleAvatarChange = (avatar: string) => {
+  // Sincronizar campo temporal de nombre cuando cambie la sesión
+  useEffect(() => {
+    if (userSession?.username) {
+      setTempUsername(userSession.username);
+    }
+  }, [userSession]);
+
+  // Determinar avatar actual y su tipo
+  const isCustomAvatar = userSession?.loggedIn
+    ? userSession.avatar_type === 'custom' && userSession.custom_avatar_url
+    : selectedAvatar.startsWith('data:image/');
+
+  const currentAvatarSrc = userSession?.loggedIn
+    ? (userSession.avatar_type === 'custom' ? userSession.custom_avatar_url : userSession.avatar)
+    : selectedAvatar;
+
+  // Guardar configuración en localStorage o en base de datos si está logueado
+  const handleAvatarChange = async (avatar: string) => {
     setSelectedAvatar(avatar);
     localStorage.setItem('barrz_user_avatar', avatar);
-    triggerSaveToast();
+
+    if (userSession?.loggedIn) {
+      try {
+        const token = localStorage.getItem('barrz_token');
+        const res = await fetch(getApiUrl('/api/auth/update-profile'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            avatar: avatar,
+            avatar_type: 'preset',
+            custom_avatar_url: null
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (onProfileUpdate) {
+            onProfileUpdate({
+              ...userSession,
+              avatar: data.user.avatar,
+              avatar_type: data.user.avatar_type,
+              custom_avatar_url: data.user.custom_avatar_url
+            });
+          }
+          triggerSaveToast();
+        }
+      } catch (err) {
+        console.error('Error al actualizar avatar:', err);
+      }
+    } else {
+      triggerSaveToast();
+    }
+  };
+
+  const handleCustomAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert('La imagen es demasiado grande. El límite es de 10MB.');
+      return;
+    }
+
+    // Comprimir con canvas antes de subir (max 300x300, JPEG 80%)
+    const compressImage = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          const MAX_SIZE = 300;
+          let { width, height } = img;
+          if (width > height) {
+            if (width > MAX_SIZE) { height = Math.round(height * MAX_SIZE / width); width = MAX_SIZE; }
+          } else {
+            if (height > MAX_SIZE) { width = Math.round(width * MAX_SIZE / height); height = MAX_SIZE; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { reject(new Error('Canvas not supported')); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Failed to load image')); };
+        img.src = objectUrl;
+      });
+    };
+
+    try {
+      const base64String = await compressImage(file);
+
+      if (userSession?.loggedIn) {
+        const token = localStorage.getItem('barrz_token');
+        const res = await fetch(getApiUrl('/api/auth/update-profile'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            avatar: 'crown',
+            avatar_type: 'custom',
+            custom_avatar_url: base64String
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (onProfileUpdate) {
+            onProfileUpdate({
+              ...userSession,
+              avatar: data.user.avatar,
+              avatar_type: data.user.avatar_type,
+              custom_avatar_url: data.user.custom_avatar_url
+            });
+          }
+          triggerSaveToast();
+        } else {
+          alert(data.error || 'Error al subir imagen.');
+        }
+      } else {
+        setSelectedAvatar(base64String);
+        localStorage.setItem('barrz_user_avatar', base64String);
+        triggerSaveToast();
+      }
+    } catch (err) {
+      console.error('Error al subir avatar:', err);
+      alert('Error al procesar la imagen. Intenta con otra foto.');
+    }
+  };
+
+  const handleRemoveCustomAvatar = async () => {
+    handleAvatarChange('🎤');
+  };
+
+  const handleSaveUsername = async () => {
+    if (tempUsername.trim().length < 3) {
+      setErrorMsg('Mínimo 3 caracteres.');
+      return;
+    }
+    setErrorMsg('');
+
+    if (userSession?.loggedIn) {
+      try {
+        const token = localStorage.getItem('barrz_token');
+        const res = await fetch(getApiUrl('/api/auth/update-profile'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            username: tempUsername.trim()
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (onProfileUpdate) {
+            onProfileUpdate({
+              ...userSession,
+              username: data.user.username
+            });
+          }
+          setIsEditingUsername(false);
+          triggerSaveToast();
+        } else {
+          setErrorMsg(data.error || 'Error al actualizar.');
+        }
+      } catch (err) {
+        console.error('Error al actualizar nombre de usuario:', err);
+        setErrorMsg('Error al conectar con el servidor.');
+      }
+    } else {
+      setIsEditingUsername(false);
+      triggerSaveToast();
+    }
   };
 
   const toggleSfx = () => {
@@ -60,7 +256,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     setTimeout(() => setShowSavedAlert(false), 1500);
   };
 
-  // Ocultar botones y panel durante el juego activo
   if (gameState === 'game') return null;
 
   return (
@@ -81,8 +276,13 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
           className="btn-top-profile-action btn-user-trigger glow-pink-btn"
           onClick={() => { setActiveTab('profile'); setIsOpen(true); }}
           title="Perfil de Competidor"
+          style={{ padding: isCustomAvatar ? '0' : '' }}
         >
-          <span className="user-trigger-avatar">{selectedAvatar}</span>
+          {isCustomAvatar ? (
+            <img src={currentAvatarSrc} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+          ) : (
+            <span className="user-trigger-avatar">{currentAvatarSrc || '🎤'}</span>
+          )}
         </button>
       </div>
 
@@ -140,10 +340,99 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
           {activeTab === 'profile' && (
             <div className="drawer-tab-content fade-in">
               <div className="profile-hero-section">
-                <div className="profile-avatar-display">
-                  <span className="avatar-main-emoji">{selectedAvatar}</span>
+                
+                {/* Visualización de Avatar con opción de carga de foto */}
+                <div className="profile-avatar-display-wrapper">
+                  <div className="profile-avatar-display" style={{ padding: isCustomAvatar ? '0' : '' }}>
+                    {isCustomAvatar ? (
+                      <img src={currentAvatarSrc} alt="Avatar" className="avatar-img-round-full" />
+                    ) : (
+                      <span className="avatar-main-emoji">{currentAvatarSrc || '🎤'}</span>
+                    )}
+                  </div>
+                  
+                  {/* Botón flotante para subir foto */}
+                  <button 
+                    type="button" 
+                    className="btn-upload-avatar-trigger"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Subir foto de perfil"
+                  >
+                    <Camera size={14} />
+                  </button>
+                  
+                  {/* Botón flotante para eliminar foto si es custom */}
+                  {isCustomAvatar && (
+                    <button 
+                      type="button" 
+                      className="btn-remove-avatar-trigger"
+                      onClick={handleRemoveCustomAvatar}
+                      title="Quitar foto y usar predeterminado"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    style={{ display: 'none' }} 
+                    accept="image/*"
+                    onChange={handleCustomAvatarUpload}
+                  />
                 </div>
-                <h3 className="profile-name-text font-base">{userSession?.email || 'Freestyler Google'}</h3>
+
+                {/* Nombre de usuario editable */}
+                <div className="profile-username-container">
+                  {isEditingUsername ? (
+                    <div className="username-edit-inline-row">
+                      <input 
+                        type="text" 
+                        value={tempUsername}
+                        onChange={(e) => setTempUsername(e.target.value)}
+                        maxLength={15}
+                        className="username-edit-input"
+                        placeholder="Nombre de usuario"
+                        autoFocus
+                      />
+                      <button 
+                        type="button" 
+                        className="btn-username-save"
+                        onClick={handleSaveUsername}
+                        title="Guardar nombre"
+                      >
+                        <Check size={16} />
+                      </button>
+                      <button 
+                        type="button" 
+                        className="btn-username-cancel"
+                        onClick={() => {
+                          setIsEditingUsername(false);
+                          setTempUsername(userSession?.username || '');
+                          setErrorMsg('');
+                        }}
+                        title="Cancelar"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="username-view-row">
+                      <h3 className="profile-name-text font-base">{userSession?.username || 'Invitado'}</h3>
+                      <button 
+                        type="button" 
+                        className="btn-username-edit-trigger"
+                        onClick={() => setIsEditingUsername(true)}
+                        title="Editar nombre de usuario"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {errorMsg && <p className="username-error-inline">{errorMsg}</p>}
+                  <p className="profile-email-sub">{userSession?.email || 'Sesión local (Invitado)'}</p>
+                </div>
+
                 <span className="profile-rank-pill">
                   <Award size={12} />
                   <span>PROMESA DE LA RIMA</span>
@@ -158,7 +447,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                     <button 
                       key={av} 
                       type="button" 
-                      className={`avatar-grid-item ${selectedAvatar === av ? 'selected' : ''}`}
+                      className={`avatar-grid-item ${(!isCustomAvatar && currentAvatarSrc === av) ? 'selected' : ''}`}
                       onClick={() => handleAvatarChange(av)}
                     >
                       {av}
@@ -172,19 +461,19 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                 <h4 className="section-subtitle font-base">Estadísticas de Rimas</h4>
                 <div className="stats-grid">
                   <div className="stat-card">
-                    <span className="stat-value text-glow-teal">32</span>
+                    <span className="stat-value text-glow-teal">{userSession?.stats?.totalBattles ?? 0}</span>
                     <span className="stat-label">Batallas</span>
                   </div>
                   <div className="stat-card">
-                    <span className="stat-value text-glow-pink">24</span>
+                    <span className="stat-value text-glow-pink">{userSession?.stats?.wins ?? 0}</span>
                     <span className="stat-label">Victorias</span>
                   </div>
                   <div className="stat-card">
-                    <span className="stat-value text-glow-teal">75%</span>
+                    <span className="stat-value text-glow-teal">{userSession?.stats?.winRate ?? 0}%</span>
                     <span className="stat-label">Win Rate</span>
                   </div>
                   <div className="stat-card">
-                    <span className="stat-value text-glow-pink">185</span>
+                    <span className="stat-value text-glow-pink">{userSession?.stats?.maxPoints ?? 0}</span>
                     <span className="stat-label">Max Pts</span>
                   </div>
                 </div>
@@ -197,49 +486,64 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
             <div className="drawer-tab-content fade-in">
               <h4 className="section-subtitle font-base mb-10">Partidas Recientes</h4>
               <div className="history-list">
-                <div className="history-card win">
-                  <div className="history-card-header">
-                    <span className="history-badge win-badge">VICTORIA</span>
-                    <span className="history-time-ago font-base">Hace 2 horas</span>
-                  </div>
-                  <div className="history-card-body">
-                    <span className="history-battle-type">Cypher Urbano (Modo Libre)</span>
-                    <span className="history-score-val font-base">+185 Pts</span>
-                  </div>
-                </div>
+                {!userSession?.history || userSession.history.length === 0 ? (
+                  <p className="history-empty-message">
+                    Aún no jugaste ninguna batalla. ¡Inicia un combate para empezar tu registro!
+                  </p>
+                ) : (
+                  userSession.history.map((item: any) => {
+                    let badgeClass = 'win-badge';
+                    let badgeText = 'VICTORIA';
+                    let cardClass = 'win';
 
-                <div className="history-card loss">
-                  <div className="history-card-header">
-                    <span className="history-badge loss-badge">DERROTA</span>
-                    <span className="history-time-ago font-base">Ayer</span>
-                  </div>
-                  <div className="history-card-body">
-                    <span className="history-battle-type">Duelo 1v1 vs Bot</span>
-                    <span className="history-score-val font-base">+120 Pts</span>
-                  </div>
-                </div>
+                    if (item.result === 'loss') {
+                      badgeClass = 'loss-badge';
+                      badgeText = 'DERROTA';
+                      cardClass = 'loss';
+                    } else if (item.result === 'draw') {
+                      badgeClass = 'draw-badge';
+                      badgeText = 'EMPATE';
+                      cardClass = 'draw';
+                    } else if (item.result === 'complete') {
+                      badgeClass = 'complete-badge';
+                      badgeText = 'COMPLETADO';
+                      cardClass = 'complete';
+                    }
 
-                <div className="history-card win">
-                  <div className="history-card-header">
-                    <span className="history-badge win-badge">VICTORIA</span>
-                    <span className="history-time-ago font-base">Hace 3 días</span>
-                  </div>
-                  <div className="history-card-body">
-                    <span className="history-battle-type">Desafío Temático (Multijugador)</span>
-                    <span className="history-score-val font-base">+160 Pts</span>
-                  </div>
-                </div>
+                    const dateStr = new Date(item.battleDate).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
 
-                <div className="history-card win">
-                  <div className="history-card-header">
-                    <span className="history-badge win-badge">VICTORIA</span>
-                    <span className="history-time-ago font-base">Hace 5 días</span>
-                  </div>
-                  <div className="history-card-body">
-                    <span className="history-battle-type">Cypher de Práctica</span>
-                    <span className="history-score-val font-base">+140 Pts</span>
-                  </div>
-                </div>
+                    const battleType = item.mode === 'solo'
+                      ? `Cypher Solitario (${item.roundsCount} ${item.roundsCount === 1 ? 'ronda' : 'rondas'})`
+                      : `Batalla Grupal (${item.roundsCount} ${item.roundsCount === 1 ? 'ronda' : 'rondas'})`;
+
+                    return (
+                      <div key={item.id} className={`history-card ${cardClass}`}>
+                        <div className="history-card-header">
+                          <span className={`history-badge ${badgeClass}`}>{badgeText}</span>
+                          <span className="history-time-ago font-base">{dateStr}</span>
+                        </div>
+                        <div className="history-card-body">
+                          <span className="history-battle-type">{battleType}</span>
+                          <span className="history-score-val font-base">
+                            {item.playerRank ? `#${item.playerRank} • ` : ''}
+                            +{item.points} Pts
+                          </span>
+                        </div>
+                        <button
+                          className="history-detail-toggle"
+                          onClick={() => setSelectedBattle(item)}
+                        >
+                          Ver detalles de la batalla →
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -340,7 +644,13 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
               className="btn-drawer-logout"
               onClick={() => {
                 localStorage.removeItem('barrz_session');
-                window.location.reload(); // Recarga simple para limpiar sesión mock
+                localStorage.removeItem('barrz_token');
+                if (onLogout) {
+                  onLogout();
+                } else {
+                  window.location.reload();
+                }
+                setIsOpen(false);
               }}
             >
               <LogOut size={16} />
@@ -355,6 +665,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
         </div>
 
       </div>
+
+      {/* Pantalla completa de detalle de la batalla */}
+      {selectedBattle && (
+        <BattleDetailView 
+          battle={selectedBattle} 
+          onBack={() => setSelectedBattle(null)} 
+        />
+      )}
     </>
   );
 };
