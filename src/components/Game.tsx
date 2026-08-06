@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Volume2, Play, Pause, Square, Music, QrCode, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Volume2, Play, Pause, Square, Music, QrCode, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -767,7 +767,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               <img 
                                 src={activeChallenge.imageUrl} 
                                 alt={activeChallenge.title} 
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
                               />
                               
                               {activeChallenge.category === 'beatbox' && (
@@ -1146,11 +1146,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         {subState === 'scoring' && (
           <div className="scoring-screen-content glass-panel glow-pink text-center fade-in">
 
-            <div className="scoring-icon-wrapper">
-              <ClipboardCheck size={32} className="pink-text" />
-            </div>
-
-            <span className="scoring-tag">VOTACIÓN DE JUGADORES</span>
             <h2 className="scoring-title font-graffiti">TURNO DE VOTAR</h2>
 
             <div className={`voter-scoring-transition-wrapper ${isVoterFading ? 'fading-out' : 'fading-in'}`}>
