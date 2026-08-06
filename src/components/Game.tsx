@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Volume2, Play, Pause, Square, Music, QrCode, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, Gavel } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Volume2, Play, Pause, Square, Music, QrCode, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ClipboardCheck } from 'lucide-react';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -35,6 +35,7 @@ interface GameProps {
     startingPlayer: string;
     initialBeat?: BeatCard | null;
     initialChallenge?: ChallengeCard | null;
+    allowRandomFreestyle?: boolean;
   };
 }
 
@@ -46,10 +47,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const categories = gameSettings?.selectedCategories || [
     'palabras',
     'tematicas',
-    'cypher',
     'terminaciones',
     'beatbox',
-    'sacrificio'
+    'versus'
   ];
   const startingPlayer = gameSettings?.startingPlayer || playerNames[0];
 
@@ -236,9 +236,11 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   useEffect(() => {
     let interval: any = null;
     if (spotifyPlaying && subState === 'playing') {
+      const isFreestyleLibre = activeChallenge?.id === 'challenge-tematicas-libre';
+      const limit = isFreestyleLibre ? 180 : 60;
       interval = setInterval(() => {
         setSpotifyProgress(prev => {
-          if (prev >= 60) return 0;
+          if (prev >= limit) return 0;
           return prev + 1;
         });
       }, 1000);
@@ -248,7 +250,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [spotifyPlaying, subState]);
+  }, [spotifyPlaying, subState, activeChallenge]);
 
   // Resetear progreso al cambiar de beat o turno
   useEffect(() => {
@@ -310,6 +312,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const drawChallenge = (delay = 150) => {
     setChallengeFlipped(false);
     setTimeout(() => {
+      // Si está activa la opción de freestyle libre aleatorio en multijugador, hay un 15% de probabilidad de forzarlo
+      if (mode === 'multiplayer' && gameSettings?.allowRandomFreestyle && Math.random() < 0.15) {
+        const libreCard = CHALLENGES_DECK.find(c => c.id === 'challenge-tematicas-libre');
+        if (libreCard) {
+          setActiveChallenge(libreCard);
+          setChallengeFlipped(true);
+          return;
+        }
+      }
       const randomIndex = Math.floor(Math.random() * availableChallenges.length);
       setActiveChallenge(availableChallenges[randomIndex]);
       setChallengeFlipped(true);
@@ -750,96 +761,179 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                         <div className="card-face card-back glow-pink" style={{ backgroundImage: 'url("/images/dorso_desafio.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', borderColor: 'var(--neon-pink)' }}>
                         </div>
 
-                        <div className="card-face card-front glow-teal" style={{ borderColor: 'var(--neon-teal)' }}>
-                          <div className={`card-pattern-overlay challenge-pattern ${activeChallenge.category}`}></div>
+                        <div className="card-face card-front glow-teal" style={{ borderColor: 'var(--neon-teal)', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                          {activeChallenge.imageUrl ? (
+                            <div className="image-challenge-card-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                              <img 
+                                src={activeChallenge.imageUrl} 
+                                alt={activeChallenge.title} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                              />
+                              
+                              {activeChallenge.category === 'beatbox' && (
+                                <div className="timer-overlay" style={{
+                                  position: 'absolute',
+                                  bottom: '20px',
+                                  left: '50%',
+                                  transform: 'translateX(-50%)',
+                                  width: '90%',
+                                  zIndex: 10
+                                }}>
+                                  <div className="timer-widget glass-panel" style={{ margin: 0, padding: '10px', background: 'rgba(15, 16, 21, 0.85)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <div className={`timer-display ${timerSeconds <= 10 && timerRunning ? 'critical-time' : ''}`} style={{ marginBottom: '8px' }}>
+                                      <span className="timer-digits" style={{ fontSize: '1.4rem' }}>
+                                        {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+                                      </span>
+                                    </div>
 
-                          <div className={`card-header-teal category-${activeChallenge.category}`}>
-                            <Sparkles size={14} />
-                            <span>{activeChallenge.category.toUpperCase()}</span>
-                          </div>
-
-                          <div className="challenge-card-body">
-                            {activeChallenge.category === 'palabras' && (
-                              <div className="words-challenge-layout-new">
-                                <div className="words-grid-8">
-                                  {activeChallenge.wordsTop?.map((w, idx) => (
-                                    <span key={idx} className="word-badge-8 pink-glow-text">{w}</span>
-                                  ))}
-                                </div>
-                                <div className="words-variar-divider">
-                                  <button
-                                    className="btn-variar"
-                                    onClick={() => {
-                                      const palabrasCards = CHALLENGES_DECK.filter(c => c.category === 'palabras' && c.id !== activeChallenge.id);
-                                      if (palabrasCards.length > 0) {
-                                        const next = palabrasCards[Math.floor(Math.random() * palabrasCards.length)];
-                                        changeChallengeWithFlip(next);
-                                      }
-                                    }}
-                                  >
-                                    <RefreshCw size={14} />
-                                    <span>Más palabras</span>
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {activeChallenge.category === 'beatbox' && (
-                              <div className="beatbox-challenge-layout">
-                                <h3 className="challenge-main-title">{activeChallenge.title}</h3>
-                                <p className="challenge-desc-text">{activeChallenge.description}</p>
-
-                                <div className="beatbox-keyword-box">
-                                  <span className="keyword-label">TEMÁTICA:</span>
-                                  <h4 className="keyword-highlight">{activeChallenge.highlightText}</h4>
-                                </div>
-
-                                <div className="timer-widget glass-panel">
-                                  <div className={`timer-display ${timerSeconds <= 10 && timerRunning ? 'critical-time' : ''}`}>
-                                    <span className="timer-digits">
-                                      {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
-                                    </span>
-                                  </div>
-
-                                  <div className="timer-controls">
-                                    {!timerRunning ? (
-                                      <button className="timer-btn btn-play-timer" onClick={startTimer}>
-                                        <Play size={14} fill="currentColor" /> Iniciar
+                                    <div className="timer-controls" style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                      {!timerRunning ? (
+                                        <button className="timer-btn btn-play-timer" onClick={(e) => { e.stopPropagation(); startTimer(); }} style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <Play size={10} fill="currentColor" /> Iniciar
+                                        </button>
+                                      ) : (
+                                        <button className="timer-btn btn-pause-timer" onClick={(e) => { e.stopPropagation(); pauseTimer(); }} style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <Pause size={10} fill="currentColor" /> Pausar
+                                        </button>
+                                      )}
+                                      <button className="timer-btn btn-reset-timer" onClick={(e) => { e.stopPropagation(); resetTimer(); }} style={{ padding: '6px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Square size={8} fill="currentColor" /> Reset
                                       </button>
-                                    ) : (
-                                      <button className="timer-btn btn-pause-timer" onClick={pauseTimer}>
-                                        <Pause size={14} fill="currentColor" /> Pausar
-                                      </button>
-                                    )}
-                                    <button className="timer-btn btn-reset-timer" onClick={resetTimer}>
-                                      <Square size={12} fill="currentColor" /> Reset
-                                    </button>
+                                    </div>
                                   </div>
                                 </div>
+                              )}
+
+                              {activeChallenge.category === 'palabras' && (
+                                <button
+                                  className="btn-variar"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const palabrasCards = CHALLENGES_DECK.filter(c => c.category === 'palabras' && c.id !== activeChallenge.id);
+                                    if (palabrasCards.length > 0) {
+                                      const next = palabrasCards[Math.floor(Math.random() * palabrasCards.length)];
+                                      changeChallengeWithFlip(next);
+                                    }
+                                  }}
+                                  style={{
+                                    position: 'absolute',
+                                    bottom: '20px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    zIndex: 10,
+                                    padding: '8px 16px',
+                                    fontSize: '0.8rem',
+                                    background: 'rgba(15, 16, 21, 0.85)',
+                                    backdropFilter: 'blur(8px)',
+                                    border: '1px solid var(--neon-teal)',
+                                    borderRadius: '20px',
+                                    color: 'var(--neon-teal)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    fontWeight: 'bold',
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  <RefreshCw size={12} />
+                                  <span>Más palabras</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <div className={`card-pattern-overlay challenge-pattern ${activeChallenge.category}`}></div>
+
+                              <div className={`card-header-teal category-${activeChallenge.category}`}>
+                                <Sparkles size={14} />
+                                <span>{activeChallenge.category.toUpperCase()}</span>
                               </div>
-                            )}
 
-                            {activeChallenge.category !== 'palabras' && activeChallenge.category !== 'beatbox' && (
-                              <div className="standard-challenge-layout">
-                                <h3 className="challenge-main-title">{activeChallenge.title}</h3>
-                                <p className="challenge-desc-text">{activeChallenge.description}</p>
+                              <div className="challenge-card-body">
+                                {activeChallenge.category === 'palabras' && (
+                                  <div className="words-challenge-layout-new">
+                                    <div className="words-grid-8">
+                                      {activeChallenge.wordsTop?.map((w, idx) => (
+                                        <span key={idx} className="word-badge-8 pink-glow-text">{w}</span>
+                                      ))}
+                                    </div>
+                                    <div className="words-variar-divider">
+                                      <button
+                                        className="btn-variar"
+                                        onClick={() => {
+                                          const palabrasCards = CHALLENGES_DECK.filter(c => c.category === 'palabras' && c.id !== activeChallenge.id);
+                                          if (palabrasCards.length > 0) {
+                                            const next = palabrasCards[Math.floor(Math.random() * palabrasCards.length)];
+                                            changeChallengeWithFlip(next);
+                                          }
+                                        }}
+                                      >
+                                        <RefreshCw size={14} />
+                                        <span>Más palabras</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
 
-                                <div className="concept-large-box">
-                                  <h4 className="concept-large-text pink-glow-text">
-                                    {activeChallenge.highlightText}
-                                  </h4>
-                                </div>
+                                {activeChallenge.category === 'beatbox' && (
+                                  <div className="beatbox-challenge-layout">
+                                    <h3 className="challenge-main-title">{activeChallenge.title}</h3>
+                                    <p className="challenge-desc-text">{activeChallenge.description}</p>
 
-                                <div className="street-sticker">
-                                  <span>FREESTYLE RULE</span>
-                                </div>
+                                    <div className="beatbox-keyword-box">
+                                      <span className="keyword-label">TEMÁTICA:</span>
+                                      <h4 className="keyword-highlight">{activeChallenge.highlightText}</h4>
+                                    </div>
+
+                                    <div className="timer-widget glass-panel">
+                                      <div className={`timer-display ${timerSeconds <= 10 && timerRunning ? 'critical-time' : ''}`}>
+                                        <span className="timer-digits">
+                                          {Math.floor(timerSeconds / 60)}:{(timerSeconds % 60).toString().padStart(2, '0')}
+                                        </span>
+                                      </div>
+
+                                      <div className="timer-controls">
+                                        {!timerRunning ? (
+                                          <button className="timer-btn btn-play-timer" onClick={startTimer}>
+                                            <Play size={14} fill="currentColor" /> Iniciar
+                                          </button>
+                                        ) : (
+                                          <button className="timer-btn btn-pause-timer" onClick={pauseTimer}>
+                                            <Pause size={14} fill="currentColor" /> Pausar
+                                          </button>
+                                        )}
+                                        <button className="timer-btn btn-reset-timer" onClick={resetTimer}>
+                                          <Square size={12} fill="currentColor" /> Reset
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {activeChallenge.category !== 'palabras' && activeChallenge.category !== 'beatbox' && (
+                                  <div className="standard-challenge-layout">
+                                    <h3 className="challenge-main-title">{activeChallenge.title}</h3>
+                                    <p className="challenge-desc-text">{activeChallenge.description}</p>
+
+                                    <div className="concept-large-box">
+                                      <h4 className="concept-large-text pink-glow-text">
+                                        {activeChallenge.highlightText}
+                                      </h4>
+                                    </div>
+
+                                    <div className="street-sticker">
+                                      <span>FREESTYLE RULE</span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
 
-                          <div className="challenge-card-footer">
-                            <span className="card-brand">BARRZJUEGO ©</span>
-                          </div>
+                              <div className="challenge-card-footer">
+                                <span className="card-brand">BARRZJUEGO ©</span>
+                              </div>
+                            </>
+                          )}
 
                           {gameSettings?.subMode !== 'custom' && (
                             <button className="btn-card-redraw" onClick={(e) => { e.stopPropagation(); drawChallenge(400); }}>
@@ -921,13 +1015,22 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                   <span className="spotify-time font-base">
                                     {Math.floor(spotifyProgress / 60)}:{(spotifyProgress % 60).toString().padStart(2, '0')}
                                   </span>
-                                  <div className="spotify-progress-bar-wrap">
-                                    <div 
-                                      className="spotify-progress-bar-fill" 
-                                      style={{ width: `${(spotifyProgress / 60) * 100}%` }}
-                                    ></div>
-                                  </div>
-                                  <span className="spotify-time font-base">1:00</span>
+                                  {(() => {
+                                    const isFreestyleLibre = activeChallenge?.id === 'challenge-tematicas-libre';
+                                    const limit = isFreestyleLibre ? 180 : 60;
+                                    const limitStr = isFreestyleLibre ? '3:00' : '1:00';
+                                    return (
+                                      <>
+                                        <div className="spotify-progress-bar-wrap">
+                                          <div 
+                                            className="spotify-progress-bar-fill" 
+                                            style={{ width: `${(spotifyProgress / limit) * 100}%` }}
+                                          ></div>
+                                        </div>
+                                        <span className="spotify-time font-base">{limitStr}</span>
+                                      </>
+                                    );
+                                  })()}
                                 </div>
 
                                 <div className="spotify-controls">
@@ -1044,7 +1147,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
           <div className="scoring-screen-content glass-panel glow-pink text-center fade-in">
 
             <div className="scoring-icon-wrapper">
-              <Gavel size={32} className="pink-text" />
+              <ClipboardCheck size={32} className="pink-text" />
             </div>
 
             <span className="scoring-tag">VOTACIÓN DE JUGADORES</span>

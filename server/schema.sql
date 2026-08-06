@@ -41,3 +41,9 @@ CREATE TABLE IF NOT EXISTS game_history (
 
 -- Migración para la columna details en game_history existente
 ALTER TABLE game_history ADD COLUMN IF NOT EXISTS details TEXT;
+
+-- Migración para guardar tokens de Spotify vinculados al usuario
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_access_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_refresh_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_token_expires_at TIMESTAMP;
+

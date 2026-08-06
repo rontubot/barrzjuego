@@ -38,11 +38,11 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   const [selectedCategories, setSelectedCategories] = useState<string[]>([
     'palabras',
     'tematicas',
-    'cypher',
     'terminaciones',
     'beatbox',
-    'sacrificio'
+    'versus'
   ]);
+  const [allowRandomFreestyle, setAllowRandomFreestyle] = useState(false);
 
   // Configuración de modo individual
   const [individualSubMode, setIndividualSubMode] = useState<'random' | 'custom'>('random');
@@ -144,14 +144,12 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     }
   }, [userSession]);
 
-  // Categorías de cartas disponibles
   const categoriesList = [
-    { id: 'palabras', label: 'Palabras', desc: 'Rimar usando las 4 palabras de tu lado' },
-    { id: 'tematicas', label: 'Temáticas', desc: 'Desarrollar rimas sobre un tema profundo' },
-    { id: 'cypher', label: 'Cypher', desc: 'Ronda libre en equipo compartiendo micro' },
-    { id: 'terminaciones', label: 'Terminaciones', desc: 'Patrones obligatorios como -ER o -AR' },
-    { id: 'beatbox', label: 'Beatbox', desc: 'Base humana con cronómetro de 60 segundos' },
-    { id: 'sacrificio', label: 'El Sacrificio', desc: 'Ronda final de máxima entrega y energía' }
+    { id: 'palabras', label: 'Palabras', desc: 'Desafíos de palabras' },
+    { id: 'tematicas', label: 'Temáticas', desc: 'Desafíos de temáticas' },
+    { id: 'terminaciones', label: 'Terminaciones', desc: 'Desafíos de terminaciones' },
+    { id: 'beatbox', label: 'Beatbox', desc: 'Desafíos de beatbox con cronómetro' },
+    { id: 'versus', label: 'Versus', desc: 'Desafíos versus' }
   ];
 
   // Manejo de nombres de jugadores
@@ -811,6 +809,21 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             ))}
           </div>
 
+          {/* Freestyle Libre Aleatorio Toggle */}
+          <div 
+            className={`category-item-card ${allowRandomFreestyle ? 'active' : ''}`}
+            style={{ marginTop: '20px', borderColor: allowRandomFreestyle ? 'var(--neon-pink)' : 'var(--glass-border)' }}
+            onClick={() => setAllowRandomFreestyle(!allowRandomFreestyle)}
+          >
+            <div className="checkbox-indicator" style={{ backgroundColor: allowRandomFreestyle ? 'var(--neon-pink)' : 'transparent', borderColor: allowRandomFreestyle ? 'var(--neon-pink)' : 'var(--text-muted)' }}>
+              {allowRandomFreestyle && <Check size={12} />}
+            </div>
+            <div className="category-card-info">
+              <h4>🎭 Freestyle Libre Aleatorio</h4>
+              <p>Tiene una probabilidad de salir en turnos y freestylear por todo el beat.</p>
+            </div>
+          </div>
+
           {/* Sorteo de Quién Empieza */}
           <div className="roulette-box glass-panel">
             <h3>🎰 ¿QUIÉN EMPIEZA EL JUEGO?</h3>
@@ -869,7 +882,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 avatars: avatarsMap,
                 roundsCount,
                 selectedCategories,
-                startingPlayer: finalStartingPlayer
+                startingPlayer: finalStartingPlayer,
+                allowRandomFreestyle
               });
             }}
             disabled={isSpinning}

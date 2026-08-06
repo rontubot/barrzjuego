@@ -13,6 +13,7 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string; color: str
   cypher:       { label: 'Cypher',       emoji: '🎤', color: '#34d399' },
   terminaciones:{ label: 'Terminaciones',emoji: '🎵', color: '#a78bfa' },
   beatbox:      { label: 'Beatbox',      emoji: '🥁', color: '#fb923c' },
+  versus:       { label: 'Versus',       emoji: '⚔️', color: '#ef4444' },
 };
 
 export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBack }) => {

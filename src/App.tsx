@@ -66,6 +66,7 @@ interface GameSettings {
   startingPlayer: string;
   initialBeat?: any;
   initialChallenge?: any;
+  allowRandomFreestyle?: boolean;
 }
 
 function App() {
@@ -201,7 +202,8 @@ function App() {
           selectedCategories: data.selectedCategories,
           startingPlayer: data.startingPlayer || data.players[0],
           initialBeat: data.initialBeat,
-          initialChallenge: data.initialChallenge
+          initialChallenge: data.initialChallenge,
+          allowRandomFreestyle: data.allowRandomFreestyle
         });
       }
     }

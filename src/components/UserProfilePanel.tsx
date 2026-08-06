@@ -26,6 +26,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
   const [visualMetronome, setVisualMetronome] = useState(() => localStorage.getItem('barrz_visual_metronome') !== 'false');
   const [beatQuality, setBeatQuality] = useState(() => localStorage.getItem('barrz_beat_quality') || 'high');
   const [language, setLanguage] = useState(() => localStorage.getItem('barrz_language') || 'es');
+  const [lobbyVolume, setLobbyVolume] = useState<number>(() => {
+    const saved = localStorage.getItem('barrz_lobby_volume');
+    return saved !== null ? parseFloat(saved) : 0.35;
+  });
   const [showSavedAlert, setShowSavedAlert] = useState(false);
 
   // Estados para la edición de perfil
@@ -249,6 +253,13 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     setLanguage(lang);
     localStorage.setItem('barrz_language', lang);
     triggerSaveToast();
+  };
+
+  const handleLobbyVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setLobbyVolume(val);
+    localStorage.setItem('barrz_lobby_volume', String(val));
+    window.dispatchEvent(new CustomEvent('barrz_lobby_volume_changed', { detail: val }));
   };
 
   const triggerSaveToast = () => {
@@ -582,6 +593,35 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   >
                     <span className="switch-knob"></span>
                   </button>
+                </div>
+
+                {/* Control Volumen de Música Lobby */}
+                <div className="setting-row-vertical">
+                  <div className="setting-info mb-10">
+                    <span className="setting-title font-base">Volumen de Música de Fondo</span>
+                    <span className="setting-desc">Ajusta el volumen del beat de fondo del menú</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={lobbyVolume}
+                      onChange={handleLobbyVolumeChange}
+                      style={{
+                        flex: 1,
+                        accentColor: 'var(--neon-pink)',
+                        height: '6px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <span className="font-base" style={{ fontSize: '0.8rem', color: 'var(--neon-teal)', minWidth: '40px', textAlign: 'right' }}>
+                      {Math.round(lobbyVolume * 100)}%
+                    </span>
+                  </div>
                 </div>
 
                 {/* Calidad de Instrumentales */}

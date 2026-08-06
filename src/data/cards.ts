@@ -9,272 +9,393 @@ export interface BeatCard {
 
 export interface ChallengeCard {
   id: string;
-  category: 'palabras' | 'tematicas' | 'cypher' | 'terminaciones' | 'beatbox' | 'sacrificio';
+  category: 'palabras' | 'tematicas' | 'terminaciones' | 'beatbox' | 'versus';
   title: string;
   description: string;
-  // Para la categoría "palabras", guardamos la lista de 4 palabras arriba y 4 palabras abajo
   wordsTop?: string[];
   wordsBottom?: string[];
-  // Para la categoría "terminaciones" o palabras clave
   highlightText?: string;
-  // Para beatbox o desafíos con tiempos/detalles específicos
   timeLimit?: number; // en segundos
+  imageUrl?: string;
 }
 
 export const BEATS_DECK: BeatCard[] = [
   {
     id: 'beat-1',
-    name: 'RUIDA 86',
-    bpm: 86,
+    name: 'MODO DIABLO 94',
+    bpm: 94,
     spotifyUrl: 'https://open.spotify.com/track/4PTG3Z6ehGkBF3sI7Wq2Ag',
     spotifyUri: 'spotify:track:4PTG3Z6ehGkBF3sI7Wq2Ag',
-    audioUrl: '/soundtracks/back.mpeg'
+    audioUrl: '/soundtracks/BEATS/MODO DIABLO 94.wav'
   },
   {
     id: 'beat-2',
-    name: 'CITRICO 93',
-    bpm: 93,
+    name: 'RUIDA 87',
+    bpm: 87,
     spotifyUrl: 'https://open.spotify.com/track/17dZsnvjQkXUWh6Sifg6hV',
     spotifyUri: 'spotify:track:17dZsnvjQkXUWh6Sifg6hV',
-    audioUrl: '/soundtracks/desconocidos.mpeg'
+    audioUrl: '/soundtracks/BEATS/RUIDA 87.wav'
   },
   {
     id: 'beat-3',
-    name: 'CHOCOLATADA 91',
-    bpm: 91,
+    name: 'TRAKETERO 88',
+    bpm: 88,
     spotifyUrl: 'https://open.spotify.com/track/5QdA5bEwS1hRzWbTep7XjO',
     spotifyUri: 'spotify:track:5QdA5bEwS1hRzWbTep7XjO',
-    audioUrl: '/soundtracks/electric-try 3.mp3.mpeg'
+    audioUrl: '/soundtracks/BEATS/TRAKETERO 88.wav'
   },
   {
     id: 'beat-4',
-    name: 'RAMEN 89',
-    bpm: 89,
+    name: 'BEAT 6 120 BPM',
+    bpm: 120,
     spotifyUrl: 'https://open.spotify.com/track/27O7B27xW3g3G0c4xX4Xp3',
     spotifyUri: 'spotify:track:27O7B27xW3g3G0c4xX4Xp3',
-    audioUrl: '/soundtracks/ovni 2.mp3.mpeg'
+    audioUrl: '/soundtracks/BEATS/BEAT 6 120 BPM.wav'
   },
   {
     id: 'beat-5',
-    name: 'PAN CASERO 91',
-    bpm: 91,
+    name: 'BEAT 7 110 BPM',
+    bpm: 110,
     spotifyUrl: 'https://open.spotify.com/track/3zHn2l3j8RSpYyGf9H2D3B',
     spotifyUri: 'spotify:track:3zHn2l3j8RSpYyGf9H2D3B',
-    audioUrl: '/soundtracks/back.mpeg'
+    audioUrl: '/soundtracks/BEATS/BEAT 7 110 BPM.wav'
   },
   {
     id: 'beat-6',
-    name: 'ESPEJO 87',
-    bpm: 87,
+    name: 'BEAT 8 96 BPM',
+    bpm: 96,
     spotifyUrl: 'https://open.spotify.com/track/4F4B3z4c1D2e3f4g5h6i7j',
     spotifyUri: 'spotify:track:4F4B3z4c1D2e3f4g5h6i7j',
-    audioUrl: '/soundtracks/desconocidos.mpeg'
+    audioUrl: '/soundtracks/BEATS/BEAT 8 96 BPM.wav'
   },
   {
     id: 'beat-7',
-    name: 'LA REINA 152',
-    bpm: 152,
+    name: 'BEAT 9 104 BPM',
+    bpm: 104,
     spotifyUrl: 'https://open.spotify.com/track/5G5H5i5j5k5l5m5n5o5p5q',
     spotifyUri: 'spotify:track:5G5H5i5j5k5l5m5n5o5p5q',
-    audioUrl: '/soundtracks/electric-try 3.mp3.mpeg'
+    audioUrl: '/soundtracks/BEATS/BEAT 9 104 BPM.wav'
   },
   {
     id: 'beat-8',
-    name: 'PULSO 120',
-    bpm: 120,
+    name: 'BEAT 11 92 BPM',
+    bpm: 92,
     spotifyUrl: 'https://open.spotify.com/track/6Q6R6s6t6u6v6w6x6y6z6A',
     spotifyUri: 'spotify:track:6Q6R6s6t6u6v6w6x6y6z6A',
-    audioUrl: '/soundtracks/ovni 2.mp3.mpeg'
+    audioUrl: '/soundtracks/BEATS/BEAT 11 92 BPM.wav'
   }
 ];
 
 export const CHALLENGES_DECK: ChallengeCard[] = [
-  // Categoria: Palabras
   {
-    id: 'challenge-p1',
+    id: 'challenge-palabras-1',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['FRUTA', 'GUITARRA', 'BONDI', 'KIOSKO', 'VEREDA', 'MADRUGADA', 'BARRIO', 'SUPERMERCADO']
+    title: 'Palabras 1',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 1.png'
   },
   {
-    id: 'challenge-p2',
+    id: 'challenge-palabras-2',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['PLAYA', 'BICICLETA', 'HELADERO', 'ZAPATO', 'SOMBRERO', 'TELEVISOR', 'PIZZA', 'MONTAÑA']
+    title: 'Palabras 2',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 2.png'
   },
   {
-    id: 'challenge-p3',
+    id: 'challenge-palabras-3',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['CÁMARA', 'LÁMPARA', 'MOCHILA', 'RELOJ', 'PERRO', 'LIBRO', 'ZAPATO', 'MONEDA']
+    title: 'Palabras 3',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 3.png'
   },
   {
-    id: 'challenge-p4',
+    id: 'challenge-palabras-4',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['CORRER', 'CANTAR', 'BAILAR', 'SALTAR', 'VENTANA', 'ESPEJO', 'NOCHE', 'PLANETA']
+    title: 'Palabras 4',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 4.png'
   },
   {
-    id: 'challenge-p5',
+    id: 'challenge-palabras-5',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['RÍO', 'VENTANA', 'SILLA', 'NUBE', 'FUEGO', 'MESA', 'LUNA', 'ÁRBOL']
+    title: 'Palabras 5',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 5.png'
   },
   {
-    id: 'challenge-p6',
+    id: 'challenge-palabras-6',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['FARO', 'COHETE', 'TECLADO', 'GLOBO', 'SELVA', 'PATINETA', 'HOSPITAL', 'CEREBRO']
+    title: 'Palabras 6',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 6.png'
   },
   {
-    id: 'challenge-p7',
+    id: 'challenge-palabras-7',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['DRAGÓN', 'AVIÓN', 'PARAGUAS', 'TAMBOR', 'GATO', 'BICHO', 'LINTERNA', 'COCODRILO']
+    title: 'Palabras 7',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 7.png'
   },
   {
-    id: 'challenge-p8',
+    id: 'challenge-palabras-8',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['SELVA', 'TORNADO', 'CEMENTO', 'CEREBRO', 'ÁRBOL', 'TELEVISOR', 'MONTAÑA', 'PIZZA']
+    title: 'Palabras 8',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 8.png'
   },
   {
-    id: 'challenge-p9',
+    id: 'challenge-palabras-9',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['VUELO', 'CARTERA', 'SEMÁFORO', 'MEDUSA', 'TREN', 'CASCADA', 'MERCADO', 'ESTRELLA']
+    title: 'Palabras 9',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 9.png'
   },
   {
-    id: 'challenge-p10',
+    id: 'challenge-palabras-10',
     category: 'palabras',
-    title: 'PALABRAS',
-    description: "Improvisá usando las 8 palabras de la carta. Presioná 'Más palabras' para obtener 8 palabras nuevas.",
-    wordsTop: ['GRAFFITI', 'MICRÓFONO', 'CALLE', 'BARRIO', 'SUDADERA', 'ZAPATILLA', 'FREESTYLE', 'RITMO']
+    title: 'Palabras 10',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 10.png'
   },
-
-  // Categoria: Tematicas
   {
-    id: 'challenge-t1',
+    id: 'challenge-palabras-11',
+    category: 'palabras',
+    title: 'Palabras 11',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 11.png'
+  },
+  {
+    id: 'challenge-palabras-12',
+    category: 'palabras',
+    title: 'Palabras 12',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 12.png'
+  },
+  {
+    id: 'challenge-palabras-13',
+    category: 'palabras',
+    title: 'Palabras 13',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 13.png'
+  },
+  {
+    id: 'challenge-palabras-14',
+    category: 'palabras',
+    title: 'Palabras 14',
+    description: 'Desafío de palabras',
+    imageUrl: '/CARTAS DESAFIO/palabras 14.png'
+  },
+  {
+    id: 'challenge-tematicas-1',
     category: 'tematicas',
-    title: 'LOS SUEÑOS',
-    description: '¿CUÁLES SON TUS SUEÑOS?',
-    highlightText: 'SUEÑOS'
+    title: 'Villanos',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica villanos.png'
   },
   {
-    id: 'challenge-t2',
+    id: 'challenge-tematicas-2',
     category: 'tematicas',
-    title: 'FIN DEL MUNDO',
-    description: '¿QUÉ HARÍAS SI MAÑANA SE TERMINA TODO?',
-    highlightText: 'APOCALIPSIS'
+    title: 'Videojuegos',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica videojuegos.png'
   },
   {
-    id: 'challenge-t3',
+    id: 'challenge-tematicas-3',
     category: 'tematicas',
-    title: 'AÑO 2099',
-    description: '¿CÓMO SERÁ EL MUNDO EN EL FUTURO?',
-    highlightText: 'FUTURO'
+    title: 'Superhéroes',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica superheroes.png'
   },
   {
-    id: 'challenge-t4',
+    id: 'challenge-tematicas-4',
     category: 'tematicas',
-    title: 'MIEDOS',
-    description: '¿CUÁLES SON TUS MIEDOS?',
-    highlightText: 'FOBIAS'
+    title: 'Películas',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematicas peliculas.png'
   },
   {
-    id: 'challenge-t5',
+    id: 'challenge-tematicas-5',
     category: 'tematicas',
-    title: 'LA RUTINA',
-    description: '¿CUÁL SERÍA TU RUTINA IDEAL?',
-    highlightText: 'DÍA A DÍA'
+    title: 'Países',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica paises.png'
   },
   {
-    id: 'challenge-t6',
+    id: 'challenge-tematicas-6',
     category: 'tematicas',
-    title: '1 MIN LIBRE',
-    description: 'Improvisación completamente libre.',
-    highlightText: '1 MIN LIBRE'
-  },
-
-  // Categoria: Cypher
-  {
-    id: 'challenge-c1',
-    category: 'cypher',
-    title: 'CYPHER',
-    description: 'Ronda libre en equipo compartiendo el micro. Formato 4x4 continuo.',
-    highlightText: '"EQUIPO"'
+    title: 'Marcas',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica marcas.png'
   },
   {
-    id: 'challenge-c2',
-    category: 'cypher',
-    title: 'CYPHER',
-    description: 'Ronda libre en equipo compartiendo el micro. Formato 4x4 continuo.',
-    highlightText: '"AMISTAD"'
+    id: 'challenge-tematicas-7',
+    category: 'tematicas',
+    title: 'Fútbol',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica futbol.png'
   },
-
-  // Categoria: Terminaciones
   {
-    id: 'challenge-e1',
+    id: 'challenge-tematicas-8',
+    category: 'tematicas',
+    title: 'En el Fin del Mundo',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica en el fin del mundo.png'
+  },
+  {
+    id: 'challenge-tematicas-9',
+    category: 'tematicas',
+    title: 'El Pasado',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica el pasado.png'
+  },
+  {
+    id: 'challenge-tematicas-10',
+    category: 'tematicas',
+    title: 'De dónde venís y a dónde vas',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica de donde venis y a donde vas.png'
+  },
+  {
+    id: 'challenge-tematicas-11',
+    category: 'tematicas',
+    title: 'Cuáles son tus sueños',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica cuales son tus sueños.png'
+  },
+  {
+    id: 'challenge-tematicas-12',
+    category: 'tematicas',
+    title: 'Comida',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica comida.png'
+  },
+  {
+    id: 'challenge-tematicas-13',
+    category: 'tematicas',
+    title: 'Bandas de Rock',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica bandas de rock.png'
+  },
+  {
+    id: 'challenge-tematicas-14',
+    category: 'tematicas',
+    title: 'Año 3000',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica año 3000.png'
+  },
+  {
+    id: 'challenge-tematicas-15',
+    category: 'tematicas',
+    title: 'Animales',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica animales.png'
+  },
+  {
+    id: 'challenge-tematicas-16',
+    category: 'tematicas',
+    title: 'Qué harías con un millón de dólares',
+    description: 'Desafío de temática',
+    imageUrl: '/CARTAS DESAFIO/tematica que harias con un millon de dolares.png'
+  },
+  {
+    id: 'challenge-tematicas-libre',
+    category: 'tematicas',
+    title: 'Freestyle Libre',
+    description: 'Improvisación libre',
+    imageUrl: '/CARTAS DESAFIO/freestyle libre.png'
+  },
+  {
+    id: 'challenge-terminaciones-1',
     category: 'terminaciones',
-    title: 'TERMINACIONES',
-    description: 'Rima obligatoriamente utilizando la terminación indicada en cada patrón.',
-    highlightText: '-ER'
+    title: 'Carlos',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones carlos.png'
   },
   {
-    id: 'challenge-e2',
+    id: 'challenge-terminaciones-2',
     category: 'terminaciones',
-    title: 'TERMINACIONES',
-    description: 'Rima obligatoriamente utilizando la terminación indicada en cada patrón.',
-    highlightText: '-IO'
+    title: 'Esdrújulas',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones esdrujulas.png'
   },
   {
-    id: 'challenge-e3',
+    id: 'challenge-terminaciones-3',
     category: 'terminaciones',
-    title: 'TERMINACIONES',
-    description: 'Rima obligatoriamente utilizando la terminación indicada en cada patrón.',
-    highlightText: '-ANDO / -ENDO'
+    title: 'EO / IO',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones eo io.png'
   },
   {
-    id: 'challenge-e4',
+    id: 'challenge-terminaciones-4',
     category: 'terminaciones',
-    title: 'TERMINACIONES',
-    description: 'Rima obligatoriamente utilizando la terminación indicada en cada patrón.',
-    highlightText: '-AR'
+    title: 'ION',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones ion.png'
   },
-
-  // Categoria: Beatbox
   {
-    id: 'challenge-b1',
+    id: 'challenge-terminaciones-5',
+    category: 'terminaciones',
+    title: 'A / AS',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones a as.png'
+  },
+  {
+    id: 'challenge-beatbox-1',
     category: 'beatbox',
-    title: 'BEATBOX',
-    description: 'Elige a un compañero para que haga beatbox como base instrumental durante la ronda. ¡Usa el cronómetro!',
-    highlightText: 'VIAJE',
+    title: 'Beatbox 1: We Will Rock You',
+    description: 'Desafío de beatbox',
+    imageUrl: '/CARTAS DESAFIO/beatbox 1 we wil rock u.png',
     timeLimit: 60
   },
   {
-    id: 'challenge-b2',
+    id: 'challenge-beatbox-2',
     category: 'beatbox',
-    title: 'BEATBOX',
-    description: 'Elige a un compañero para que haga beatbox como base instrumental durante la ronda. ¡Usa el cronómetro!',
-    highlightText: 'CARRERA',
+    title: 'Beatbox 2: Sueños',
+    description: 'Desafío de beatbox',
+    imageUrl: '/CARTAS DESAFIO/beatbox 2 suenos.png',
     timeLimit: 60
   },
-
-  // Categoria: El Sacrificio
   {
-    id: 'challenge-s1',
-    category: 'sacrificio',
-    title: 'EL SACRIFICIO',
-    description: '¿CUÁNTO TE ESFORZASTE? La ronda definitiva donde se evalúa la entrega y energía total.',
-    highlightText: 'ENTREGA MÁXIMA'
+    id: 'challenge-beatbox-3',
+    category: 'beatbox',
+    title: 'Beatbox 2: Viajes',
+    description: 'Desafío de beatbox',
+    imageUrl: '/CARTAS DESAFIO/beatbox 2 viajes.png',
+    timeLimit: 60
+  },
+  {
+    id: 'challenge-versus-1',
+    category: 'versus',
+    title: 'Villano vs Superhéroe',
+    description: 'Desafío versus',
+    imageUrl: '/CARTAS DESAFIO/versus villano vs superhero.png'
+  },
+  {
+    id: 'challenge-versus-2',
+    category: 'versus',
+    title: 'Pasado vs Futuro',
+    description: 'Desafío versus',
+    imageUrl: '/CARTAS DESAFIO/versus pasado vs futuro.png'
+  },
+  {
+    id: 'challenge-versus-3',
+    category: 'versus',
+    title: 'Messi vs Maradona',
+    description: 'Desafío versus',
+    imageUrl: '/CARTAS DESAFIO/versus messi vs maradona.png'
+  },
+  {
+    id: 'challenge-versus-4',
+    category: 'versus',
+    title: 'Dinero vs Amor',
+    description: 'Desafío versus',
+    imageUrl: '/CARTAS DESAFIO/versus dinero vs amor.png'
+  },
+  {
+    id: 'challenge-versus-5',
+    category: 'versus',
+    title: 'Campo vs Ciudad',
+    description: 'Desafío versus',
+    imageUrl: '/CARTAS DESAFIO/versus campo vs ciudad.png'
   }
 ];

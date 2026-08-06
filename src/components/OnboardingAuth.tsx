@@ -37,12 +37,12 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
           window.google.accounts.id.renderButton(
             document.getElementById('google-signin-btn-container'),
             { 
-              theme: 'filled_black', 
+              theme: 'outline', 
               size: 'large', 
-              text: 'continue_with',
-              shape: 'rectangular',
-              width: 300,
-              logo_alignment: 'left'
+              text: 'signin_with',
+              shape: 'pill',
+              width: 320,
+              logo_alignment: 'center'
             }
           );
         } else {
