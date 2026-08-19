@@ -118,111 +118,91 @@
   transform: scale(0.98);
 }
 
-/* TUTORIAL ASK */
-.icon-wrapper {
-  display: inline-flex;
-  padding: 18px;
-  border-radius: 50%;
-  background: rgba(0, 245, 171, 0.05);
-  border: 1px solid rgba(0, 245, 171, 0.15);
-  margin-bottom: 16px;
-  box-shadow: 0 0 15px rgba(0, 245, 171, 0.05);
-}
-
-.tutorial-actions-row {
+/* TUTORIAL / REGLAS DIRECTO */
+.tutorial-card-view {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-/* Tutorial slideshow */
-.tutorial-slideshow {
-  padding: 10px 0;
-  min-height: 240px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.slide-icon-row {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 14px;
-}
-
-.slide-icon-row svg {
-  filter: drop-shadow(0 0 10px currentColor);
-}
-
-.slide-title {
-  font-size: 1.35rem;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-}
-
-.slide-description {
-  font-size: 0.85rem;
-  line-height: 1.6;
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-}
-
-.slide-indicators {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.indicator-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.indicator-dot.active {
-  background: var(--neon-teal);
-  box-shadow: var(--shadow-neon-teal);
-  transform: scale(1.2);
-}
-
-.slide-navigation {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 0;
+  margin: auto 0;
+  z-index: 5;
 }
 
-.btn-nav-slide {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-family: var(--font-base);
-  font-size: 0.78rem;
-  font-weight: 700;
+.tutorial-card-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   cursor: pointer;
+  max-width: 92vw;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.tutorial-card-wrapper:hover {
+  transform: scale(1.02);
+}
+
+.tutorial-card-wrapper:active {
+  transform: scale(0.98);
+}
+
+.tutorial-full-card {
+  width: auto;
+  max-width: min(90vw, 400px);
+  height: auto;
+  max-height: 76vh;
+  object-fit: contain;
+  border-radius: 22px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 245, 171, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  display: block;
+}
+
+.tutorial-continue-btn {
+  margin-top: 18px;
+  background: var(--neon-teal);
+  color: #07080a;
+  border: none;
+  font-family: var(--font-base);
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 1.5px;
+  padding: 12px 28px;
+  border-radius: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(0, 245, 171, 0.4);
   transition: all 0.2s ease;
 }
 
-.btn-nav-slide:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--text-secondary);
+.tutorial-continue-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: var(--shadow-neon-teal);
 }
 
-.btn-nav-slide.highlight {
-  background: var(--neon-pink);
-  border-color: var(--neon-pink);
-  box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+.tutorial-continue-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
-.btn-nav-slide.highlight:hover {
-  background: #ff3399;
-  box-shadow: var(--shadow-neon-pink);
+@media (max-width: 600px) {
+  .tutorial-full-card {
+    max-width: 88vw;
+    max-height: 74vh;
+    border-radius: 18px;
+  }
+  
+  .tutorial-continue-btn {
+    padding: 10px 22px;
+    font-size: 0.88rem;
+    margin-top: 14px;
+  }
 }
 
 .placeholder-slide {
@@ -1406,3 +1386,40 @@
   color: var(--text-primary);
   border-color: var(--text-secondary);
 }
+
+/* RESPONSIVE MEDIA QUERIES */
+@media (max-width: 768px) {
+  .setup-outer-container {
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding: 60px 12px 24px;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .setup-individual-screen {
+    height: auto;
+    gap: 16px;
+    padding-bottom: 24px;
+  }
+
+  .individual-custom-content {
+    flex-direction: column;
+    overflow: visible;
+    gap: 20px;
+    height: auto;
+  }
+
+  .selection-column {
+    min-height: 250px;
+    max-height: 350px;
+    height: 300px;
+  }
+
+  .scrollable-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 240px;
+  }
+}
+

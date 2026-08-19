@@ -9,7 +9,7 @@ export interface BeatCard {
 
 export interface ChallengeCard {
   id: string;
-  category: 'palabras' | 'tematicas' | 'terminaciones' | 'beatbox' | 'versus';
+  category: 'palabras' | 'tematicas' | 'terminaciones' | 'beatbox' | 'versus' | 'freestyle';
   title: string;
   description: string;
   wordsTop?: string[];
@@ -211,7 +211,7 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     category: 'tematicas',
     title: 'Películas',
     description: 'Desafío de temática',
-    imageUrl: '/CARTAS DESAFIO/tematicas peliculas.png'
+    imageUrl: '/CARTAS DESAFIO/tematica películas.png'
   },
   {
     id: 'challenge-tematicas-5',
@@ -232,14 +232,14 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     category: 'tematicas',
     title: 'Fútbol',
     description: 'Desafío de temática',
-    imageUrl: '/CARTAS DESAFIO/tematica futbol.png'
+    imageUrl: '/CARTAS DESAFIO/tematica fútbol.png'
   },
   {
     id: 'challenge-tematicas-8',
     category: 'tematicas',
     title: 'En el Fin del Mundo',
     description: 'Desafío de temática',
-    imageUrl: '/CARTAS DESAFIO/tematica en el fin del mundo.png'
+    imageUrl: '/CARTAS DESAFIO/tematica el fin del mundo.png'
   },
   {
     id: 'challenge-tematicas-9',
@@ -253,14 +253,14 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     category: 'tematicas',
     title: 'De dónde venís y a dónde vas',
     description: 'Desafío de temática',
-    imageUrl: '/CARTAS DESAFIO/tematica de donde venis y a donde vas.png'
+    imageUrl: '/CARTAS DESAFIO/tematica de donde venis.png'
   },
   {
     id: 'challenge-tematicas-11',
     category: 'tematicas',
     title: 'Cuáles son tus sueños',
     description: 'Desafío de temática',
-    imageUrl: '/CARTAS DESAFIO/tematica cuales son tus sueños.png'
+    imageUrl: '/CARTAS DESAFIO/tematica sueños.png'
   },
   {
     id: 'challenge-tematicas-12',
@@ -295,49 +295,91 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     category: 'tematicas',
     title: 'Qué harías con un millón de dólares',
     description: 'Desafío de temática',
-    imageUrl: '/CARTAS DESAFIO/tematica que harias con un millon de dolares.png'
+    imageUrl: '/CARTAS DESAFIO/tematica millon de dolares.png'
   },
   {
-    id: 'challenge-tematicas-libre',
-    category: 'tematicas',
+    id: 'challenge-freestyle-libre',
+    category: 'freestyle',
     title: 'Freestyle Libre',
-    description: 'Improvisación libre',
+    description: 'Improvisación libre sobre el beat',
     imageUrl: '/CARTAS DESAFIO/freestyle libre.png'
   },
   {
-    id: 'challenge-terminaciones-1',
+    id: 'challenge-terminaciones-ad',
+    category: 'terminaciones',
+    title: '-ad',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -ad.png'
+  },
+  {
+    id: 'challenge-terminaciones-ado',
+    category: 'terminaciones',
+    title: '-ado',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -ado.png'
+  },
+  {
+    id: 'challenge-terminaciones-ando',
+    category: 'terminaciones',
+    title: '-ando',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -ando.png'
+  },
+  {
+    id: 'challenge-terminaciones-ar',
+    category: 'terminaciones',
+    title: '-ar',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -ar.png'
+  },
+  {
+    id: 'challenge-terminaciones-carlos',
     category: 'terminaciones',
     title: 'Carlos',
     description: 'Desafío de terminaciones',
-    imageUrl: '/CARTAS DESAFIO/terminaciones carlos.png'
+    imageUrl: '/CARTAS DESAFIO/terminaciones -carlos.png'
   },
   {
-    id: 'challenge-terminaciones-2',
+    id: 'challenge-terminaciones-eo',
+    category: 'terminaciones',
+    title: 'EO',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -eo.png'
+  },
+  {
+    id: 'challenge-terminaciones-er',
+    category: 'terminaciones',
+    title: '-er',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -er.png'
+  },
+  {
+    id: 'challenge-terminaciones-ito',
+    category: 'terminaciones',
+    title: '-ito',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -ito.png'
+  },
+  {
+    id: 'challenge-terminaciones-a',
+    category: 'terminaciones',
+    title: 'Á',
+    description: 'Desafío de terminaciones',
+    imageUrl: '/CARTAS DESAFIO/terminaciones -á.png'
+  },
+  {
+    id: 'challenge-terminaciones-esdrujulas',
     category: 'terminaciones',
     title: 'Esdrújulas',
     description: 'Desafío de terminaciones',
-    imageUrl: '/CARTAS DESAFIO/terminaciones esdrujulas.png'
+    imageUrl: '/CARTAS DESAFIO/terminaciones esdrújulas.png'
   },
   {
-    id: 'challenge-terminaciones-3',
+    id: 'challenge-terminaciones-ion',
     category: 'terminaciones',
-    title: 'EO / IO',
+    title: 'IÓN',
     description: 'Desafío de terminaciones',
-    imageUrl: '/CARTAS DESAFIO/terminaciones eo io.png'
-  },
-  {
-    id: 'challenge-terminaciones-4',
-    category: 'terminaciones',
-    title: 'ION',
-    description: 'Desafío de terminaciones',
-    imageUrl: '/CARTAS DESAFIO/terminaciones ion.png'
-  },
-  {
-    id: 'challenge-terminaciones-5',
-    category: 'terminaciones',
-    title: 'A / AS',
-    description: 'Desafío de terminaciones',
-    imageUrl: '/CARTAS DESAFIO/terminaciones a as.png'
+    imageUrl: '/CARTAS DESAFIO/terminaciones ión.png'
   },
   {
     id: 'challenge-beatbox-1',
@@ -360,7 +402,15 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     category: 'beatbox',
     title: 'Beatbox 2: Viajes',
     description: 'Desafío de beatbox',
-    imageUrl: '/CARTAS DESAFIO/beatbox 2 viajes.png',
+    imageUrl: '/CARTAS DESAFIO/beatbox 3 viajes.png',
+    timeLimit: 60
+  },
+  {
+    id: 'challenge-beatbox-4',
+    category: 'beatbox',
+    title: 'Beatbox 4: Ritmo',
+    description: 'Desafío de beatbox',
+    imageUrl: '/CARTAS DESAFIO/beatbox 4 RITMO.png',
     timeLimit: 60
   },
   {
@@ -382,7 +432,7 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     category: 'versus',
     title: 'Messi vs Maradona',
     description: 'Desafío versus',
-    imageUrl: '/CARTAS DESAFIO/versus messi vs maradona.png'
+    imageUrl: '/CARTAS DESAFIO/versus Messi vs Maradonna.png'
   },
   {
     id: 'challenge-versus-4',
@@ -397,5 +447,12 @@ export const CHALLENGES_DECK: ChallengeCard[] = [
     title: 'Campo vs Ciudad',
     description: 'Desafío versus',
     imageUrl: '/CARTAS DESAFIO/versus campo vs ciudad.png'
+  },
+  {
+    id: 'challenge-versus-6',
+    category: 'versus',
+    title: 'Desafía a alguien',
+    description: 'Desafío versus',
+    imageUrl: '/CARTAS DESAFIO/Versus desafía a alguien.png'
   }
 ];

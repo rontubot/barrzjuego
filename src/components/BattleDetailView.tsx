@@ -14,6 +14,7 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string; color: str
   terminaciones:{ label: 'Terminaciones',emoji: '🎵', color: '#a78bfa' },
   beatbox:      { label: 'Beatbox',      emoji: '🥁', color: '#fb923c' },
   versus:       { label: 'Versus',       emoji: '⚔️', color: '#ef4444' },
+  freestyle:    { label: 'Freestyle',    emoji: '🔥', color: '#00f5ab' },
 };
 
 export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBack }) => {

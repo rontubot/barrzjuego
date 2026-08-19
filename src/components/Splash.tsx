@@ -11,11 +11,20 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
   const [showRules, setShowRules] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
 
-  const playIntroSFX = () => {
+  const playIntroSFX = (force = false) => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContext) return;
+      
+      // Evitar reproducir varias veces si ya sonó
+      if ((window as any).__barrz_audio_logo_played && !force) return;
+      
       const ctx = new AudioContext();
+      if (ctx.state === 'suspended' && !force) {
+        return; // Esperar a la interacción
+      }
+      
+      (window as any).__barrz_audio_logo_played = true;
       
       const osc = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
@@ -60,6 +69,20 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
     // Only play intro SFX if not returning from active gameplay
     if (!fromGame) {
       playIntroSFX();
+      
+      const handleGesture = () => {
+        playIntroSFX(true); // Forzar reproducción en primer clic si no sonó antes
+        document.removeEventListener('click', handleGesture);
+        document.removeEventListener('touchstart', handleGesture);
+      };
+      
+      document.addEventListener('click', handleGesture);
+      document.addEventListener('touchstart', handleGesture);
+      
+      return () => {
+        document.removeEventListener('click', handleGesture);
+        document.removeEventListener('touchstart', handleGesture);
+      };
     }
   }, [fromGame]);
 

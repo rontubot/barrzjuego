@@ -2027,3 +2027,281 @@
   opacity: 0.25;
 }
 
+/* Card Controls Panel (Debajo de la carta) */
+.card-controls-panel {
+  width: 100%;
+  max-width: 320px;
+  margin: -10px auto 20px auto;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(15, 16, 21, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-controls-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-variar-new {
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  border-radius: 24px;
+  background: rgba(0, 245, 171, 0.05);
+  border: 1px solid var(--neon-teal);
+  color: var(--neon-teal);
+  font-weight: bold;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-variar-new:hover {
+  background: rgba(0, 245, 171, 0.15);
+  box-shadow: 0 0 12px rgba(0, 245, 171, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-card-redraw-new {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-card-redraw-new:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+}
+
+.timer-control-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.timer-display-new {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timer-digits-new {
+  font-family: monospace;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--neon-teal);
+  text-shadow: 0 0 10px rgba(0, 245, 171, 0.3);
+}
+
+.timer-digits-new.critical-time {
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px var(--neon-pink-glow);
+  animation: pulse-red 0.5s infinite alternate;
+}
+
+.timer-controls-new {
+  display: flex;
+  gap: 8px;
+}
+
+.timer-btn-new {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.timer-btn-new:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.beat-controls-new {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-spotify-link-new {
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  border-radius: 20px;
+  background: rgba(29, 185, 84, 0.1);
+  border: 1px solid #1DB954;
+  color: #1DB954;
+  font-weight: bold;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-spotify-link-new:hover {
+  background: rgba(29, 185, 84, 0.2);
+  box-shadow: 0 0 8px rgba(29, 185, 84, 0.3);
+}
+
+.btn-metronome-new {
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  border-radius: 20px;
+  background: rgba(255, 0, 127, 0.05);
+  border: 1px solid var(--neon-pink);
+  color: var(--neon-pink);
+  font-weight: bold;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-metronome-new:hover {
+  background: rgba(255, 0, 127, 0.1);
+}
+
+.btn-metronome-new.active {
+  background: var(--neon-pink);
+  color: #000;
+  box-shadow: 0 0 10px var(--neon-pink-glow);
+}
+
+.scoring-player-prompt,
+.voter-label {
+  text-align: center;
+  align-self: center;
+  width: 100%;
+}
+
+/* Timer Integrado en la Carta Frontal (v6.0) */
+.card-timer-widget {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 245, 171, 0.2);
+  border-radius: 16px;
+  padding: 10px 14px;
+  box-shadow: inset 0 0 15px rgba(0, 245, 171, 0.05);
+  width: 100%;
+  max-width: 260px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.card-timer-display {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 4px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.card-timer-digits {
+  font-family: monospace;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--neon-teal);
+  text-shadow: 0 0 8px rgba(0, 245, 171, 0.4);
+  letter-spacing: 1px;
+}
+
+.card-timer-display.critical-time {
+  border-color: rgba(255, 0, 127, 0.35);
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+}
+
+.card-timer-display.critical-time .card-timer-digits {
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px var(--neon-pink-glow);
+  animation: pulse-red 0.5s infinite alternate;
+}
+
+.card-timer-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.card-timer-btn {
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+  font-family: var(--font-base);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.card-timer-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.card-timer-btn.btn-play {
+  border-color: rgba(0, 245, 171, 0.3);
+  color: var(--neon-teal);
+}
+
+.card-timer-btn.btn-play:hover {
+  background: rgba(0, 245, 171, 0.08);
+}
+
+.card-timer-btn.btn-pause {
+  border-color: rgba(255, 0, 127, 0.3);
+  color: var(--neon-pink);
+}
+
+.card-timer-btn.btn-pause:hover {
+  background: rgba(255, 0, 127, 0.08);
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(1); opacity: 0.85; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+
+

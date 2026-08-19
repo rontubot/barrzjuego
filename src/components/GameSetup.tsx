@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, User, Play, Pause, ArrowLeft, Plus, Minus, UserPlus, Check, RefreshCw, Volume2, Sparkles, BookOpen, Compass, Radio, ArrowRight } from 'lucide-react';
+import { Users, User, Play, Pause, ArrowLeft, Plus, Minus, UserPlus, Check, RefreshCw, ArrowRight } from 'lucide-react';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import './GameSetup.css';
@@ -40,7 +40,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     'tematicas',
     'terminaciones',
     'beatbox',
-    'versus'
+    'versus',
+    'freestyle'
   ]);
   const [allowRandomFreestyle, setAllowRandomFreestyle] = useState(false);
 
@@ -103,10 +104,6 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinIndex, setSpinIndex] = useState(0);
 
-  // Tutorial interactivo
-  const [showTutorialSlides, setShowTutorialSlides] = useState(false);
-  const [tutorialSlide, setTutorialSlide] = useState(0);
-
   // Vinculación de Spotify
   const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
 
@@ -149,7 +146,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     { id: 'tematicas', label: 'Temáticas', desc: 'Desafíos de temáticas' },
     { id: 'terminaciones', label: 'Terminaciones', desc: 'Desafíos de terminaciones' },
     { id: 'beatbox', label: 'Beatbox', desc: 'Desafíos de beatbox con cronómetro' },
-    { id: 'versus', label: 'Versus', desc: 'Desafíos versus' }
+    { id: 'versus', label: 'Versus', desc: 'Desafíos versus' },
+    { id: 'freestyle', label: 'Freestyle', desc: 'Improvisación libre sobre el beat' }
   ];
 
   // Manejo de nombres de jugadores
@@ -229,34 +227,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     setIsSpinning(true);
   };
 
-  // Tutorial Slides
-  const tutorialSteps = [
-    {
-      title: "Navegación e Interacción",
-      desc: "Bienvenido al laboratorio de freestyle. Navegá por los diferentes mazos de cartas, desafíos dinámicos y bases instrumentales con cronómetro de rimas incorporado y soporte en tiempo real.",
-      icon: <Compass size={40} className="teal-text" />
-    },
-    {
-      title: "Mazos y Cartas",
-      desc: "El juego tiene un mazo verde de Beats (ritmos de rap) y un mazo rosa de Desafíos. ¡En cada turno deberás sacar una carta de cada mazo!",
-      icon: <Sparkles size={40} className="teal-text" />
-    },
-    {
-      title: "Bases con Spotify",
-      desc: "Haz clic sobre la carta de Beat para abrir directamente el reproductor de Spotify en segundo plano. La música sonará sin interrumpir la app.",
-      icon: <Volume2 size={40} className="pink-text" />
-    },
-    {
-      title: "Puntuación en Equipo",
-      desc: "Improvisa de acuerdo al desafío. Al final del turno, tus compañeros te puntuarán de 1 a 5 estrellas según tu fluidez, métrica y entrega. ¡Gana el que sume más puntos!",
-      icon: <Users size={40} className="teal-text" />
-    },
-    {
-      title: "Estadísticas y Conexión",
-      desc: "Sincronizá tus bases de rap de forma fluida y accede a los informes completos y registros estadísticos de cada uno de tus combates.",
-      icon: <Radio size={40} className="pink-text" />
-    }
-  ];
+
 
   return (
     <div className="setup-outer-container">
@@ -291,72 +262,26 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
         </div>
       )}
 
-      {/* ── TUTORIAL ASK ───────────────────────────────────────────────── */}
+      {/* ── TUTORIAL / REGLAS DIRECTO ──────────────────────────────────── */}
       {step === 'tutorial_ask' && (
-        <div className="setup-card glass-panel glow-teal text-center fade-in">
-          {!showTutorialSlides ? (
-            <div className="tutorial-ask-content">
-              <div className="icon-wrapper">
-                <BookOpen size={48} className="teal-text" />
-              </div>
-              <h2 className="font-graffiti text-glow-teal">¿CÓMO ANDAMOS DE REGLAS?</h2>
-              <p className="step-description">
-                ¿Querés ver un breve tutorial interactivo para entender cómo jugar, las cartas y el reproductor de Spotify?
-              </p>
-
-              <div className="tutorial-actions-row">
-                <button className="btn-neon-teal" onClick={() => setShowTutorialSlides(true)}>
-                  SÍ, VER TUTORIAL
-                </button>
-                <button className="btn-neon-pink" onClick={() => onNext('link_spotify')}>
-                  NO, SALTEAR
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="tutorial-slideshow fade-in">
-              <div className="slide-icon-row">
-                {tutorialSteps[tutorialSlide].icon}
-              </div>
-              <h3 className="slide-title font-graffiti">{tutorialSteps[tutorialSlide].title}</h3>
-              <p className="slide-description">{tutorialSteps[tutorialSlide].desc}</p>
-
-              <div className="slide-indicators">
-                {tutorialSteps.map((_, idx) => (
-                  <span 
-                    key={idx} 
-                    className={`indicator-dot ${tutorialSlide === idx ? 'active' : ''}`}
-                    onClick={() => setTutorialSlide(idx)}
-                  ></span>
-                ))}
-              </div>
-
-              <div className="slide-navigation">
-                {tutorialSlide > 0 ? (
-                  <button className="btn-nav-slide" onClick={() => setTutorialSlide(prev => prev - 1)}>
-                    Anterior
-                  </button>
-                ) : <span className="placeholder-slide"></span>}
-
-                {tutorialSlide < tutorialSteps.length - 1 ? (
-                  <button className="btn-nav-slide highlight" onClick={() => setTutorialSlide(prev => prev + 1)}>
-                    Siguiente
-                  </button>
-                ) : (
-                  <button 
-                    className="btn-nav-slide highlight" 
-                    onClick={() => {
-                      setShowTutorialSlides(false);
-                      setTutorialSlide(0);
-                      onNext('link_spotify');
-                    }}
-                  >
-                    Entendido, Jugar
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+        <div className="tutorial-card-view fade-in">
+          <div className="tutorial-card-wrapper" onClick={() => onNext('link_spotify')}>
+            <img 
+              src="/CARTAS DESAFIO/carta REGLAS JUEGO.png" 
+              alt="Reglas del Juego" 
+              className="tutorial-full-card" 
+            />
+            <button 
+              className="tutorial-continue-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNext('link_spotify');
+              }}
+            >
+              <span>CONTINUAR</span>
+              <Play size={16} fill="currentColor" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -597,7 +522,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                   </div>
 
                   <div className="themes-mosaic-grid">
-                    {CHALLENGES_DECK.filter(c => c.category === 'tematicas').map((card) => (
+                    {CHALLENGES_DECK.filter(c => c.category === 'tematicas' && c.id !== 'challenge-tematicas-libre').map((card) => (
                       <div 
                         key={card.id} 
                         className="theme-mosaic-card glow-pink" 
