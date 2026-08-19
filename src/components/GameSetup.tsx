@@ -28,9 +28,10 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     return [defaultName, 'Freestyler B'];
   });
   const [playerAvatars, setPlayerAvatars] = useState<string[]>(() => {
+    const rawAv = userSession?.avatar === 'crown' ? '' : userSession?.avatar;
     const defaultAvatar = userSession?.avatar_type === 'custom' && userSession?.custom_avatar_url 
       ? userSession.custom_avatar_url 
-      : (userSession?.avatar || '🎤');
+      : (rawAv || '🎤');
     return [defaultAvatar, '🔥'];
   });
   const [activeAvatarPicker, setActiveAvatarPicker] = useState<number | null>(null);
@@ -131,9 +132,10 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       setPlayerAvatars(prev => {
         if (prev[0] === '🎤') {
           const next = [...prev];
+          const rawAv = userSession.avatar === 'crown' ? '' : userSession.avatar;
           next[0] = userSession.avatar_type === 'custom' && userSession.custom_avatar_url 
             ? userSession.custom_avatar_url 
-            : (userSession.avatar || '🎤');
+            : (rawAv || '🎤');
           return next;
         }
         return prev;

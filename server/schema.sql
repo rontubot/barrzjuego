@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255),
   google_id VARCHAR(255) UNIQUE,
   username VARCHAR(100),
-  avatar VARCHAR(50) DEFAULT 'crown',
+  avatar VARCHAR(50) DEFAULT '',
   avatar_type VARCHAR(20) DEFAULT 'preset',
   custom_avatar_url TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS verification_codes (
 
 -- Migraciones para base de datos existente
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(50) DEFAULT 'crown';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(50) DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_type VARCHAR(20) DEFAULT 'preset';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_avatar_url TEXT;
 

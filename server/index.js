@@ -177,7 +177,7 @@ app.post('/api/auth/register', async (req, res) => {
     // Crear usuario con campos por defecto
     const newUserRes = await db.query(
       'INSERT INTO users (email, password_hash, username, avatar, avatar_type) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, username, avatar, avatar_type',
-      [email, passwordHash, defaultUsername, 'crown', 'preset']
+      [email, passwordHash, defaultUsername, '', 'preset']
     );
 
     const user = newUserRes.rows[0];
@@ -355,7 +355,7 @@ app.post('/api/auth/google-login', async (req, res) => {
       // Crear nuevo usuario de Google con campos por defecto
       const insertRes = await db.query(
         'INSERT INTO users (email, google_id, username, avatar, avatar_type) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, username, avatar, avatar_type',
-        [email, googleId, defaultUsername, 'crown', 'preset']
+        [email, googleId, defaultUsername, '', 'preset']
       );
       user = insertRes.rows[0];
     } else {

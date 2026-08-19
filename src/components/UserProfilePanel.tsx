@@ -21,7 +21,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
   const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'settings'>('profile');
 
   // Ajustes y Perfil persistidos localmente
-  const [selectedAvatar, setSelectedAvatar] = useState(() => localStorage.getItem('barrz_user_avatar') || '🎤');
+  const [selectedAvatar, setSelectedAvatar] = useState(() => localStorage.getItem('barrz_user_avatar') || '');
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [sfxEnabled, setSfxEnabled] = useState(() => localStorage.getItem('barrz_sfx') !== 'false');
   const [visualMetronome, setVisualMetronome] = useState(() => localStorage.getItem('barrz_visual_metronome') !== 'false');
   const [beatQuality, setBeatQuality] = useState(() => localStorage.getItem('barrz_beat_quality') || 'high');
@@ -51,14 +52,16 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     }
   }, [userSession]);
 
-  // Determinar avatar actual y su tipo
-  const isCustomAvatar = userSession?.loggedIn
-    ? userSession.avatar_type === 'custom' && userSession.custom_avatar_url
-    : selectedAvatar.startsWith('data:image/');
-
-  const currentAvatarSrc = userSession?.loggedIn
+  // Determinar avatar actual y su tipo (descartar 'crown' por defecto a vacío)
+  const rawAvatar = userSession?.loggedIn
     ? (userSession.avatar_type === 'custom' ? userSession.custom_avatar_url : userSession.avatar)
     : selectedAvatar;
+
+  const currentAvatarSrc = (rawAvatar === 'crown' || rawAvatar === 'null' || !rawAvatar) ? '' : rawAvatar;
+
+  const isCustomAvatar = userSession?.loggedIn
+    ? userSession.avatar_type === 'custom' && Boolean(userSession.custom_avatar_url)
+    : currentAvatarSrc.startsWith('data:image/');
 
   // Guardar configuración en localStorage o en base de datos si está logueado
   const handleAvatarChange = async (avatar: string) => {
@@ -152,7 +155,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            avatar: 'crown',
+            avatar: 'custom',
             avatar_type: 'custom',
             custom_avatar_url: base64String
           })
@@ -183,7 +186,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
   };
 
   const handleRemoveCustomAvatar = async () => {
-    handleAvatarChange('🎤');
+    handleAvatarChange('');
   };
 
   const handleSaveUsername = async () => {
@@ -291,8 +294,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
         >
           {isCustomAvatar ? (
             <img src={currentAvatarSrc} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+          ) : currentAvatarSrc ? (
+            <span className="user-trigger-avatar">{currentAvatarSrc}</span>
           ) : (
-            <span className="user-trigger-avatar">{currentAvatarSrc || '🎤'}</span>
+            <User size={19} className="user-trigger-empty-icon" />
           )}
         </button>
       </div>
@@ -357,8 +362,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   <div className="profile-avatar-display" style={{ padding: isCustomAvatar ? '0' : '' }}>
                     {isCustomAvatar ? (
                       <img src={currentAvatarSrc} alt="Avatar" className="avatar-img-round-full" />
+                    ) : currentAvatarSrc ? (
+                      <span className="avatar-main-emoji">{currentAvatarSrc}</span>
                     ) : (
-                      <span className="avatar-main-emoji">{currentAvatarSrc || '🎤'}</span>
+                      <User size={34} className="avatar-empty-user-icon" />
                     )}
                   </div>
                   
@@ -450,21 +457,36 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                 </span>
               </div>
 
-              {/* Selector de Avatares */}
-              <div className="avatar-selection-box">
-                <h4 className="section-subtitle font-base">Elegí tu Avatar</h4>
-                <div className="avatars-grid">
-                  {avatars.map((av) => (
-                    <button 
-                      key={av} 
-                      type="button" 
-                      className={`avatar-grid-item ${(!isCustomAvatar && currentAvatarSrc === av) ? 'selected' : ''}`}
-                      onClick={() => handleAvatarChange(av)}
-                    >
-                      {av}
-                    </button>
-                  ))}
-                </div>
+              {/* Selector Desplegable de Avatares */}
+              <div className="avatar-picker-compact-section">
+                <button 
+                  type="button" 
+                  className={`btn-toggle-avatar-picker ${showAvatarPicker ? 'active' : ''}`}
+                  onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+                >
+                  <span>{showAvatarPicker ? '▲ Ocultar avatares' : '✨ Elegir avatar predeterminado ▼'}</span>
+                </button>
+
+                {showAvatarPicker && (
+                  <div className="avatar-selection-box fade-in">
+                    <div className="avatars-grid">
+                      {avatars.map((av) => (
+                        <button 
+                          key={av} 
+                          type="button" 
+                          className={`avatar-grid-item ${(!isCustomAvatar && currentAvatarSrc === av) ? 'selected' : ''}`}
+                          onClick={() => {
+                            handleAvatarChange(av);
+                            setShowAvatarPicker(false);
+                          }}
+                          title={`Seleccionar avatar ${av}`}
+                        >
+                          {av}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Estadísticas de Batalla */}
