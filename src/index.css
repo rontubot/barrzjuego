@@ -195,9 +195,8 @@ body {
 .card-container-3d {
   perspective: 1200px;
   width: 100%;
-  max-width: 310px;
-  height: 430px;
-  max-height: 52vh;
+  max-width: 320px;
+  height: 460px;
   margin: 0 auto;
 }
 
