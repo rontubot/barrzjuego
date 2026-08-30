@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Volume2, Play, Pause, Square, Music, QrCode, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -93,8 +93,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [selectedRating, setSelectedRating] = useState<number>(3); // Estrellas por defecto: 3
   const [currentVoterIndex, setCurrentVoterIndex] = useState<number>(0);
   const [votesReceived, setVotesReceived] = useState<Record<string, number>>({});
-  
-  const [showSpotifyPlayer, setShowSpotifyPlayer] = useState(true);
   const [isVoterFading, setIsVoterFading] = useState(false);
 
   // Estados para Réplicas (Desempate)
@@ -143,11 +141,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [timerSeconds, setTimerSeconds] = useState(60);
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<any>(null);
-
-  // Metrónomo visual
-  const [isMetronomeOn, setIsMetronomeOn] = useState(true);
-
-
 
   // Lista de competidores activos en la ronda actual (en réplica solo participan los empatados)
   const activeRoundPlayers = isReplicaActive ? replicaPlayers : playerNames;
@@ -254,11 +247,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const prevIndex = (currentIndex - 1 + BEATS_DECK.length) % BEATS_DECK.length;
     stopAllAudio();
     setActiveBeat(BEATS_DECK[prevIndex]);
-  };
-
-  const handleShuffleBeat = () => {
-    stopAllAudio();
-    drawBeat(200);
   };
 
   // Detener audio al cambiar de beat o turno
@@ -540,11 +528,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     setSubState('ready');
   };
 
-  // Spotify Link Launcher
-  const openSpotify = (beat: BeatCard) => {
-    window.open(beat.spotifyUrl, '_blank');
-  };
-
   const startTimer = () => setTimerRunning(true);
   const pauseTimer = () => setTimerRunning(false);
   const resetTimer = () => {
@@ -573,8 +556,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       }, 50);
     }, 300);
   };
-
-  const bpmPulseDuration = activeBeat ? 60 / activeBeat.bpm : 0.67;
 
   // Ordenar puntuaciones para la tabla y el podio
   const sortedLeaderboard = Object.entries(scores)
@@ -896,68 +877,21 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
                           <div className="card-header-pink">
                             <Music size={16} />
-                            <span>INST. BEAT</span>
-                            <button 
-                              type="button" 
-                              className={`btn-spotify-card-toggle ${showSpotifyPlayer ? 'active' : ''}`}
-                              onClick={(e) => { e.stopPropagation(); setShowSpotifyPlayer(!showSpotifyPlayer); }}
-                              title="Alternar Reproductor Spotify"
-                            >
-                              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
-                              </svg>
-                            </button>
+                            <span>INST. BEAT ({activeBeat.bpm} BPM)</span>
                           </div>
 
-                          {showSpotifyPlayer ? (
-                            <div className="spotify-embed-card-container fade-in">
-                              <iframe
-                                title={activeBeat.name}
-                                src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
-                                width="100%"
-                                height="100%"
-                                frameBorder="0"
-                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                loading="lazy"
-                                className="spotify-official-embed-iframe"
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              <div className="beat-card-body">
-                                <h3 className="beat-title">{activeBeat.name}</h3>
-
-                                <div
-                                  className={`bpm-indicator ${isMetronomeOn ? 'pulsing' : ''}`}
-                                  style={{
-                                    animationDuration: `${bpmPulseDuration}s`,
-                                    borderColor: 'var(--neon-teal)'
-                                  }}
-                                  onClick={(e) => { e.stopPropagation(); setIsMetronomeOn(!isMetronomeOn); }}
-                                >
-                                  <Volume2 size={36} className="teal-text" />
-                                  <span className="bpm-number">{activeBeat.bpm}</span>
-                                  <span className="bpm-label">BPM</span>
-                                </div>
-
-                                <p className="bpm-help-text">El altavoz pulsa al ritmo de la instrumental.</p>
-                              </div>
-
-                              <div className="beat-card-footer">
-                                <div className="qr-container-sim" onClick={(e) => { e.stopPropagation(); openSpotify(activeBeat); }}>
-                                  <QrCode size={48} className="pink-text" />
-                                  <span className="qr-scan-label">CLICK PARA ABRIR</span>
-                                </div>
-
-                                <button className="btn-spotify-link" onClick={(e) => { e.stopPropagation(); openSpotify(activeBeat); }}>
-                                  <Play size={14} fill="currentColor" />
-                                  ABRIR EN SPOTIFY
-                                </button>
-                              </div>
-                            </>
-                          )}
-
-
+                          <div className="spotify-embed-card-container fade-in">
+                            <iframe
+                              title={activeBeat.name}
+                              src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
+                              width="100%"
+                              height="100%"
+                              frameBorder="0"
+                              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                              loading="lazy"
+                              className="spotify-official-embed-iframe"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -998,8 +932,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                       </button>
                     )}
 
-
-
                     {/* Cambiar Desafío */}
                     {gameSettings?.subMode !== 'custom' && (
                       <button className="btn-card-redraw-new" onClick={() => drawChallenge(400)}>
@@ -1011,29 +943,18 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
                 {activeCardType === 'beat' && activeBeat && (
                   <div className="card-controls-group fade-in">
-                    <div className="beat-controls-new">
-                      <button className="btn-spotify-link-new" onClick={() => openSpotify(activeBeat)}>
-                        <Play size={12} fill="currentColor" />
-                        <span>ABRIR EN SPOTIFY</span>
+                    <div className="beat-nav-row">
+                      <button className="btn-beat-nav" onClick={handlePrevBeat} title="Beat Anterior">
+                        <ChevronLeft size={18} />
+                        <span>Anterior</span>
                       </button>
-                      <button 
-                        className={`btn-metronome-new ${isMetronomeOn ? 'active' : ''}`}
-                        onClick={() => setIsMetronomeOn(!isMetronomeOn)}
-                      >
-                        <Volume2 size={12} />
-                        <span>Metrónomo ({activeBeat.bpm} BPM)</span>
+                      <span className="beat-counter-tag">
+                        {BEATS_DECK.findIndex(b => b.id === activeBeat.id) + 1} / {BEATS_DECK.length}
+                      </span>
+                      <button className="btn-beat-nav" onClick={handleNextBeat} title="Siguiente Beat">
+                        <span>Siguiente</span>
+                        <ChevronRight size={18} />
                       </button>
-                      <button className="btn-card-redraw-new" onClick={handlePrevBeat} title="Beat Anterior">
-                        ⏮ Anterior
-                      </button>
-                      <button className="btn-card-redraw-new" onClick={handleNextBeat} title="Siguiente Beat">
-                        ⏭ Siguiente
-                      </button>
-                      {gameSettings?.subMode !== 'custom' && (
-                        <button className="btn-card-redraw-new" onClick={handleShuffleBeat}>
-                          <RefreshCw size={12} /> Aleatorio
-                        </button>
-                      )}
                     </div>
                   </div>
                 )}

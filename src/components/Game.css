@@ -2168,57 +2168,46 @@
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.beat-controls-new {
+.beat-nav-row {
   display: flex;
-  gap: 10px;
-  width: 100%;
+  align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  padding: 4px 0;
 }
 
-.btn-spotify-link-new {
-  padding: 8px 14px;
-  font-size: 0.78rem;
-  border-radius: 20px;
-  background: rgba(29, 185, 84, 0.1);
-  border: 1px solid #1DB954;
-  color: #1DB954;
-  font-weight: bold;
+.btn-beat-nav {
+  padding: 10px 22px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  border-radius: 24px;
+  background: rgba(0, 245, 171, 0.08);
+  border: 1px solid var(--neon-teal);
+  color: var(--neon-teal);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   transition: all 0.2s ease;
+  letter-spacing: 0.5px;
 }
 
-.btn-spotify-link-new:hover {
-  background: rgba(29, 185, 84, 0.2);
-  box-shadow: 0 0 8px rgba(29, 185, 84, 0.3);
+.btn-beat-nav:hover {
+  background: rgba(0, 245, 171, 0.2);
+  box-shadow: 0 0 12px rgba(0, 245, 171, 0.35);
+  transform: scale(1.04);
 }
 
-.btn-metronome-new {
-  padding: 8px 14px;
-  font-size: 0.78rem;
-  border-radius: 20px;
-  background: rgba(255, 0, 127, 0.05);
-  border: 1px solid var(--neon-pink);
-  color: var(--neon-pink);
-  font-weight: bold;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-metronome-new:hover {
-  background: rgba(255, 0, 127, 0.1);
-}
-
-.btn-metronome-new.active {
-  background: var(--neon-pink);
-  color: #000;
-  box-shadow: 0 0 10px var(--neon-pink-glow);
+.beat-counter-tag {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 6px 12px;
+  letter-spacing: 1px;
 }
 
 .scoring-player-prompt,
