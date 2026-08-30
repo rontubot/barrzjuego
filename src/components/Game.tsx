@@ -95,9 +95,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [votesReceived, setVotesReceived] = useState<Record<string, number>>({});
   
   const [showSpotifyPlayer, setShowSpotifyPlayer] = useState(true);
-  const [spotifyPlaying, setSpotifyPlaying] = useState(false);
-  const [spotifyProgress, setSpotifyProgress] = useState(0);
-  const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
   const [isVoterFading, setIsVoterFading] = useState(false);
 
   // Estados para Réplicas (Desempate)
@@ -232,71 +229,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
   }, [subState]);
 
-  // Simulador de barra de progreso de Spotify
-  useEffect(() => {
-    let interval: any = null;
-    if (spotifyPlaying && subState === 'playing') {
-      const isFreestyleLibre = activeChallenge?.category === 'freestyle' || activeChallenge?.id === 'challenge-tematicas-libre' || activeChallenge?.id === 'challenge-freestyle-libre';
-      const limit = isFreestyleLibre ? 180 : 60;
-      interval = setInterval(() => {
-        setSpotifyProgress(prev => {
-          if (prev >= limit) return 0;
-          return prev + 1;
-        });
-      }, 1000);
-    } else {
-      if (interval) clearInterval(interval);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [spotifyPlaying, subState, activeChallenge]);
-
   const localAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Detener todo el audio (Spotify y Local)
   const stopAllAudio = () => {
-    setSpotifyPlaying(false);
     if (localAudioRef.current) {
       localAudioRef.current.pause();
       localAudioRef.current.currentTime = 0;
     }
     spotifyPlayer.pauseTrack().catch(() => {});
-  };
-
-  // Reproducir / Pausar
-  const handlePlayToggle = async () => {
-    if (spotifyPlaying) {
-      stopAllAudio();
-    } else {
-      if (!activeBeat) return;
-      setSpotifyPlaying(true);
-
-      // Si está vinculado con Spotify, intentar reproducir vía SDK / API de Spotify
-      if (isSpotifyLinked) {
-        const success = await spotifyPlayer.playTrack(activeBeat.spotifyUri);
-        if (!success) {
-          // Si falla o no hay dispositivo, reproducir vía local audio como respaldo automático
-          console.log('Fallback a audio local por falta de dispositivo activo en Spotify.');
-          if (activeBeat.audioUrl) {
-            if (!localAudioRef.current || localAudioRef.current.src !== window.location.origin + activeBeat.audioUrl) {
-              localAudioRef.current = new Audio(activeBeat.audioUrl);
-              localAudioRef.current.loop = true;
-            }
-            localAudioRef.current.play().catch(err => console.warn('Error en audio local:', err));
-          }
-        }
-      } else {
-        // Modo local
-        if (activeBeat.audioUrl) {
-          if (!localAudioRef.current || localAudioRef.current.src !== window.location.origin + activeBeat.audioUrl) {
-            localAudioRef.current = new Audio(activeBeat.audioUrl);
-            localAudioRef.current.loop = true;
-          }
-          localAudioRef.current.play().catch(err => console.warn('Error en audio local:', err));
-        }
-      }
-    }
   };
 
   const handleNextBeat = () => {
@@ -320,11 +261,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     drawBeat(200);
   };
 
-  // Resetear progreso y detener audio al cambiar de beat o turno
+  // Detener audio al cambiar de beat o turno
   useEffect(() => {
-    setSpotifyProgress(0);
     stopAllAudio();
-    setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
   }, [activeBeat, subState]);
 
   // Cleanup al desmontar Game
@@ -971,106 +910,17 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                           </div>
 
                           {showSpotifyPlayer ? (
-                            <div className="spotify-card-overlay fade-in">
-                              <div className="spotify-overlay-header">
-                                <div className="spotify-api-badge">
-                                  <span className={`pulse-dot ${spotifyPlaying ? 'pulsing' : ''}`}></span>
-                                  <span>SPOTIFY PREMIUM API</span>
-                                </div>
-                                <span className="spotify-stream-indicator">
-                                  {isSpotifyLinked ? '✓ Cuenta Vinculada' : '⚠ Cuenta No Vinculada'}
-                                </span>
-                              </div>
-
-                              <div className="spotify-overlay-body">
-                                <div className={`spotify-vinyl-container ${spotifyPlaying ? 'spinning' : ''}`}>
-                                  <div className="spotify-vinyl-disc">
-                                    <div className="spotify-vinyl-center"></div>
-                                  </div>
-                                </div>
-
-                                <h3 className="spotify-overlay-title">{activeBeat.name}</h3>
-                                <span className="spotify-overlay-artist font-base">BARRZ PRODUCER</span>
-                              </div>
-
-                              <div className="spotify-overlay-footer">
-                                <div className="spotify-progress-container">
-                                  <span className="spotify-time font-base">
-                                    {Math.floor(spotifyProgress / 60)}:{(spotifyProgress % 60).toString().padStart(2, '0')}
-                                  </span>
-                                  {(() => {
-                                    const isFreestyleLibre = activeChallenge?.category === 'freestyle' || activeChallenge?.id === 'challenge-tematicas-libre' || activeChallenge?.id === 'challenge-freestyle-libre';
-                                    const limit = isFreestyleLibre ? 180 : 60;
-                                    const limitStr = isFreestyleLibre ? '3:00' : '1:00';
-                                    return (
-                                      <>
-                                        <div className="spotify-progress-bar-wrap">
-                                          <div 
-                                            className="spotify-progress-bar-fill" 
-                                            style={{ width: `${(spotifyProgress / limit) * 100}%` }}
-                                          ></div>
-                                        </div>
-                                        <span className="spotify-time font-base">{limitStr}</span>
-                                      </>
-                                    );
-                                  })()}
-                                </div>
-
-                                <div className="spotify-controls">
-                                  <button 
-                                    type="button" 
-                                    className="spotify-btn-sub" 
-                                    title="Aleatorio"
-                                    onClick={(e) => { e.stopPropagation(); handleShuffleBeat(); }}
-                                  >
-                                    <span style={{ fontSize: '1rem', color: '#1DB954' }}>⇄</span>
-                                  </button>
-                                  <button 
-                                    type="button" 
-                                    className="spotify-btn-sub" 
-                                    title="Anterior"
-                                    onClick={(e) => { e.stopPropagation(); handlePrevBeat(); }}
-                                  >
-                                    <span style={{ fontSize: '1.2rem', verticalAlign: 'middle' }}>⏮</span>
-                                  </button>
-                                  <button 
-                                    type="button" 
-                                    className={`spotify-btn-play-pause ${spotifyPlaying ? 'playing' : ''}`}
-                                    onClick={(e) => { e.stopPropagation(); handlePlayToggle(); }}
-                                    title={spotifyPlaying ? 'Pausar' : 'Reproducir'}
-                                  >
-                                    {spotifyPlaying ? '⏸' : '▶'}
-                                  </button>
-                                  <button 
-                                    type="button" 
-                                    className="spotify-btn-sub" 
-                                    title="Siguiente"
-                                    onClick={(e) => { e.stopPropagation(); handleNextBeat(); }}
-                                  >
-                                    <span style={{ fontSize: '1.2rem', verticalAlign: 'middle' }}>⏭</span>
-                                  </button>
-                                  <button 
-                                    type="button" 
-                                    className="spotify-btn-sub" 
-                                    title="Reiniciar Beat"
-                                    onClick={(e) => { 
-                                      e.stopPropagation(); 
-                                      setSpotifyProgress(0);
-                                      if (localAudioRef.current) localAudioRef.current.currentTime = 0;
-                                    }}
-                                  >
-                                    <span style={{ fontSize: '1rem' }}>↻</span>
-                                  </button>
-                                </div>
-
-                                <div className="spotify-monetization-msg">
-                                  {isSpotifyLinked ? (
-                                    <span className="monetized font-base">✓ Monetizando rimas (Streaming activo)</span>
-                                  ) : (
-                                    <span className="not-monetized font-base">⚠ Conectá Spotify para sumar reproducciones</span>
-                                  )}
-                                </div>
-                              </div>
+                            <div className="spotify-embed-card-container fade-in">
+                              <iframe
+                                title={activeBeat.name}
+                                src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                loading="lazy"
+                                className="spotify-official-embed-iframe"
+                              />
                             </div>
                           ) : (
                             <>
@@ -1173,14 +1023,18 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                         <Volume2 size={12} />
                         <span>Metrónomo ({activeBeat.bpm} BPM)</span>
                       </button>
-                    </div>
-
-                    {/* Cambiar Beat */}
-                    {gameSettings?.subMode !== 'custom' && (
-                      <button className="btn-card-redraw-new" onClick={() => drawBeat(400)}>
-                        <RefreshCw size={12} /> Cambiar Beat
+                      <button className="btn-card-redraw-new" onClick={handlePrevBeat} title="Beat Anterior">
+                        ⏮ Anterior
                       </button>
-                    )}
+                      <button className="btn-card-redraw-new" onClick={handleNextBeat} title="Siguiente Beat">
+                        ⏭ Siguiente
+                      </button>
+                      {gameSettings?.subMode !== 'custom' && (
+                        <button className="btn-card-redraw-new" onClick={handleShuffleBeat}>
+                          <RefreshCw size={12} /> Aleatorio
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
