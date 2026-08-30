@@ -4,10 +4,13 @@
   align-items: center;
   justify-content: space-between;
   min-height: 100vh;
-  padding: 20px;
+  min-height: 100dvh;
+  padding: 12px 16px;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 2;
+  box-sizing: border-box;
   animation: gameEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
@@ -50,7 +53,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2vh;
+  margin-bottom: 6px;
   z-index: 5;
 }
 
@@ -183,8 +186,9 @@
 
 .card-stack-carousel {
   position: relative;
-  width: 320px;
-  height: 520px;
+  width: 310px;
+  height: 440px;
+  max-height: 54vh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -289,8 +293,9 @@
 /* Mazo Apilado (Deck Pile) */
 .deck-pile {
   width: 100%;
-  max-width: 320px;
-  height: 460px;
+  max-width: 310px;
+  height: 420px;
+  max-height: 52vh;
   border-radius: 24px;
   cursor: pointer;
   position: relative;
@@ -962,7 +967,8 @@
   display: flex;
   justify-content: center;
   z-index: 5;
-  margin-top: 3vh;
+  margin-top: 4px;
+  margin-bottom: 6px;
 }
 
 .btn-next-turn {
@@ -970,10 +976,10 @@
   color: var(--text-primary);
   border: none;
   border-radius: 16px;
-  padding: 16px 36px;
+  padding: 12px 32px;
   font-family: var(--font-base);
   font-weight: 900;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   letter-spacing: 1px;
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(255, 0, 127, 0.25);
@@ -2050,9 +2056,9 @@
 /* Card Controls Panel (Debajo de la carta) */
 .card-controls-panel {
   width: 100%;
-  max-width: 320px;
-  margin: -10px auto 20px auto;
-  padding: 16px;
+  max-width: 310px;
+  margin: 6px auto 10px auto;
+  padding: 8px 14px;
   border-radius: 16px;
   background: rgba(15, 16, 21, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2312,5 +2318,85 @@
   100% { transform: scale(1.05); opacity: 1; }
 }
 
+/* ── RESPONSIVE & MOBILE / SHORT SCREEN QUERIES ────────────────────────── */
+@media (max-height: 820px) {
+  .game-container {
+    padding: 8px 12px;
+  }
+  .card-stack-carousel {
+    height: 400px;
+  }
+  .deck-pile, .card-container-3d {
+    height: 380px !important;
+  }
+  .carousel-card-tag {
+    margin-bottom: 4px;
+    font-size: 0.72rem;
+  }
+  .card-controls-panel {
+    margin: 4px auto 6px auto;
+    padding: 6px 12px;
+  }
+  .btn-beat-nav {
+    padding: 8px 16px;
+    font-size: 0.82rem;
+  }
+  .btn-next-turn {
+    padding: 10px 24px;
+    font-size: 0.92rem;
+  }
+}
 
+@media (max-height: 700px) {
+  .game-container {
+    padding: 4px 8px;
+  }
+  .game-header {
+    margin-bottom: 2px;
+  }
+  .card-stack-carousel {
+    height: 350px;
+  }
+  .deck-pile, .card-container-3d {
+    height: 330px !important;
+  }
+  .btn-carousel-nav {
+    width: 38px;
+    height: 38px;
+  }
+  .card-controls-panel {
+    margin: 2px auto 4px auto;
+    padding: 4px 8px;
+  }
+  .btn-beat-nav {
+    padding: 6px 12px;
+    font-size: 0.76rem;
+  }
+  .beat-counter-tag {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  .btn-next-turn {
+    padding: 8px 18px;
+    font-size: 0.84rem;
+  }
+}
 
+@media (max-width: 480px) {
+  .game-container {
+    padding: 8px 6px;
+  }
+  .card-stack-carousel {
+    width: 280px;
+  }
+  .deck-pile, .card-container-3d {
+    max-width: 280px !important;
+  }
+  .card-controls-panel {
+    max-width: 280px;
+  }
+  .btn-beat-nav {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+}
