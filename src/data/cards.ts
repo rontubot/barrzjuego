@@ -22,67 +22,123 @@ export interface ChallengeCard {
 export const BEATS_DECK: BeatCard[] = [
   {
     id: 'beat-1',
-    name: 'MODO DIABLO 94',
-    bpm: 94,
-    spotifyUrl: 'https://open.spotify.com/track/4PTG3Z6ehGkBF3sI7Wq2Ag',
-    spotifyUri: 'spotify:track:4PTG3Z6ehGkBF3sI7Wq2Ag',
-    audioUrl: '/soundtracks/BEATS/MODO DIABLO 94.wav'
+    name: 'Pan casero 80',
+    bpm: 80,
+    spotifyUrl: 'https://open.spotify.com/track/2rraMyumwdlBQsXXpqN7gF',
+    spotifyUri: 'spotify:track:2rraMyumwdlBQsXXpqN7gF',
+    audioUrl: '/soundtracks/BEATS/BEAT 26 80 BPM.wav'
   },
   {
     id: 'beat-2',
-    name: 'RUIDA 87',
+    name: 'Ruida 87',
     bpm: 87,
-    spotifyUrl: 'https://open.spotify.com/track/17dZsnvjQkXUWh6Sifg6hV',
-    spotifyUri: 'spotify:track:17dZsnvjQkXUWh6Sifg6hV',
+    spotifyUrl: 'https://open.spotify.com/track/76KOvzubs4yxj4y5MAVvRp',
+    spotifyUri: 'spotify:track:76KOvzubs4yxj4y5MAVvRp',
     audioUrl: '/soundtracks/BEATS/RUIDA 87.wav'
   },
   {
     id: 'beat-3',
-    name: 'TRAKETERO 88',
-    bpm: 88,
-    spotifyUrl: 'https://open.spotify.com/track/5QdA5bEwS1hRzWbTep7XjO',
-    spotifyUri: 'spotify:track:5QdA5bEwS1hRzWbTep7XjO',
-    audioUrl: '/soundtracks/BEATS/TRAKETERO 88.wav'
+    name: 'Falta envido 87',
+    bpm: 87,
+    spotifyUrl: 'https://open.spotify.com/track/1flIwQRB3DkZZqJAf8xknI',
+    spotifyUri: 'spotify:track:1flIwQRB3DkZZqJAf8xknI',
+    audioUrl: '/soundtracks/BEATS/BEAT 29 87BPM.wav'
   },
   {
     id: 'beat-4',
-    name: 'BEAT 6 120 BPM',
-    bpm: 120,
-    spotifyUrl: 'https://open.spotify.com/track/27O7B27xW3g3G0c4xX4Xp3',
-    spotifyUri: 'spotify:track:27O7B27xW3g3G0c4xX4Xp3',
-    audioUrl: '/soundtracks/BEATS/BEAT 6 120 BPM.wav'
+    name: 'Chocolatada 88',
+    bpm: 88,
+    spotifyUrl: 'https://open.spotify.com/track/1rX4oWJVtGturbpUriWRI0',
+    spotifyUri: 'spotify:track:1rX4oWJVtGturbpUriWRI0',
+    audioUrl: '/soundtracks/BEATS/BEAT 25 88 BPM.wav'
   },
   {
     id: 'beat-5',
-    name: 'BEAT 7 110 BPM',
-    bpm: 110,
-    spotifyUrl: 'https://open.spotify.com/track/3zHn2l3j8RSpYyGf9H2D3B',
-    spotifyUri: 'spotify:track:3zHn2l3j8RSpYyGf9H2D3B',
-    audioUrl: '/soundtracks/BEATS/BEAT 7 110 BPM.wav'
+    name: 'Scaloneta 89',
+    bpm: 89,
+    spotifyUrl: 'https://open.spotify.com/track/4c0xaoCtA9bGPOFkRdY1f3',
+    spotifyUri: 'spotify:track:4c0xaoCtA9bGPOFkRdY1f3',
+    audioUrl: '/soundtracks/BEATS/BEAT 21 89 BPM.wav'
   },
   {
     id: 'beat-6',
-    name: 'BEAT 8 96 BPM',
-    bpm: 96,
-    spotifyUrl: 'https://open.spotify.com/track/4F4B3z4c1D2e3f4g5h6i7j',
-    spotifyUri: 'spotify:track:4F4B3z4c1D2e3f4g5h6i7j',
-    audioUrl: '/soundtracks/BEATS/BEAT 8 96 BPM.wav'
+    name: 'Román 90',
+    bpm: 90,
+    spotifyUrl: 'https://open.spotify.com/track/4QXmJ5NBSNtrruORZPPIPx',
+    spotifyUri: 'spotify:track:4QXmJ5NBSNtrruORZPPIPx',
+    audioUrl: '/soundtracks/BEATS/BEAT 18 90 BPM.wav'
   },
   {
     id: 'beat-7',
-    name: 'BEAT 9 104 BPM',
-    bpm: 104,
-    spotifyUrl: 'https://open.spotify.com/track/5G5H5i5j5k5l5m5n5o5p5q',
-    spotifyUri: 'spotify:track:5G5H5i5j5k5l5m5n5o5p5q',
-    audioUrl: '/soundtracks/BEATS/BEAT 9 104 BPM.wav'
+    name: 'Bazooka 90',
+    bpm: 90,
+    spotifyUrl: 'https://open.spotify.com/track/6wIDnXuIpV4tvyysRn1qWi',
+    spotifyUri: 'spotify:track:6wIDnXuIpV4tvyysRn1qWi',
+    audioUrl: '/soundtracks/BEATS/BEAT 19 90 BPM.wav'
   },
   {
     id: 'beat-8',
-    name: 'BEAT 11 92 BPM',
+    name: 'Kelengue 92',
     bpm: 92,
-    spotifyUrl: 'https://open.spotify.com/track/6Q6R6s6t6u6v6w6x6y6z6A',
-    spotifyUri: 'spotify:track:6Q6R6s6t6u6v6w6x6y6z6A',
+    spotifyUrl: 'https://open.spotify.com/track/3YMVzs9ejblNzh0e4tYZt2',
+    spotifyUri: 'spotify:track:3YMVzs9ejblNzh0e4tYZt2',
     audioUrl: '/soundtracks/BEATS/BEAT 11 92 BPM.wav'
+  },
+  {
+    id: 'beat-9',
+    name: 'La jefa 93',
+    bpm: 93,
+    spotifyUrl: 'https://open.spotify.com/track/731uRoun8fAUbAYF6FxP3e',
+    spotifyUri: 'spotify:track:731uRoun8fAUbAYF6FxP3e',
+    audioUrl: '/soundtracks/BEATS/BEAT 28-93 BPM wav.wav'
+  },
+  {
+    id: 'beat-10',
+    name: 'Modo diablo 94',
+    bpm: 94,
+    spotifyUrl: 'https://open.spotify.com/track/2oYT8ibR6ktUhIrS5HgqQf',
+    spotifyUri: 'spotify:track:2oYT8ibR6ktUhIrS5HgqQf',
+    audioUrl: '/soundtracks/BEATS/MODO DIABLO 94.wav'
+  },
+  {
+    id: 'beat-11',
+    name: 'Gomagoma 95',
+    bpm: 95,
+    spotifyUrl: 'https://open.spotify.com/track/5BeT6hZzcWGolqDat6wPBd',
+    spotifyUri: 'spotify:track:5BeT6hZzcWGolqDat6wPBd',
+    audioUrl: '/soundtracks/BEATS/BEAT 30 95 BPM.wav'
+  },
+  {
+    id: 'beat-12',
+    name: 'Eclípse 108',
+    bpm: 108,
+    spotifyUrl: 'https://open.spotify.com/track/43Fgt9Rh9iWrC4sTcwoSMy',
+    spotifyUri: 'spotify:track:43Fgt9Rh9iWrC4sTcwoSMy',
+    audioUrl: '/soundtracks/BEATS/BEAT 24 108 BPM.wav'
+  },
+  {
+    id: 'beat-13',
+    name: 'El quinto 130',
+    bpm: 130,
+    spotifyUrl: 'https://open.spotify.com/track/0I3yyAZ94uo3Gqxsvc2L2i',
+    spotifyUri: 'spotify:track:0I3yyAZ94uo3Gqxsvc2L2i',
+    audioUrl: '/soundtracks/BEATS/BEAT 20  130 BPM.wav'
+  },
+  {
+    id: 'beat-14',
+    name: 'La bestia 140',
+    bpm: 140,
+    spotifyUrl: 'https://open.spotify.com/track/6lGGOIaKNMndZUAVvtOYXP',
+    spotifyUri: 'spotify:track:6lGGOIaKNMndZUAVvtOYXP',
+    audioUrl: '/soundtracks/BEATS/BEAT 22 140 BPM.wav'
+  },
+  {
+    id: 'beat-15',
+    name: 'Cítrico 146',
+    bpm: 146,
+    spotifyUrl: 'https://open.spotify.com/track/1WSWpomyMvudAGbuXHzxNQ',
+    spotifyUri: 'spotify:track:1WSWpomyMvudAGbuXHzxNQ',
+    audioUrl: '/soundtracks/BEATS/BEAT 27 146 BPM.wav'
   }
 ];
 

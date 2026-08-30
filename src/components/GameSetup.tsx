@@ -108,14 +108,50 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   // Vinculación de Spotify
   const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
 
-  const handleSpotifyToggle = () => {
-    const nextVal = !isSpotifyLinked;
-    setIsSpotifyLinked(nextVal);
-    localStorage.setItem('barrz_spotify_linked', String(nextVal));
+  const getApiUrl = (path: string) => {
+    const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+    return `${base}${path}`;
+  };
+
+  const handleSpotifyConnect = () => {
+    const token = localStorage.getItem('barrz_token');
+    if (!token) {
+      alert('Debes iniciar sesión primero para vincular tu cuenta de Spotify.');
+      return;
+    }
+    // Guardar pantalla de retorno
+    sessionStorage.setItem('barrz_spotify_return_step', step);
+    // Redirigir al login de Spotify
+    window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
+  };
+
+  const handleSpotifyDisconnect = () => {
+    localStorage.removeItem('barrz_spotify_linked');
+    setIsSpotifyLinked(false);
   };
 
   useEffect(() => {
-    setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
+    const checkSpotifyStatus = async () => {
+      const token = localStorage.getItem('barrz_token');
+      if (!token) return;
+      try {
+        const res = await fetch(getApiUrl('/api/spotify/status'), {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.linked) {
+          setIsSpotifyLinked(true);
+          localStorage.setItem('barrz_spotify_linked', 'true');
+        } else if (res.ok && !data.linked) {
+          setIsSpotifyLinked(false);
+          localStorage.removeItem('barrz_spotify_linked');
+        }
+      } catch (e) {
+        setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
+      }
+    };
+
+    checkSpotifyStatus();
   }, [step]);
 
   // Sincronizar el competidor 1 con los datos de perfil del usuario logueado
@@ -307,12 +343,14 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             <button 
               type="button" 
               className={`btn-spotify-link-setup ${isSpotifyLinked ? 'linked' : ''}`}
-              onClick={handleSpotifyToggle}
+              onClick={isSpotifyLinked ? handleSpotifyDisconnect : handleSpotifyConnect}
             >
-              {isSpotifyLinked ? '✓ CUENTA VINCULADA' : 'CONECTAR CON SPOTIFY'}
+              {isSpotifyLinked ? '✓ SPOTIFY VINCULADO (CLICK PARA DESVINCULAR)' : 'CONECTAR CON SPOTIFY'}
             </button>
             {isSpotifyLinked && (
-              <span className="spotify-user-meta font-base">Conectado como: <strong>BarrzUser_99</strong></span>
+              <span className="spotify-user-meta font-base">
+                Conectado con cuenta Spotify Premium ✓ (Streaming activo)
+              </span>
             )}
           </div>
 

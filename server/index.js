@@ -507,24 +507,24 @@ app.post('/api/auth/save-game', async (req, res) => {
   }
 });
 
-// 8. SPOTIFY INTEGRATION — AUTHENTICATION ROUTING
+// 8. SPOTIFY INTEGRATION — AUTHENTICATION & WEB PLAYBACK SDK ROUTING
 
 // Endpoint para iniciar la autenticación de Spotify
 app.get('/api/spotify/login', (req, res) => {
-  const userToken = req.query.state; // Pasamos el JWT de la app para saber a qué usuario asociar
+  const userToken = req.query.state; // JWT de la app para asociar con la cuenta
   if (!userToken) {
     return res.status(400).send('Falta token de usuario.');
   }
 
   const client_id = process.env.SPOTIFY_CLIENT_ID;
-  const redirect_uri = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:3001/api/spotify/callback';
+  const redirect_uri = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:5000/api/spotify/callback';
   
   if (!client_id) {
     return res.status(500).send('Error: SPOTIFY_CLIENT_ID no configurado en el servidor.');
   }
 
-  // Permisos necesarios para interactuar con el reproductor de Spotify
-  const scope = 'user-modify-playback-state user-read-playback-state user-read-currently-playing';
+  // Permisos completos para Web Playback SDK y control del reproductor
+  const scope = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state user-read-currently-playing app-remote-control';
 
   // Redirigir a la pantalla de autorización de Spotify
   const queryParams = new URLSearchParams({
@@ -532,7 +532,8 @@ app.get('/api/spotify/login', (req, res) => {
     client_id: client_id,
     scope: scope,
     redirect_uri: redirect_uri,
-    state: userToken // Enviamos el JWT como state
+    state: userToken,
+    show_dialog: 'true'
   });
 
   res.redirect(`https://accounts.spotify.com/authorize?${queryParams.toString()}`);
@@ -542,14 +543,17 @@ app.get('/api/spotify/login', (req, res) => {
 app.get('/api/spotify/callback', async (req, res) => {
   const code = req.query.code || null;
   const userToken = req.query.state || null;
+  const error = req.query.error || null;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-  if (!code || !userToken) {
-    return res.status(400).send('Faltan parámetros de autenticación.');
+  if (error || !code || !userToken) {
+    console.error('Spotify auth error or cancelled:', error);
+    return res.redirect(`${frontendUrl}?spotify_error=${encodeURIComponent(error || 'cancelled')}`);
   }
 
   const client_id = process.env.SPOTIFY_CLIENT_ID;
   const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
-  const redirect_uri = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:3001/api/spotify/callback';
+  const redirect_uri = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:5000/api/spotify/callback';
 
   if (!client_id || !client_secret) {
     return res.status(500).send('Credenciales de Spotify incompletas en el servidor.');
@@ -578,7 +582,7 @@ app.get('/api/spotify/callback', async (req, res) => {
 
     if (!tokenRes.ok || tokenData.error) {
       console.error('Error al obtener tokens de Spotify:', tokenData);
-      return res.status(400).send('Error al conectar con Spotify.');
+      return res.redirect(`${frontendUrl}?spotify_error=token_exchange_failed`);
     }
 
     const { access_token, refresh_token, expires_in } = tokenData;
@@ -595,36 +599,10 @@ app.get('/api/spotify/callback', async (req, res) => {
     );
 
     // Redirigir de regreso al frontend indicando éxito
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     res.redirect(`${frontendUrl}?spotify_success=true`);
   } catch (err) {
     console.error('Error en Spotify Callback:', err);
-    res.status(500).send('Error de autenticación.');
-  }
-});
-
-// Obtener estado/vinculación de Spotify del usuario actual
-app.get('/api/spotify/status', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Token no provisto.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const userRes = await db.query(
-      'SELECT spotify_refresh_token FROM users WHERE id = $1',
-      [decoded.id]
-    );
-    const user = userRes.rows[0];
-
-    res.json({
-      linked: !!(user && user.spotify_refresh_token)
-    });
-  } catch (err) {
-    res.status(401).json({ error: 'Token inválido.' });
+    res.redirect(`${frontendUrl}?spotify_error=server_auth_error`);
   }
 });
 
@@ -687,7 +665,74 @@ const getOrRefreshSpotifyToken = async (userId) => {
   return newAccessToken;
 };
 
-// Controlar el reproductor de Spotify (Play/Pause/Skip)
+// Obtener estado/vinculación de Spotify del usuario actual
+app.get('/api/spotify/status', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no provisto.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const userRes = await db.query(
+      'SELECT spotify_refresh_token FROM users WHERE id = $1',
+      [decoded.id]
+    );
+    const user = userRes.rows[0];
+
+    res.json({
+      linked: !!(user && user.spotify_refresh_token)
+    });
+  } catch (err) {
+    res.status(401).json({ error: 'Token inválido.' });
+  }
+});
+
+// Endpoint para que el SDK del frontend obtenga el token de acceso de Spotify
+app.get('/api/spotify/token', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no provisto.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const accessToken = await getOrRefreshSpotifyToken(decoded.id);
+    res.json({ access_token: accessToken });
+  } catch (err) {
+    console.error('Error al obtener token de Spotify:', err.message);
+    res.status(400).json({ error: err.message || 'Error al obtener token de Spotify.' });
+  }
+});
+
+// Obtener lista de dispositivos Spotify activos
+app.get('/api/spotify/devices', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no provisto.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const spotifyToken = await getOrRefreshSpotifyToken(decoded.id);
+
+    const devRes = await fetch('https://api.spotify.com/v1/me/player/devices', {
+      headers: { 'Authorization': `Bearer ${spotifyToken}` }
+    });
+    const data = await devRes.json();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Controlar el reproductor de Spotify (Play/Pause/Transfer)
 app.post('/api/spotify/control', async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -695,7 +740,7 @@ app.post('/api/spotify/control', async (req, res) => {
   }
 
   const token = authHeader.split(' ')[1];
-  const { action, uri } = req.body; // action: 'play' | 'pause', uri: spotify track uri
+  const { action, uri, device_id, position_ms } = req.body;
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
@@ -710,9 +755,25 @@ app.post('/api/spotify/control', async (req, res) => {
 
     if (action === 'play') {
       spotifyEndpoint = 'https://api.spotify.com/v1/me/player/play';
-      if (uri) {
-        body = JSON.stringify({ uris: [uri] });
+      if (device_id) {
+        spotifyEndpoint += `?device_id=${encodeURIComponent(device_id)}`;
       }
+      const playBody = {};
+      if (uri) {
+        playBody.uris = [uri];
+      }
+      if (position_ms !== undefined) {
+        playBody.position_ms = position_ms;
+      }
+      body = Object.keys(playBody).length > 0 ? JSON.stringify(playBody) : null;
+    } else if (action === 'pause') {
+      spotifyEndpoint = 'https://api.spotify.com/v1/me/player/pause';
+      if (device_id) {
+        spotifyEndpoint += `?device_id=${encodeURIComponent(device_id)}`;
+      }
+    } else if (action === 'transfer') {
+      spotifyEndpoint = 'https://api.spotify.com/v1/me/player';
+      body = JSON.stringify({ device_ids: [device_id], play: false });
     }
 
     const spotifyRes = await fetch(spotifyEndpoint, {
@@ -725,17 +786,17 @@ app.post('/api/spotify/control', async (req, res) => {
     });
 
     if (spotifyRes.status === 404) {
-       return res.status(404).json({ error: 'No se detectó un dispositivo activo en tu cuenta de Spotify. Abre la app de Spotify y dale Play para activarlo.' });
+       return res.status(404).json({ error: 'No se detectó un dispositivo activo en tu cuenta de Spotify. Abre la app de Spotify o activa el reproductor web.' });
     }
 
     if (spotifyRes.status === 403) {
-       return res.status(403).json({ error: 'Se requiere una suscripción Premium de Spotify para controlar el reproductor desde juegos externos.' });
+       return res.status(403).json({ error: 'Se requiere Spotify Premium para reproducir por streaming.' });
     }
 
-    if (!spotifyRes.ok) {
+    if (!spotifyRes.ok && spotifyRes.status !== 204 && spotifyRes.status !== 200) {
        const errData = await spotifyRes.json().catch(() => ({}));
        console.error('Error controlando Spotify:', errData);
-       return res.status(400).json({ error: 'Error al enviar comando a Spotify.' });
+       return res.status(400).json({ error: 'Error al enviar comando a Spotify.', details: errData });
     }
 
     res.json({ success: true });

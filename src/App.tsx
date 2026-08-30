@@ -5,6 +5,7 @@ import { GameSetup } from './components/GameSetup';
 import { Game } from './components/Game';
 import { MenuAudioPlayer } from './components/MenuAudioPlayer';
 import { UserProfilePanel } from './components/UserProfilePanel';
+import { spotifyPlayer } from './services/spotifyPlayer';
 import './App.css';
 
 const getApiUrl = (path: string) => {
@@ -79,6 +80,32 @@ function App() {
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
 
+  // Escuchar callback de Spotify desde URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('spotify_success') === 'true') {
+      localStorage.setItem('barrz_spotify_linked', 'true');
+      spotifyPlayer.init();
+      const returnStep = sessionStorage.getItem('barrz_spotify_return_step');
+      sessionStorage.removeItem('barrz_spotify_return_step');
+      if (returnStep) {
+        setGameState(returnStep as GameState);
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('spotify_error')) {
+      const err = urlParams.get('spotify_error');
+      console.warn('Spotify auth returned error:', err);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // Inicializar SDK de Spotify si ya está vinculado
+  useEffect(() => {
+    if (localStorage.getItem('barrz_spotify_linked') === 'true') {
+      spotifyPlayer.init();
+    }
+  }, []);
+
   // Secuencia de carga: 3s logo solo + 4s barra de carga
   useEffect(() => {
     const showBarTimer = setTimeout(() => {
@@ -124,6 +151,17 @@ function App() {
             };
             setUserSession(session);
             localStorage.setItem('barrz_session', JSON.stringify(session));
+            
+            // Verificar también si tiene Spotify vinculado
+            const spRes = await fetch(getApiUrl('/api/spotify/status'), {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const spData = await spRes.json();
+            if (spRes.ok && spData.linked) {
+              localStorage.setItem('barrz_spotify_linked', 'true');
+              spotifyPlayer.init();
+            }
+
             setGameState('splash');
           } else {
             localStorage.removeItem('barrz_token');

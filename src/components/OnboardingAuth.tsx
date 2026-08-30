@@ -19,7 +19,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
+  const [isSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
   const [isLogin, setIsLogin] = useState(false);
 
   useEffect(() => {
@@ -54,9 +54,12 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   }, [step]);
 
   const handleSpotifyToggle = () => {
-    const nextVal = !isSpotifyLinked;
-    setIsSpotifyLinked(nextVal);
-    localStorage.setItem('barrz_spotify_linked', String(nextVal));
+    const token = localStorage.getItem('barrz_token');
+    if (!token) {
+      setErrorMsg('Ingresá primero con tu correo o Google para asociar tu cuenta de Spotify.');
+      return;
+    }
+    window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {

@@ -3,12 +3,12 @@ import { ArrowLeft, RefreshCw, Volume2, Play, Pause, Square, Music, QrCode, Spar
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
+import { spotifyPlayer } from '../services/spotifyPlayer';
 import './Game.css';
 
 const getApiUrl = (path: string) => {
-  const isProd = import.meta.env.PROD;
-  const baseUrl = isProd ? window.location.origin : 'http://localhost:3001';
-  return `${baseUrl}${path}`;
+  const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+  return `${base}${path}`;
 };
 
 const DEATHMATCH_THEMES = [
@@ -252,12 +252,87 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     };
   }, [spotifyPlaying, subState, activeChallenge]);
 
-  // Resetear progreso al cambiar de beat o turno
+  const localAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Detener todo el audio (Spotify y Local)
+  const stopAllAudio = () => {
+    setSpotifyPlaying(false);
+    if (localAudioRef.current) {
+      localAudioRef.current.pause();
+      localAudioRef.current.currentTime = 0;
+    }
+    spotifyPlayer.pauseTrack().catch(() => {});
+  };
+
+  // Reproducir / Pausar
+  const handlePlayToggle = async () => {
+    if (spotifyPlaying) {
+      stopAllAudio();
+    } else {
+      if (!activeBeat) return;
+      setSpotifyPlaying(true);
+
+      // Si está vinculado con Spotify, intentar reproducir vía SDK / API de Spotify
+      if (isSpotifyLinked) {
+        const success = await spotifyPlayer.playTrack(activeBeat.spotifyUri);
+        if (!success) {
+          // Si falla o no hay dispositivo, reproducir vía local audio como respaldo automático
+          console.log('Fallback a audio local por falta de dispositivo activo en Spotify.');
+          if (activeBeat.audioUrl) {
+            if (!localAudioRef.current || localAudioRef.current.src !== window.location.origin + activeBeat.audioUrl) {
+              localAudioRef.current = new Audio(activeBeat.audioUrl);
+              localAudioRef.current.loop = true;
+            }
+            localAudioRef.current.play().catch(err => console.warn('Error en audio local:', err));
+          }
+        }
+      } else {
+        // Modo local
+        if (activeBeat.audioUrl) {
+          if (!localAudioRef.current || localAudioRef.current.src !== window.location.origin + activeBeat.audioUrl) {
+            localAudioRef.current = new Audio(activeBeat.audioUrl);
+            localAudioRef.current.loop = true;
+          }
+          localAudioRef.current.play().catch(err => console.warn('Error en audio local:', err));
+        }
+      }
+    }
+  };
+
+  const handleNextBeat = () => {
+    if (!activeBeat) return;
+    const currentIndex = BEATS_DECK.findIndex(b => b.id === activeBeat.id);
+    const nextIndex = (currentIndex + 1) % BEATS_DECK.length;
+    stopAllAudio();
+    setActiveBeat(BEATS_DECK[nextIndex]);
+  };
+
+  const handlePrevBeat = () => {
+    if (!activeBeat) return;
+    const currentIndex = BEATS_DECK.findIndex(b => b.id === activeBeat.id);
+    const prevIndex = (currentIndex - 1 + BEATS_DECK.length) % BEATS_DECK.length;
+    stopAllAudio();
+    setActiveBeat(BEATS_DECK[prevIndex]);
+  };
+
+  const handleShuffleBeat = () => {
+    stopAllAudio();
+    drawBeat(200);
+  };
+
+  // Resetear progreso y detener audio al cambiar de beat o turno
   useEffect(() => {
     setSpotifyProgress(0);
-    setSpotifyPlaying(false);
+    stopAllAudio();
     setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
   }, [activeBeat, subState]);
+
+  // Cleanup al desmontar Game
+  useEffect(() => {
+    return () => {
+      stopAllAudio();
+    };
+  }, []);
 
   // Manejo del temporizador
   useEffect(() => {
@@ -291,10 +366,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
   }, [activeChallenge]);
 
-
-
   // Volver al menú
   const triggerExitToMenu = () => {
+    stopAllAudio();
     setIsExiting(true);
     setTimeout(() => onBackToMenu(), 600);
   };
@@ -312,7 +386,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const drawChallenge = (delay = 150) => {
     setChallengeFlipped(false);
     setTimeout(() => {
-      // Si está activa la opción de freestyle libre aleatorio en multijugador, hay un 15% de probabilidad de forzarlo
       if (mode === 'multiplayer' && gameSettings?.allowRandomFreestyle && Math.random() < 0.15) {
         const libreCard = CHALLENGES_DECK.find(c => c.category === 'freestyle' || c.id === 'challenge-freestyle-libre' || c.id === 'challenge-tematicas-libre');
         if (libreCard) {
@@ -329,12 +402,12 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   // Terminar improvisación e ir a puntuar
   const handleFinishImprovisation = () => {
+    stopAllAudio();
     setTimerRunning(false);
     if (mode === 'solo') {
-      // En modo Solo, no hay puntuación. Pasamos de turno directamente
       advanceTurn(scores);
     } else {
-      setSelectedRating(3); // Restablecer estrellas a 3
+      setSelectedRating(3);
       setCurrentVoterIndex(0);
       setVotesReceived({});
       setSubState('scoring');
@@ -944,24 +1017,48 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                 </div>
 
                                 <div className="spotify-controls">
-                                  <button type="button" className="spotify-btn-sub" title="Aleatorio">
+                                  <button 
+                                    type="button" 
+                                    className="spotify-btn-sub" 
+                                    title="Aleatorio"
+                                    onClick={(e) => { e.stopPropagation(); handleShuffleBeat(); }}
+                                  >
                                     <span style={{ fontSize: '1rem', color: '#1DB954' }}>⇄</span>
                                   </button>
-                                  <button type="button" className="spotify-btn-sub" title="Anterior">
+                                  <button 
+                                    type="button" 
+                                    className="spotify-btn-sub" 
+                                    title="Anterior"
+                                    onClick={(e) => { e.stopPropagation(); handlePrevBeat(); }}
+                                  >
                                     <span style={{ fontSize: '1.2rem', verticalAlign: 'middle' }}>⏮</span>
                                   </button>
                                   <button 
                                     type="button" 
                                     className={`spotify-btn-play-pause ${spotifyPlaying ? 'playing' : ''}`}
-                                    onClick={(e) => { e.stopPropagation(); setSpotifyPlaying(!spotifyPlaying); }}
+                                    onClick={(e) => { e.stopPropagation(); handlePlayToggle(); }}
                                     title={spotifyPlaying ? 'Pausar' : 'Reproducir'}
                                   >
                                     {spotifyPlaying ? '⏸' : '▶'}
                                   </button>
-                                  <button type="button" className="spotify-btn-sub" title="Siguiente">
+                                  <button 
+                                    type="button" 
+                                    className="spotify-btn-sub" 
+                                    title="Siguiente"
+                                    onClick={(e) => { e.stopPropagation(); handleNextBeat(); }}
+                                  >
                                     <span style={{ fontSize: '1.2rem', verticalAlign: 'middle' }}>⏭</span>
                                   </button>
-                                  <button type="button" className="spotify-btn-sub" title="Repetir">
+                                  <button 
+                                    type="button" 
+                                    className="spotify-btn-sub" 
+                                    title="Reiniciar Beat"
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      setSpotifyProgress(0);
+                                      if (localAudioRef.current) localAudioRef.current.currentTime = 0;
+                                    }}
+                                  >
                                     <span style={{ fontSize: '1rem' }}>↻</span>
                                   </button>
                                 </div>
