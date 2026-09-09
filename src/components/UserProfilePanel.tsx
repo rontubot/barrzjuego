@@ -4,9 +4,8 @@ import { BattleDetailView } from './BattleDetailView';
 import './UserProfilePanel.css';
 
 const getApiUrl = (path: string) => {
-  const isProd = import.meta.env.PROD;
-  const baseUrl = isProd ? window.location.origin : 'http://localhost:3001';
-  return `${baseUrl}${path}`;
+  const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+  return `${base}${path}`;
 };
 
 interface UserProfilePanelProps {
@@ -705,11 +704,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
               type="button" 
               className="btn-drawer-logout"
               onClick={() => {
-                localStorage.removeItem('barrz_session');
-                localStorage.removeItem('barrz_token');
                 if (onLogout) {
                   onLogout();
                 } else {
+                  localStorage.removeItem('barrz_session');
+                  localStorage.removeItem('barrz_token');
+                  localStorage.removeItem('barrz_spotify_linked');
                   window.location.reload();
                 }
                 setIsOpen(false);

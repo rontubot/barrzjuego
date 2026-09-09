@@ -125,7 +125,20 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
   };
 
-  const handleSpotifyDisconnect = () => {
+  const handleSpotifyDisconnect = async () => {
+    const token = localStorage.getItem('barrz_token');
+    if (token) {
+      try {
+        await fetch(getApiUrl('/api/spotify/unlink'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (err) {
+        console.error('Error al desvincular Spotify en servidor:', err);
+      }
+    }
     localStorage.removeItem('barrz_spotify_linked');
     setIsSpotifyLinked(false);
   };

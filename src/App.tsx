@@ -152,20 +152,36 @@ function App() {
             setUserSession(session);
             localStorage.setItem('barrz_session', JSON.stringify(session));
             
-            // Verificar también si tiene Spotify vinculado
-            const spRes = await fetch(getApiUrl('/api/spotify/status'), {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const spData = await spRes.json();
-            if (spRes.ok && spData.linked) {
+            // Sincronizar estado de Spotify de la cuenta
+            if (data.spotify_linked) {
               localStorage.setItem('barrz_spotify_linked', 'true');
               spotifyPlayer.init();
+            } else {
+              // Verificar como respaldo en el endpoint de status
+              try {
+                const spRes = await fetch(getApiUrl('/api/spotify/status'), {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const spData = await spRes.json();
+                if (spRes.ok && spData.linked) {
+                  localStorage.setItem('barrz_spotify_linked', 'true');
+                  spotifyPlayer.init();
+                } else {
+                  localStorage.removeItem('barrz_spotify_linked');
+                  spotifyPlayer.disconnect();
+                }
+              } catch {
+                localStorage.removeItem('barrz_spotify_linked');
+                spotifyPlayer.disconnect();
+              }
             }
 
             setGameState('splash');
           } else {
             localStorage.removeItem('barrz_token');
             localStorage.removeItem('barrz_session');
+            localStorage.removeItem('barrz_spotify_linked');
+            spotifyPlayer.disconnect();
             setGameState('auth_choice');
           }
         } catch (e) {
@@ -206,6 +222,8 @@ function App() {
     setUserSession(null);
     localStorage.removeItem('barrz_session');
     localStorage.removeItem('barrz_token');
+    localStorage.removeItem('barrz_spotify_linked');
+    spotifyPlayer.disconnect();
     setGameState('auth_choice');
   };
 
@@ -227,6 +245,14 @@ function App() {
         };
         setUserSession(session);
         localStorage.setItem('barrz_session', JSON.stringify(session));
+
+        if (data.spotify_linked) {
+          localStorage.setItem('barrz_spotify_linked', 'true');
+          spotifyPlayer.init();
+        } else if (data.spotify_linked === false) {
+          localStorage.removeItem('barrz_spotify_linked');
+          spotifyPlayer.disconnect();
+        }
       }
 
       // Al iniciar el combate directo (desde deck selection, solo mode o rápido)

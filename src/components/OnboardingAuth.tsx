@@ -124,7 +124,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         
         if (res.ok) {
           localStorage.setItem('barrz_token', data.token);
-          onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, loggedIn: true, method: 'email' });
+          onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'email' });
         } else {
           setErrorMsg(data.error || 'Contraseña incorrecta.');
         }
@@ -188,7 +188,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       
       if (res.ok) {
         localStorage.setItem('barrz_token', data.token);
-        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, loggedIn: true, method: 'email' });
+        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'email' });
       } else {
         setErrorMsg(data.error || 'Código incorrecto.');
       }
@@ -213,7 +213,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('barrz_token', data.token);
-        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, loggedIn: true, method: 'google' });
+        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'google' });
       } else {
         setErrorMsg(data.error || 'Error al iniciar sesión con Google.');
       }

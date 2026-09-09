@@ -166,9 +166,12 @@ class SpotifyPlayerService {
     });
 
     this.player.addListener('authentication_error', async ({ message }: { message: string }) => {
-      console.error('Spotify Auth Error:', message);
-      this.error = 'Sesión de Spotify expirada. Reconectá tu cuenta.';
-      this.notify();
+      console.warn('Spotify Auth Warning:', message);
+      const freshToken = await this.fetchAccessToken();
+      if (!freshToken) {
+        this.error = 'Sesión de Spotify expirada. Reconectá tu cuenta.';
+        this.notify();
+      }
     });
 
     this.player.addListener('account_error', ({ message }: { message: string }) => {

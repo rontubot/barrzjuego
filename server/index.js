@@ -195,6 +195,7 @@ app.post('/api/auth/register', async (req, res) => {
       username: user.username,
       avatar: user.avatar,
       avatar_type: user.avatar_type,
+      spotify_linked: false,
       loggedIn: true,
       method: 'email'
     });
@@ -256,6 +257,7 @@ app.post('/api/auth/login', async (req, res) => {
       avatar: user.avatar,
       avatar_type: user.avatar_type,
       custom_avatar_url: user.custom_avatar_url,
+      spotify_linked: Boolean(user.spotify_refresh_token),
       stats: profileData.stats,
       history: profileData.history,
       loggedIn: true,
@@ -281,7 +283,7 @@ app.get('/api/auth/verify-token', async (req, res) => {
     
     // Obtener perfil completo
     const userRes = await db.query(
-      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url FROM users WHERE id = $1',
+      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url, spotify_refresh_token FROM users WHERE id = $1',
       [decoded.id]
     );
     if (userRes.rows.length === 0) {
@@ -307,6 +309,7 @@ app.get('/api/auth/verify-token', async (req, res) => {
       avatar: user.avatar,
       avatar_type: user.avatar_type,
       custom_avatar_url: user.custom_avatar_url,
+      spotify_linked: Boolean(user.spotify_refresh_token),
       stats: profileData.stats,
       history: profileData.history
     });
@@ -376,7 +379,7 @@ app.post('/api/auth/google-login', async (req, res) => {
 
     // Obtener los datos completos
     const userProfileRes = await db.query(
-      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url FROM users WHERE id = $1',
+      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url, spotify_refresh_token FROM users WHERE id = $1',
       [user.id]
     );
     const fullUser = userProfileRes.rows[0];
@@ -395,6 +398,7 @@ app.post('/api/auth/google-login', async (req, res) => {
       avatar: fullUser.avatar,
       avatar_type: fullUser.avatar_type,
       custom_avatar_url: fullUser.custom_avatar_url,
+      spotify_linked: Boolean(fullUser.spotify_refresh_token),
       stats: profileData.stats,
       history: profileData.history,
       loggedIn: true,
@@ -651,19 +655,48 @@ const getOrRefreshSpotifyToken = async (userId) => {
   }
 
   const newAccessToken = refreshData.access_token;
-  const expiresAt = new Date(Date.now() + refreshData.expires_in * 1000);
+  const newRefreshToken = refreshData.refresh_token || spotify_refresh_token;
+  const expiresAt = new Date(Date.now() + (refreshData.expires_in || 3600) * 1000);
 
-  // Actualizar en base de datos
+  // Actualizar en base de datos conservando o actualizando el refresh_token
   await db.query(
     `UPDATE users 
      SET spotify_access_token = $1, 
-         spotify_token_expires_at = $2 
-     WHERE id = $3`,
-    [newAccessToken, expiresAt, userId]
+         spotify_refresh_token = $2, 
+         spotify_token_expires_at = $3 
+     WHERE id = $4`,
+    [newAccessToken, newRefreshToken, expiresAt, userId]
   );
 
   return newAccessToken;
 };
+
+// Desvincular Spotify de la cuenta de usuario de forma explícita
+app.post('/api/spotify/unlink', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no provisto.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    await db.query(
+      `UPDATE users 
+       SET spotify_access_token = NULL, 
+           spotify_refresh_token = NULL, 
+           spotify_token_expires_at = NULL 
+       WHERE id = $1`,
+      [decoded.id]
+    );
+
+    res.json({ success: true, linked: false });
+  } catch (err) {
+    console.error('Error al desvincular Spotify:', err);
+    res.status(500).json({ error: 'Error del servidor al desvincular Spotify.' });
+  }
+});
 
 // Obtener estado/vinculación de Spotify del usuario actual
 app.get('/api/spotify/status', async (req, res) => {
