@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Users, User, Play, Pause, ArrowLeft, Plus, Minus, UserPlus, Check, RefreshCw, ArrowRight } from 'lucide-react';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
+import { useI18n } from '../i18n/LanguageContext';
 import './GameSetup.css';
 
 interface GameSetupProps {
@@ -12,6 +13,7 @@ interface GameSetupProps {
 }
 
 export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext, onBack }) => {
+  const { t } = useI18n();
   const avatars = [
     '🎤', '🔥', '🎧', '👑', '👽', '⚡', '🎸', '🚀', '💀', '💥', '🛹', '🕶️',
     '/avatars/female_1.png',
@@ -116,7 +118,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   const handleSpotifyConnect = () => {
     const token = localStorage.getItem('barrz_token');
     if (!token) {
-      alert('Debes iniciar sesión primero para vincular tu cuenta de Spotify.');
+      alert(t.auth.spotify_need_auth);
       return;
     }
     // Guardar pantalla de retorno
@@ -193,12 +195,12 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   }, [userSession]);
 
   const categoriesList = [
-    { id: 'palabras', label: 'Palabras', desc: 'Desafíos de palabras' },
-    { id: 'tematicas', label: 'Temáticas', desc: 'Desafíos de temáticas' },
-    { id: 'terminaciones', label: 'Terminaciones', desc: 'Desafíos de terminaciones' },
-    { id: 'beatbox', label: 'Beatbox', desc: 'Desafíos de beatbox con cronómetro' },
-    { id: 'versus', label: 'Versus', desc: 'Desafíos versus' },
-    { id: 'freestyle', label: 'Freestyle', desc: 'Improvisación libre sobre el beat' }
+    { id: 'palabras', label: t.categories.palabras, desc: t.categories.palabras_desc },
+    { id: 'tematicas', label: t.categories.tematicas, desc: t.categories.tematicas_desc },
+    { id: 'terminaciones', label: t.categories.terminaciones, desc: t.categories.terminaciones_desc },
+    { id: 'beatbox', label: t.categories.beatbox, desc: t.categories.beatbox_desc },
+    { id: 'versus', label: t.categories.versus, desc: t.categories.versus_desc },
+    { id: 'freestyle', label: t.categories.freestyle, desc: t.categories.freestyle_desc }
   ];
 
   // Manejo de nombres de jugadores
@@ -278,15 +280,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     setIsSpinning(true);
   };
 
-
-
   return (
     <div className="setup-outer-container">
       <div className="grunge-overlay"></div>
 
       {/* Botón de volver */}
       <button className="btn-setup-back" onClick={onBack}>
-        <span>Atrás</span>
+        <span>{t.common.back}</span>
       </button>
 
       {/* ── LOBBY START ────────────────────────────────────────────────── */}
@@ -294,21 +294,21 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
         <div className="setup-card glass-panel glow-pink text-center fade-in">
           <div className="lobby-user-badge">
             <span className="user-icon">🔥</span>
-            <span>Sesión: {userSession?.email || 'Freestyler Google'}</span>
+            <span>{t.setup.session_label}: {userSession?.email || 'Freestyler'}</span>
           </div>
 
           <h1 className="logo-title-large">
             <img src="/Barrzjuego.png" alt="BARRZ" className="setup-logo-img" />
           </h1>
-          <div className="logo-sub-urban">EDICIÓN DE COMBATE</div>
+          <div className="logo-sub-urban">{t.setup.lobby_title}</div>
 
           <p className="lobby-desc">
-            ¿Preparado para medir tus habilidades de improvisación? Configura tu equipo, define las rondas y que empiece el cypher.
+            {t.setup.lobby_desc}
           </p>
 
           <button className="btn-comenzar pulse-pink-anim" onClick={() => onNext('tutorial_ask')}>
             <Play size={22} fill="currentColor" />
-            <span>COMENZAR</span>
+            <span>{t.setup.start_btn}</span>
           </button>
         </div>
       )}
@@ -329,7 +329,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 onNext(isSpotifyLinked ? 'mode_selection' : 'link_spotify');
               }}
             >
-              <span>CONTINUAR</span>
+              <span>{t.setup.tutorial_continue}</span>
               <Play size={16} fill="currentColor" />
             </button>
           </div>
@@ -347,9 +347,9 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             </div>
           </div>
           
-          <h2 className="font-graffiti text-glow-teal mt-10">VINCULAR SPOTIFY</h2>
+          <h2 className="font-graffiti text-glow-teal mt-10">{t.setup.spotify_title}</h2>
           <p className="step-description">
-            Vinculá tu cuenta de Spotify Premium para que cada rima sume reproducciones reales a los beatmakers de las instrumentales. ¡Es el motor del cypher!
+            {t.setup.spotify_desc}
           </p>
 
           <div className="spotify-link-action-box">
@@ -358,17 +358,17 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               className={`btn-spotify-link-setup ${isSpotifyLinked ? 'linked' : ''}`}
               onClick={isSpotifyLinked ? handleSpotifyDisconnect : handleSpotifyConnect}
             >
-              {isSpotifyLinked ? '✓ SPOTIFY VINCULADO (CLICK PARA DESVINCULAR)' : 'CONECTAR CON SPOTIFY'}
+              {isSpotifyLinked ? t.setup.spotify_disconnect : t.setup.spotify_connect}
             </button>
             {isSpotifyLinked && (
               <span className="spotify-user-meta font-base">
-                Conectado con cuenta Spotify Premium ✓ (Streaming activo)
+                {t.setup.spotify_streaming_active}
               </span>
             )}
           </div>
 
           <button className="btn-neon-pink w-100 mt-20" onClick={() => onNext('mode_selection')}>
-            <span>CONTINUAR A MODOS</span>
+            <span>{t.setup.continue_to_modes}</span>
             <ArrowRight size={18} />
           </button>
         </div>
@@ -377,8 +377,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {/* ── MODE SELECTION ─────────────────────────────────────────────── */}
       {step === 'mode_selection' && (
         <div className="setup-card glass-panel glow-pink fade-in">
-          <h2 className="font-graffiti text-glow-pink text-center mb-20">SELECCIONAR MODO</h2>
-          <p className="step-sub text-center">Elegí la modalidad de improvisación.</p>
+          <h2 className="font-graffiti text-glow-pink text-center mb-20">{t.setup.mode_title}</h2>
+          <p className="step-sub text-center">{t.setup.mode_desc}</p>
 
           <div className="modes-stack">
             <button 
@@ -387,9 +387,9 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             >
               <div className="mode-option-header">
                 <Users size={20} className="pink-text" />
-                <h3>Multijugador</h3>
+                <h3>{t.setup.mode_multi}</h3>
               </div>
-              <p>Competencia en equipo con registro de nombres, conteo de rondas, sorteo inicial y tabla de puntuaciones.</p>
+              <p>{t.setup.mode_multi_desc}</p>
             </button>
 
             <button 
@@ -398,9 +398,9 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             >
               <div className="mode-option-header">
                 <User size={20} className="pink-text" />
-                <h3>Jugar Solo</h3>
+                <h3>{t.setup.mode_solo}</h3>
               </div>
-              <p>Entrená en solitario con bases y desafíos para perfeccionar tus patrones. Admite flujo automático o selección a mano.</p>
+              <p>{t.setup.mode_solo_desc}</p>
             </button>
           </div>
         </div>
@@ -417,9 +417,9 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             <div className="individual-header">
               <button className="btn-back-individual" onClick={onBack}>
                 <ArrowLeft size={18} />
-                <span>Volver</span>
+                <span>{t.common.back}</span>
               </button>
-              <h2 className="font-graffiti text-glow-teal">MODO INDIVIDUAL</h2>
+              <h2 className="font-graffiti text-glow-teal">{t.setup.individual_title}</h2>
             </div>
 
             {/* Sub-mode Tabs */}
@@ -432,13 +432,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                   setSelectedChallenge(null);
                 }}
               >
-                🎲 ALEATORIO
+                {t.setup.solo_random_tab}
               </button>
               <button
                 className={`individual-tab ${individualSubMode === 'custom' ? 'active' : ''}`}
                 onClick={() => setIndividualSubMode('custom')}
               >
-                🎛️ PERSONALIZADO
+                {t.setup.solo_custom_tab}
               </button>
             </div>
 
@@ -447,12 +447,11 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               <div className="individual-random-content fade-in">
                 <div className="random-mode-card glass-panel">
                   <div className="random-icon">🎲</div>
-                  <h3>Modo Aleatorio</h3>
-                  <p>El sistema seleccionará un beat y un desafío automáticamente al iniciar cada turno. Perfecto para entrenamientos rápidos y variados.</p>
+                  <h3>{t.setup.solo_random_title}</h3>
+                  <p>{t.setup.solo_random_desc}</p>
                   <div className="random-features">
-                    <span className="feature-chip">🎵 Beat aleatorio</span>
-                    <span className="feature-chip">🃏 Desafío sorpresa</span>
-                    <span className="feature-chip">⚡ Sin configuración</span>
+                    <span className="feature-chip">{t.setup.chip_random_beat}</span>
+                    <span className="feature-chip">{t.setup.chip_random_challenge}</span>
                   </div>
                 </div>
               </div>
@@ -464,7 +463,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 {/* Beats column */}
                 <div className="selection-column">
                   <div className="column-header">
-                    <h3 className="teal-text">🎵 ELEGÍ TU BASE</h3>
+                    <h3 className="teal-text">{t.setup.choose_beat}</h3>
                     {selectedBeat && <span className="selection-badge">✓ {selectedBeat.name}</span>}
                   </div>
                   <div className="beats-list scrollable-list">
@@ -483,7 +482,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                             <button
                               className={`btn-preview ${previewingBeatId === beat.id ? 'previewing' : ''}`}
                               onClick={e => { e.stopPropagation(); handleTogglePreview(beat); }}
-                              title={previewingBeatId === beat.id ? 'Detener' : 'Escuchar'}
+                              title={previewingBeatId === beat.id ? 'Pausar' : 'Escuchar'}
                             >
                               {previewingBeatId === beat.id ? <Pause size={14} /> : <Play size={14} />}
                             </button>
@@ -498,7 +497,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 {/* Challenges column */}
                 <div className="selection-column">
                   <div className="column-header">
-                    <h3 className="pink-text">🃏 ELEGÍ TU DESAFÍO</h3>
+                    <h3 className="pink-text">{t.setup.choose_challenge}</h3>
                     {selectedChallenge && <span className="selection-badge">✓ {selectedChallenge.title || selectedChallenge.category}</span>}
                   </div>
                   <div className="challenges-list scrollable-list">
@@ -555,11 +554,11 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 }}
               >
                 {!canStart ? (
-                  <span>Seleccioná un beat y desafío</span>
+                  <span>{t.setup.select_beat_and_challenge}</span>
                 ) : (
                   <>
                     <Play size={18} fill="currentColor" />
-                    <span>ARRANCAR SESIÓN</span>
+                    <span>{t.setup.start_solo_btn}</span>
                   </>
                 )}
               </button>
@@ -570,8 +569,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               <div className="themes-mosaic-overlay fade-in">
                 <div className="themes-mosaic-container glass-panel glow-pink">
                   <div className="themes-mosaic-header">
-                    <h2 className="font-graffiti text-glow-pink">SELECCIONAR TEMÁTICA</h2>
-                    <p className="themes-mosaic-subtitle font-base">Hacé click en una temática para expandirla y leerla antes de confirmar.</p>
+                    <h2 className="font-graffiti text-glow-pink">{t.setup.select_theme_title}</h2>
+                    <p className="themes-mosaic-subtitle font-base">{t.setup.select_theme_desc}</p>
                   </div>
 
                   <div className="themes-mosaic-grid">
@@ -582,13 +581,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                         onClick={() => setExpandedThemeCard(card)}
                       >
                         <h4 className="theme-card-title">{card.title}</h4>
-                        <div className="theme-card-preview font-base">{card.highlightText || 'Temática'}</div>
+                        <div className="theme-card-preview font-base">{card.highlightText || t.setup.theme_badge}</div>
                       </div>
                     ))}
                   </div>
 
                   <button className="btn-close-mosaic font-base" onClick={() => setShowThemesMosaic(false)}>
-                    CERRAR
+                    {t.setup.close_mosaic_btn}
                   </button>
                 </div>
               </div>
@@ -598,7 +597,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             {expandedThemeCard && (
               <div className="theme-expanded-overlay fade-in">
                 <div className="theme-expanded-card glass-panel glow-pink">
-                  <span className="expanded-card-badge">TEMÁTICA</span>
+                  <span className="expanded-card-badge">{t.setup.theme_badge}</span>
                   <h2 className="expanded-card-title">{expandedThemeCard.title}</h2>
                   <p className="expanded-card-desc">{expandedThemeCard.description}</p>
                   {expandedThemeCard.highlightText && (
@@ -616,13 +615,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                         setShowThemesMosaic(false);
                       }}
                     >
-                      CONFIRMAR SELECCIÓN
+                      {t.setup.confirm_theme_selection}
                     </button>
                     <button 
                       className="btn-expanded-back font-base"
                       onClick={() => setExpandedThemeCard(null)}
                     >
-                      VOLVER AL MOSAICO
+                      {t.setup.back_to_mosaic}
                     </button>
                   </div>
                 </div>
@@ -635,8 +634,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {/* ── SETUP PLAYERS ──────────────────────────────────────────────── */}
       {step === 'setup_players' && (
         <div className="setup-card glass-panel glow-teal fade-in">
-          <h2 className="font-graffiti text-glow-teal text-center mb-10">PARTICIPANTES</h2>
-          <p className="step-sub text-center">Registrá los nombres de los competidores (2 a 8 jugadores).</p>
+          <h2 className="font-graffiti text-glow-teal text-center mb-10">{t.setup.players_title}</h2>
+          <p className="step-sub text-center">{t.setup.players_sub}</p>
 
           <div className="players-list-inputs scrollable-container">
             {players.map((playerName, index) => (
@@ -648,7 +647,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                     type="button"
                     className="player-avatar-btn"
                     onClick={() => setActiveAvatarPicker(activeAvatarPicker === index ? null : index)}
-                    title="Elegir Avatar"
+                    title="Avatar"
                     style={{ padding: (playerAvatars[index]?.startsWith('/') || playerAvatars[index]?.startsWith('data:image/')) ? '0' : '' }}
                   >
                     {(playerAvatars[index]?.startsWith('/') || playerAvatars[index]?.startsWith('data:image/')) ? (
@@ -663,7 +662,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                     value={playerName}
                     maxLength={15}
                     onChange={(e) => handlePlayerNameChange(index, e.target.value)}
-                    placeholder={`Jugador ${index + 1}`}
+                    placeholder={`${t.setup.player_placeholder} ${index + 1}`}
                     className="player-name-field"
                   />
                   <button 
@@ -710,14 +709,14 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               disabled={players.length >= 8}
             >
               <UserPlus size={16} />
-              <span>Añadir Competidor ({players.length}/8)</span>
+              <span>{t.setup.add_player} ({players.length}/8)</span>
             </button>
 
             <button 
               className="btn-neon-pink w-100 mt-20"
               onClick={() => onNext('setup_rounds', { players })}
             >
-              <span>SIGUIENTE: RONDAS</span>
+              <span>{t.setup.next_rounds_btn}</span>
             </button>
           </div>
         </div>
@@ -726,8 +725,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {/* ── SETUP ROUNDS ───────────────────────────────────────────────── */}
       {step === 'setup_rounds' && (
         <div className="setup-card glass-panel glow-pink text-center fade-in">
-          <h2 className="font-graffiti text-glow-pink mb-10">CANTIDAD DE RONDAS</h2>
-          <p className="step-sub">Elegí la duración de la batalla (1 a 20 rondas).</p>
+          <h2 className="font-graffiti text-glow-pink mb-10">{t.setup.rounds_title}</h2>
+          <p className="step-sub">{t.setup.rounds_sub}</p>
 
           <div className="rounds-selector-widget">
             <button 
@@ -739,7 +738,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
 
             <div className="rounds-count-display">
               <span className="rounds-number">{roundsCount}</span>
-              <span className="rounds-label">{roundsCount === 1 ? 'RONDA' : 'RONDAS'}</span>
+              <span className="rounds-label">{roundsCount === 1 ? t.common.round.toUpperCase() : t.common.rounds.toUpperCase()}</span>
             </div>
 
             <button 
@@ -751,14 +750,14 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
           </div>
 
           <p className="rounds-help-info">
-            Tiempo estimado: ~{roundsCount * players.length * 2} minutos de freestyle.
+            {t.setup.rounds_time_est} ~{roundsCount * players.length * 2} {t.setup.rounds_time_est_end}
           </p>
 
           <button 
             className="btn-neon-teal w-100 mt-20"
             onClick={() => onNext('setup_deck', { players, roundsCount })}
           >
-            <span>SIGUIENTE: PALETA</span>
+            <span>{t.setup.next_deck_btn}</span>
           </button>
         </div>
       )}
@@ -766,8 +765,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {/* ── SETUP DECK & SPIN WHEEL ─────────────────────────────────────── */}
       {step === 'setup_deck' && (
         <div className="setup-card glass-panel glow-teal fade-in">
-          <h2 className="font-graffiti text-glow-teal text-center mb-10">PALETA DE JUEGO</h2>
-          <p className="step-sub text-center">Selecciona qué desafíos se incluirán en el mazo.</p>
+          <h2 className="font-graffiti text-glow-teal text-center mb-10">{t.setup.deck_title}</h2>
+          <p className="step-sub text-center">{t.setup.deck_sub}</p>
 
           <div className="categories-grid scrollable-container">
             {categoriesList.map((cat) => (
@@ -797,14 +796,14 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               {allowRandomFreestyle && <Check size={12} />}
             </div>
             <div className="category-card-info">
-              <h4>🎭 Freestyle Libre Aleatorio</h4>
-              <p>Tiene una probabilidad de salir en turnos y freestylear por todo el beat.</p>
+              <h4>{t.setup.allow_freestyle_random}</h4>
+              <p>{t.setup.allow_freestyle_random_desc}</p>
             </div>
           </div>
 
           {/* Sorteo de Quién Empieza */}
           <div className="roulette-box glass-panel">
-            <h3>🎰 ¿QUIÉN EMPIEZA EL JUEGO?</h3>
+            <h3>{t.setup.who_starts}</h3>
             
             <div className="roulette-display">
               {isSpinning ? (
@@ -826,10 +825,10 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                     )}
                   </div>
                   <span className="winner-name pink-text">{startingPlayer}</span>
-                  <span className="winner-tag">¡Rima primero!</span>
+                  <span className="winner-tag">{t.setup.starts_turn}</span>
                 </div>
               ) : (
-                <span className="roulette-placeholder">Sin sortear</span>
+                <span className="roulette-placeholder">{t.setup.not_spun}</span>
               )}
             </div>
 
@@ -839,7 +838,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               disabled={isSpinning}
             >
               <RefreshCw size={14} className={isSpinning ? 'spin' : ''} />
-              <span>{startingPlayer ? 'SORTEAR OTRA VEZ' : 'REALIZAR SORTEO'}</span>
+              <span>{startingPlayer ? t.setup.spin_again : t.setup.spin_roulette}</span>
             </button>
           </div>
 
@@ -866,7 +865,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             }}
             disabled={isSpinning}
           >
-            <span>INICIAR COMBATE</span>
+            <span>{t.setup.start_battle_btn}</span>
           </button>
         </div>
       )}

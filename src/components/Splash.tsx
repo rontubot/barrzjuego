@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Play, BookOpen } from 'lucide-react';
+import { useI18n } from '../i18n/LanguageContext';
 import './Splash.css';
 
 interface SplashProps {
@@ -8,6 +9,7 @@ interface SplashProps {
 }
 
 export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false }) => {
+  const { t } = useI18n();
   const [showRules, setShowRules] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
 
@@ -20,8 +22,8 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
         <h1 className="logo-title">
           <img src="/Barrzjuego.png" alt="BARRZJUEGO" className="logo-img" />
         </h1>
-        <div className="logo-badge">FREESTYLE CARD GAME</div>
-        <p className="logo-description">El juego definitivo de improvisación, rimas y beats.</p>
+        <div className="logo-badge">{t.splash.badge}</div>
+        <p className="logo-description">{t.splash.desc}</p>
       </div>
 
       {/* Menú de Botones Principales */}
@@ -36,12 +38,12 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
             disabled={isLaunching}
           >
             <Play size={24} fill="currentColor" />
-            {isLaunching ? 'CARGANDO...' : 'JUGAR AHORA'}
+            {isLaunching ? t.splash.loading_btn : t.splash.play_now}
           </button>
           
           <button className="btn-menu-option" onClick={() => setShowRules(true)} disabled={isLaunching}>
             <BookOpen size={20} />
-            Instrucciones y Consejos
+            {t.splash.instructions_btn}
           </button>
         </div>
       )}
@@ -51,61 +53,54 @@ export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false })
         <div className="overlay-panel glass-panel glow-pink fade-in">
           <div className="panel-header">
             <BookOpen className="header-icon pink-text" size={24} />
-            <h2>CÓMO JUGAR</h2>
+            <h2>{t.splash.rules_title}</h2>
           </div>
           
           <div className="panel-content scrollable">
             <div className="rule-item">
               <span className="rule-num">1</span>
               <div>
-                <h3>Dos Mazos de Combate</h3>
-                <p>El juego se compone de un mazo verde de <strong>Beats</strong> y un mazo rosa de <strong>Desafíos</strong>.</p>
+                <h3>{t.splash.rules_1_title}</h3>
+                <p>{t.splash.rules_1_desc}</p>
               </div>
             </div>
             
             <div className="rule-item">
               <span className="rule-num">2</span>
               <div>
-                <h3>Establece el Ritmo (Beat)</h3>
-                <p>En tu turno, saca una carta de Beat. Verás el nombre, los BPM (ritmo) y un enlace a Spotify. Haz clic en la carta para abrir Spotify y reproducir el beat sin que se pause la app.</p>
+                <h3>{t.splash.rules_2_title}</h3>
+                <p>{t.splash.rules_2_desc}</p>
               </div>
             </div>
             
             <div className="rule-item">
               <span className="rule-num">3</span>
               <div>
-                <h3>Acepta el Desafío</h3>
-                <p>Saca una carta de Desafío. El juego se divide en 5 modalidades dinámicas:</p>
-                <ul className="challenges-list">
-                  <li><strong>Palabras:</strong> Rima usando las palabras. Pulsa "Rotar" para que el otro freestyler lea cómodamente sus palabras invertidas.</li>
-                  <li><strong>Temáticas:</strong> Desarrolla tus rimas en base a un tema profundo (Sueños, Miedos, Apocalipsis).</li>
-                  <li><strong>Terminaciones:</strong> Patrones obligatorios (ej. terminar en -ER o -AR).</li>
-                  <li><strong>Beatbox:</strong> Saca tu caja de ritmos humana. Un compañero hace la base mientras corre el cronómetro integrado de 60 segundos.</li>
-                  <li><strong>Cypher:</strong> Rondas en equipo en formato 4x4 continuo.</li>
-                </ul>
+                <h3>{t.splash.rules_3_title}</h3>
+                <p>{t.splash.rules_3_desc}</p>
               </div>
             </div>
 
             <div className="rule-item">
               <span className="rule-num">4</span>
               <div>
-                <h3>Puntuación y Turnos</h3>
-                <p>Sumen puntos por estilo, métrica y cumplimiento de las palabras clave. ¡Pasen al siguiente turno para un nuevo desafío!</p>
+                <h3>{t.splash.rules_4_title}</h3>
+                <p>{t.splash.rules_4_desc}</p>
               </div>
             </div>
           </div>
           
           <button className="btn-close" onClick={() => setShowRules(false)}>
-            Volver al Menú
+            {t.splash.back_to_menu}
           </button>
         </div>
       )}
 
-      
       {/* Footer corporativo / informativo */}
       <div className="splash-footer">
-        <span>© 2026 Barrzjuego - Creado para Freestyle Players</span>
+        <span>{t.splash.footer}</span>
       </div>
     </div>
   );
 };
+

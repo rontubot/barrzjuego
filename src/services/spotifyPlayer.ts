@@ -253,6 +253,14 @@ class SpotifyPlayerService {
     }
   }
 
+  public isPlayerReady(): boolean {
+    return this.isReady;
+  }
+
+  public async pause(): Promise<boolean> {
+    return this.pauseTrack();
+  }
+
   public disconnect() {
     if (this.player) {
       this.player.disconnect();

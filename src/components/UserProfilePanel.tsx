@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2 } from 'lucide-react';
+import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2, Globe } from 'lucide-react';
 import { BattleDetailView } from './BattleDetailView';
+import { useI18n } from '../i18n/LanguageContext';
 import './UserProfilePanel.css';
 
 const getApiUrl = (path: string) => {
@@ -16,16 +17,13 @@ interface UserProfilePanelProps {
 }
 
 export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, userSession, onLogout, onProfileUpdate }) => {
+  const { language, setLanguage, t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'history' | 'settings'>('profile');
 
   // Ajustes y Perfil persistidos localmente
   const [selectedAvatar, setSelectedAvatar] = useState(() => localStorage.getItem('barrz_user_avatar') || '');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [sfxEnabled, setSfxEnabled] = useState(() => localStorage.getItem('barrz_sfx') !== 'false');
-  const [visualMetronome, setVisualMetronome] = useState(() => localStorage.getItem('barrz_visual_metronome') !== 'false');
-  const [beatQuality, setBeatQuality] = useState(() => localStorage.getItem('barrz_beat_quality') || 'high');
-  const [language, setLanguage] = useState(() => localStorage.getItem('barrz_language') || 'es');
   const [lobbyVolume, setLobbyVolume] = useState<number>(() => {
     const saved = localStorage.getItem('barrz_lobby_volume');
     return saved !== null ? parseFloat(saved) : 0.35;
@@ -286,32 +284,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     }
   };
 
-  const toggleSfx = () => {
-    const nextVal = !sfxEnabled;
-    setSfxEnabled(nextVal);
-    localStorage.setItem('barrz_sfx', String(nextVal));
-    triggerSaveToast();
-  };
-
-  const toggleMetronome = () => {
-    const nextVal = !visualMetronome;
-    setVisualMetronome(nextVal);
-    localStorage.setItem('barrz_visual_metronome', String(nextVal));
-    triggerSaveToast();
-  };
-
-  const handleBeatQualityChange = (quality: 'high' | 'std') => {
-    setBeatQuality(quality);
-    localStorage.setItem('barrz_beat_quality', quality);
-    triggerSaveToast();
-  };
-
-  const handleLanguageChange = (lang: 'es' | 'en') => {
-    setLanguage(lang);
-    localStorage.setItem('barrz_language', lang);
-    triggerSaveToast();
-  };
-
   const handleLobbyVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setLobbyVolume(val);
@@ -368,7 +340,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
         <div className="drawer-header">
           <div className="drawer-title-wrapper">
             <User size={22} className="pink-text" />
-            <h2 className="font-graffiti">PANEL DE CONTROL</h2>
+            <h2 className="font-graffiti">{t.profile.control_panel}</h2>
           </div>
           <button type="button" className="btn-drawer-close" onClick={() => setIsOpen(false)}>
             <X size={20} />
@@ -383,7 +355,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
             onClick={() => setActiveTab('profile')}
           >
             <Flame size={16} />
-            <span>Perfil</span>
+            <span>{t.profile.tab_profile}</span>
           </button>
           <button 
             type="button" 
@@ -391,7 +363,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
             onClick={() => setActiveTab('history')}
           >
             <History size={16} />
-            <span>Historial</span>
+            <span>{t.profile.tab_history}</span>
           </button>
           <button 
             type="button" 
@@ -399,7 +371,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
             onClick={() => setActiveTab('settings')}
           >
             <Sliders size={16} />
-            <span>Ajustes</span>
+            <span>{t.profile.tab_settings}</span>
           </button>
         </div>
 
@@ -428,7 +400,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                     type="button" 
                     className="btn-upload-avatar-trigger"
                     onClick={() => fileInputRef.current?.click()}
-                    title="Subir foto de perfil"
+                    title={t.profile.upload_photo}
                   >
                     <Camera size={14} />
                   </button>
@@ -495,7 +467,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                         type="button" 
                         className="btn-username-edit-trigger"
                         onClick={() => setIsEditingUsername(true)}
-                        title="Editar nombre de usuario"
+                        title={t.profile.username_edit}
                       >
                         <Edit2 size={14} />
                       </button>
@@ -507,7 +479,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
 
                 <span className="profile-rank-pill">
                   <Award size={12} />
-                  <span>PROMESA DE LA RIMA</span>
+                  <span>{t.profile.rank_pill}</span>
                 </span>
               </div>
 
@@ -518,7 +490,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   className={`btn-toggle-avatar-picker ${showAvatarPicker ? 'active' : ''}`}
                   onClick={() => setShowAvatarPicker(!showAvatarPicker)}
                 >
-                  <span>{showAvatarPicker ? '▲ Ocultar avatares' : '✨ Elegir avatar predeterminado ▼'}</span>
+                  <span>{showAvatarPicker ? t.profile.hide_avatars : t.profile.choose_preset_avatar}</span>
                 </button>
 
                 {showAvatarPicker && (
@@ -545,23 +517,23 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
 
               {/* Estadísticas de Batalla */}
               <div className="stats-box-section">
-                <h4 className="section-subtitle font-base">Estadísticas de Rimas</h4>
+                <h4 className="section-subtitle font-base">{t.profile.stats_subtitle}</h4>
                 <div className="stats-grid">
                   <div className="stat-card">
                     <span className="stat-value text-glow-teal">{userSession?.stats?.totalBattles ?? 0}</span>
-                    <span className="stat-label">Batallas</span>
+                    <span className="stat-label">{t.profile.battles}</span>
                   </div>
                   <div className="stat-card">
                     <span className="stat-value text-glow-pink">{userSession?.stats?.wins ?? 0}</span>
-                    <span className="stat-label">Victorias</span>
+                    <span className="stat-label">{t.profile.wins}</span>
                   </div>
                   <div className="stat-card">
                     <span className="stat-value text-glow-teal">{userSession?.stats?.winRate ?? 0}%</span>
-                    <span className="stat-label">Win Rate</span>
+                    <span className="stat-label">{t.profile.win_rate}</span>
                   </div>
                   <div className="stat-card">
                     <span className="stat-value text-glow-pink">{userSession?.stats?.maxPoints ?? 0}</span>
-                    <span className="stat-label">Max Pts</span>
+                    <span className="stat-label">{t.profile.max_pts}</span>
                   </div>
                 </div>
               </div>
@@ -571,33 +543,33 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
           {/* TAB 2: HISTORIAL */}
           {activeTab === 'history' && (
             <div className="drawer-tab-content fade-in">
-              <h4 className="section-subtitle font-base mb-10">Partidas Recientes</h4>
+              <h4 className="section-subtitle font-base mb-10">{t.profile.recent_battles}</h4>
               <div className="history-list">
                 {!userSession?.history || userSession.history.length === 0 ? (
                   <p className="history-empty-message">
-                    Aún no jugaste ninguna batalla. ¡Inicia un combate para empezar tu registro!
+                    {t.profile.no_history}
                   </p>
                 ) : (
                   userSession.history.map((item: any) => {
                     let badgeClass = 'win-badge';
-                    let badgeText = 'VICTORIA';
+                    let badgeText = t.common.win;
                     let cardClass = 'win';
 
                     if (item.result === 'loss') {
                       badgeClass = 'loss-badge';
-                      badgeText = 'DERROTA';
+                      badgeText = t.common.loss;
                       cardClass = 'loss';
                     } else if (item.result === 'draw') {
                       badgeClass = 'draw-badge';
-                      badgeText = 'EMPATE';
+                      badgeText = t.common.draw;
                       cardClass = 'draw';
                     } else if (item.result === 'complete') {
                       badgeClass = 'complete-badge';
-                      badgeText = 'COMPLETADO';
+                      badgeText = t.common.complete;
                       cardClass = 'complete';
                     }
 
-                    const dateStr = new Date(item.battleDate).toLocaleDateString('es-ES', {
+                    const dateStr = new Date(item.battleDate).toLocaleDateString(language === 'en' ? 'en-US' : 'es-ES', {
                       day: 'numeric',
                       month: 'short',
                       hour: '2-digit',
@@ -605,8 +577,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                     });
 
                     const battleType = item.mode === 'solo'
-                      ? `Cypher Solitario (${item.roundsCount} ${item.roundsCount === 1 ? 'ronda' : 'rondas'})`
-                      : `Batalla Grupal (${item.roundsCount} ${item.roundsCount === 1 ? 'ronda' : 'rondas'})`;
+                      ? `${t.common.solo_mode} (${item.roundsCount} ${item.roundsCount === 1 ? t.common.round : t.common.rounds})`
+                      : `${t.common.multi_mode} (${item.roundsCount} ${item.roundsCount === 1 ? t.common.round : t.common.rounds})`;
 
                     return (
                       <div key={item.id} className={`history-card ${cardClass}`}>
@@ -618,14 +590,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                           <span className="history-battle-type">{battleType}</span>
                           <span className="history-score-val font-base">
                             {item.playerRank ? `#${item.playerRank} • ` : ''}
-                            +{item.points} Pts
+                            +{item.points} {t.common.points}
                           </span>
                         </div>
                         <button
                           className="history-detail-toggle"
                           onClick={() => setSelectedBattle(item)}
                         >
-                          Ver detalles de la batalla →
+                          {t.profile.view_details}
                         </button>
                       </div>
                     );
@@ -638,44 +610,45 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
           {/* TAB 3: AJUSTES */}
           {activeTab === 'settings' && (
             <div className="drawer-tab-content fade-in">
-              <h4 className="section-subtitle font-base mb-10">Preferencias de Juego</h4>
+              <h4 className="section-subtitle font-base mb-10">{t.settings.title}</h4>
               
               <div className="settings-controls-stack">
-                {/* Control Efectos de Sonido */}
-                <div className="setting-row">
-                  <div className="setting-info">
-                    <span className="setting-title font-base">Efectos de Sonido</span>
-                    <span className="setting-desc">Activar clics y alertas de cronómetro</span>
+                {/* Control de Idioma */}
+                <div className="setting-row-vertical">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <Globe size={18} className="teal-text" />
+                    <span className="setting-title font-base">{t.settings.language_title}</span>
                   </div>
-                  <button 
-                    type="button" 
-                    className={`setting-switch ${sfxEnabled ? 'active' : ''}`}
-                    onClick={toggleSfx}
-                  >
-                    <span className="switch-knob"></span>
-                  </button>
-                </div>
-
-                {/* Control Metrónomo Visual */}
-                <div className="setting-row">
-                  <div className="setting-info">
-                    <span className="setting-title font-base">Metrónomo en Juego</span>
-                    <span className="setting-desc">Pulsación visual en altavoz de Beat</span>
+                  <span className="setting-desc mb-10">{t.settings.language_desc}</span>
+                  <div className="settings-buttons-group">
+                    <button 
+                      type="button" 
+                      className={`btn-group-option ${language === 'es' ? 'active' : ''}`}
+                      onClick={() => {
+                        setLanguage('es');
+                        triggerSaveToast();
+                      }}
+                    >
+                      ESPAÑOL 🇪🇸
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`btn-group-option ${language === 'en' ? 'active' : ''}`}
+                      onClick={() => {
+                        setLanguage('en');
+                        triggerSaveToast();
+                      }}
+                    >
+                      ENGLISH 🇺🇸
+                    </button>
                   </div>
-                  <button 
-                    type="button" 
-                    className={`setting-switch ${visualMetronome ? 'active' : ''}`}
-                    onClick={toggleMetronome}
-                  >
-                    <span className="switch-knob"></span>
-                  </button>
                 </div>
 
                 {/* Control Volumen de Música Lobby */}
                 <div className="setting-row-vertical">
                   <div className="setting-info mb-10">
-                    <span className="setting-title font-base">Volumen de Música de Fondo</span>
-                    <span className="setting-desc">Ajusta el volumen del beat de fondo del menú</span>
+                    <span className="setting-title font-base">{t.settings.lobby_volume_title}</span>
+                    <span className="setting-desc">{t.settings.lobby_volume_desc}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
                     <input
@@ -700,67 +673,23 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   </div>
                 </div>
 
-                {/* Calidad de Instrumentales */}
-                <div className="setting-row-vertical">
-                  <span className="setting-title font-base">Calidad de Beats</span>
-                  <span className="setting-desc mb-10">Define la tasa de compresión del audio instrumental</span>
-                  <div className="settings-buttons-group">
-                    <button 
-                      type="button" 
-                      className={`btn-group-option ${beatQuality === 'high' ? 'active' : ''}`}
-                      onClick={() => handleBeatQualityChange('high')}
-                    >
-                      ALTA (320kbps)
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`btn-group-option ${beatQuality === 'std' ? 'active' : ''}`}
-                      onClick={() => handleBeatQualityChange('std')}
-                    >
-                      ESTÁNDAR
-                    </button>
-                  </div>
-                </div>
-
-                {/* Idioma de la interfaz */}
-                <div className="setting-row-vertical">
-                  <span className="setting-title font-base">Idioma de la Interfaz</span>
-                  <span className="setting-desc mb-10">Afecta textos de menús y desafíos</span>
-                  <div className="settings-buttons-group">
-                    <button 
-                      type="button" 
-                      className={`btn-group-option ${language === 'es' ? 'active' : ''}`}
-                      onClick={() => handleLanguageChange('es')}
-                    >
-                      ESPAÑOL
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`btn-group-option ${language === 'en' ? 'active' : ''}`}
-                      onClick={() => handleLanguageChange('en')}
-                    >
-                      ENGLISH
-                    </button>
-                  </div>
-                </div>
-
                 {/* Integración de Spotify */}
-                <div className="setting-row-vertical" style={{ background: 'rgba(29, 185, 84, 0.06)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(29, 185, 84, 0.25)', marginTop: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
+                <div className="setting-row-vertical" style={{ background: 'rgba(29, 185, 84, 0.06)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(29, 185, 84, 0.25)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg viewBox="0 0 24 24" width="18" height="18" fill="#1DB954">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="#1DB954">
                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
                       </svg>
-                      <span className="setting-title font-base">Cuenta Spotify</span>
+                      <span className="setting-title font-base">{t.settings.spotify_title}</span>
                     </div>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSpotifyLinked ? '#1DB954' : 'var(--text-muted)' }}>
-                      {isSpotifyLinked ? '● VINCULADA' : 'NO VINCULADA'}
+                      {isSpotifyLinked ? t.settings.spotify_linked_badge : t.settings.spotify_unlinked_badge}
                     </span>
                   </div>
                   <span className="setting-desc mb-10">
                     {isSpotifyLinked 
-                      ? 'Tu cuenta está asociada para streaming de instrumentales oficiales.' 
-                      : 'Vincula tu cuenta de Spotify para reproducir instrumentales en alta calidad.'}
+                      ? t.settings.spotify_desc_linked 
+                      : t.settings.spotify_desc_unlinked}
                   </span>
                   <button
                     type="button"
@@ -773,7 +702,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                       background: 'rgba(0, 0, 0, 0.35)'
                     }}
                   >
-                    {isSpotifyLinked ? 'Desvincular Cuenta de Spotify' : 'Conectar con Spotify'}
+                    {isSpotifyLinked ? t.settings.spotify_btn_disconnect : t.settings.spotify_btn_connect}
                   </button>
                 </div>
               </div>
@@ -804,14 +733,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
               }}
             >
               <LogOut size={16} />
-              <span>Cerrar Sesión</span>
+              <span>{t.profile.logout}</span>
             </button>
           )}
         </div>
 
         {/* Alerta de guardado */}
         <div className={`save-toast-alert ${showSavedAlert ? 'show' : ''}`}>
-          Configuración guardada ✓
+          {t.common.saved}
         </div>
 
       </div>

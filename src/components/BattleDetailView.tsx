@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Swords, Music, Star, Trophy, Shield, Minus } from 'lucide-react';
+import { useI18n } from '../i18n/LanguageContext';
 import './BattleDetailView.css';
 
 interface BattleDetailViewProps {
@@ -7,18 +8,21 @@ interface BattleDetailViewProps {
   onBack: () => void;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; emoji: string; color: string }> = {
-  palabras:     { label: 'Palabras',     emoji: '🔤', color: '#60a5fa' },
-  tematicas:    { label: 'Temáticas',    emoji: '🎭', color: '#f472b6' },
-  cypher:       { label: 'Cypher',       emoji: '🎤', color: '#34d399' },
-  terminaciones:{ label: 'Terminaciones',emoji: '🎵', color: '#a78bfa' },
-  beatbox:      { label: 'Beatbox',      emoji: '🥁', color: '#fb923c' },
-  versus:       { label: 'Versus',       emoji: '⚔️', color: '#ef4444' },
-  freestyle:    { label: 'Freestyle',    emoji: '🔥', color: '#00f5ab' },
-};
-
 export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBack }) => {
-  const dateStr = new Date(battle.battleDate).toLocaleDateString('es-ES', {
+  const { t, language } = useI18n();
+
+  const categoryLabels: Record<string, { label: string; emoji: string; color: string }> = {
+    palabras:     { label: t.categories.palabras,     emoji: '🔤', color: '#60a5fa' },
+    tematicas:    { label: t.categories.tematicas,    emoji: '🎭', color: '#f472b6' },
+    cypher:       { label: t.categories.cypher,       emoji: '🎤', color: '#34d399' },
+    terminaciones:{ label: t.categories.terminaciones,emoji: '🎵', color: '#a78bfa' },
+    beatbox:      { label: t.categories.beatbox,      emoji: '🥁', color: '#fb923c' },
+    versus:       { label: t.categories.versus,       emoji: '⚔️', color: '#ef4444' },
+    freestyle:    { label: t.categories.freestyle,    emoji: '🔥', color: '#00f5ab' },
+  };
+
+  const locale = language === 'en' ? 'en-US' : 'es-ES';
+  const dateStr = new Date(battle.battleDate).toLocaleDateString(locale, {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
@@ -28,16 +32,16 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
     : [];
 
   const resultConfig: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    win:      { label: 'VICTORIA',   color: '#00f5ab', icon: <Trophy size={16} /> },
-    loss:     { label: 'DERROTA',    color: '#ff3366', icon: <Shield size={16} /> },
-    draw:     { label: 'EMPATE',     color: '#facc15', icon: <Minus size={16} /> },
-    complete: { label: 'COMPLETADO', color: '#a78bfa', icon: <Star size={16} /> },
+    win:      { label: t.common.win,      color: '#00f5ab', icon: <Trophy size={16} /> },
+    loss:     { label: t.common.loss,     color: '#ff3366', icon: <Shield size={16} /> },
+    draw:     { label: t.common.draw,     color: '#facc15', icon: <Minus size={16} /> },
+    complete: { label: t.common.complete, color: '#a78bfa', icon: <Star size={16} /> },
   };
   const rc = resultConfig[battle.result] || resultConfig.complete;
 
   const modeLabel = battle.mode === 'solo'
-    ? `Cypher Solitario`
-    : `Batalla Grupal`;
+    ? t.common.solo_mode
+    : t.common.multi_mode;
 
   // Group turns by round number for cleaner display
   const roundGroups: { round: number; isDeathmatch: boolean; turns: any[] }[] = [];
@@ -59,11 +63,11 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
       <div className="bdv-header">
         <button className="bdv-back-btn" onClick={onBack}>
           <ArrowLeft size={18} />
-          <span>Historial</span>
+          <span>{t.profile.history_back_btn}</span>
         </button>
         <div className="bdv-header-center">
           <span className="bdv-mode-label">{modeLabel}</span>
-          <span className="bdv-rounds-label">{battle.roundsCount} {battle.roundsCount === 1 ? 'ronda' : 'rondas'}</span>
+          <span className="bdv-rounds-label">{battle.roundsCount} {battle.roundsCount === 1 ? t.common.round : t.common.rounds}</span>
         </div>
         <div className="bdv-result-badge" style={{ color: rc.color, borderColor: rc.color }}>
           {rc.icon} {rc.label}
@@ -78,11 +82,11 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
         <section className="bdv-section">
           <div className="bdv-section-header">
             <Swords size={15} />
-            <span>Marcador Final</span>
+            <span>{t.profile.final_scoreboard}</span>
           </div>
           <div className="bdv-scoreboard">
             {sortedScores.length === 0 ? (
-              <p className="bdv-empty">Sin datos de puntaje.</p>
+              <p className="bdv-empty">{t.profile.no_score_data}</p>
             ) : (
               sortedScores.map(([name, score], idx) => {
                 const medals = ['🥇', '🥈', '🥉'];
@@ -92,7 +96,7 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
                     <span className="bdv-medal">{medals[idx] || `#${idx + 1}`}</span>
                     <div className="bdv-player-info">
                       <span className="bdv-player-name">{name}</span>
-                      {isWinner && <span className="bdv-winner-tag">Campeón</span>}
+                      {isWinner && <span className="bdv-winner-tag">{t.profile.champion_badge}</span>}
                     </div>
                     <div className="bdv-score-bar-wrap">
                       <div
@@ -103,7 +107,7 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
                         }}
                       />
                     </div>
-                    <span className="bdv-score-num">{score} pts</span>
+                    <span className="bdv-score-num">{score} {t.common.points}</span>
                   </div>
                 );
               })
@@ -116,17 +120,17 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
           <section className="bdv-section">
             <div className="bdv-section-header">
               <Star size={15} />
-              <span>Turnos de la Batalla</span>
+              <span>{t.profile.battle_turns}</span>
             </div>
 
             {roundGroups.map((group) => (
               <div key={group.round} className="bdv-round-group">
                 <div className={`bdv-round-label ${group.isDeathmatch ? 'deathmatch' : ''}`}>
-                  {group.isDeathmatch ? '⚔️ RONDA DE RÉPLICA' : `RONDA ${group.round}`}
+                  {group.isDeathmatch ? t.profile.replica_round : `${t.profile.round_header} ${group.round}`}
                 </div>
 
                 {group.turns.map((turn: any, ti: number) => {
-                  const cat = CATEGORY_LABELS[turn.challengeCategory] || { label: turn.challengeCategory, emoji: '🎯', color: '#94a3b8' };
+                  const cat = categoryLabels[turn.challengeCategory] || { label: turn.challengeCategory, emoji: '🎯', color: '#94a3b8' };
                   const totalVoters = turn.votes ? Object.keys(turn.votes).length : 0;
                   const maxPossible = totalVoters * 5;
 
@@ -139,7 +143,7 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
                           <span className="bdv-turn-player-name">{turn.player}</span>
                         </div>
                         <div className="bdv-turn-score-badge">
-                          +{turn.totalScore} pts
+                          +{turn.totalScore} {t.common.points}
                         </div>
                       </div>
 
@@ -170,8 +174,8 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
                       {turn.votes && Object.keys(turn.votes).length > 0 && (
                         <div className="bdv-votes-block">
                           <div className="bdv-votes-header">
-                            <span>Votos</span>
-                            <span className="bdv-votes-total">{turn.totalScore} / {maxPossible} pts</span>
+                            <span>{t.profile.votes}</span>
+                            <span className="bdv-votes-total">{turn.totalScore} / {maxPossible} {t.common.points}</span>
                           </div>
                           {Object.entries(turn.votes as Record<string, number>).map(([voter, pts]) => {
                             const pct = Math.round((pts / 5) * 100);
@@ -202,8 +206,8 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
           <section className="bdv-section">
             <div className="bdv-empty-detail">
               <Star size={30} opacity={0.3} />
-              <p>Esta partida no tiene datos de turno detallados.</p>
-              <p className="bdv-empty-sub">Solo las partidas jugadas después de la última actualización guardan el desglose completo.</p>
+              <p>{t.profile.no_turns_detail}</p>
+              <p className="bdv-empty-sub">{t.profile.no_turns_detail_sub}</p>
             </div>
           </section>
         )}
@@ -212,3 +216,4 @@ export const BattleDetailView: React.FC<BattleDetailViewProps> = ({ battle, onBa
     </div>
   );
 };
+

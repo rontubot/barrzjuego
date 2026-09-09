@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Cloud, ArrowRight, ArrowLeft, Mail, Lock, ShieldCheck, HelpCircle, Compass, Radio } from 'lucide-react';
+import { useI18n } from '../i18n/LanguageContext';
 import './OnboardingAuth.css';
 
 interface OnboardingAuthProps {
@@ -14,6 +15,7 @@ const getApiUrl = (path: string) => {
 };
 
 export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, onBack }) => {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -56,7 +58,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const handleSpotifyToggle = () => {
     const token = localStorage.getItem('barrz_token');
     if (!token) {
-      setErrorMsg('Ingresá primero con tu correo o Google para asociar tu cuenta de Spotify.');
+      setErrorMsg(t.auth.spotify_need_auth);
       return;
     }
     window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
@@ -65,11 +67,11 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      setErrorMsg('Por favor, ingresá un correo electrónico.');
+      setErrorMsg(t.auth.enter_email);
       return;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setErrorMsg('Ingresá un correo válido.');
+      setErrorMsg(t.auth.invalid_email);
       return;
     }
     
@@ -93,11 +95,11 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         setErrorMsg('');
         onNext('auth_password', { email });
       } else {
-        setErrorMsg(data.error || 'Ocurrió un error. Intenta de nuevo.');
+        setErrorMsg(data.error || t.auth.server_error);
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('No se pudo conectar con el servidor.');
+      setErrorMsg(t.auth.server_error);
     } finally {
       setIsSubmitting(false);
     }
@@ -106,7 +108,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
+      setErrorMsg(t.auth.pass_min);
       return;
     }
     setErrorMsg('');
@@ -126,11 +128,11 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
           localStorage.setItem('barrz_token', data.token);
           onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'email' });
         } else {
-          setErrorMsg(data.error || 'Contraseña incorrecta.');
+          setErrorMsg(data.error || t.auth.wrong_pass);
         }
       } catch (err) {
         console.error(err);
-        setErrorMsg('No se pudo conectar con el servidor.');
+        setErrorMsg(t.auth.server_error);
       } finally {
         setIsSubmitting(false);
       }
@@ -155,13 +157,12 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    const digits = pastedData.replace(/\D/g, ''); // Extraer solo los dígitos
+    const digits = pastedData.replace(/\D/g, '');
     
     if (digits.length >= 6) {
       const newCode = digits.slice(0, 6).split('');
       setVerificationCode(newCode);
       
-      // Enfocar el último input para indicar que está completo
       const lastInput = document.getElementById('code-input-5');
       lastInput?.focus();
     }
@@ -171,7 +172,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
     e.preventDefault();
     const codeString = verificationCode.join('');
     if (codeString.length < 6) {
-      setErrorMsg('Ingresá el código completo de 6 dígitos.');
+      setErrorMsg(t.auth.code_incomplete);
       return;
     }
     setErrorMsg('');
@@ -190,11 +191,11 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         localStorage.setItem('barrz_token', data.token);
         onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'email' });
       } else {
-        setErrorMsg(data.error || 'Código incorrecto.');
+        setErrorMsg(data.error || t.auth.wrong_code);
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('No se pudo conectar con el servidor.');
+      setErrorMsg(t.auth.server_error);
     } finally {
       setIsSubmitting(false);
     }
@@ -215,11 +216,11 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         localStorage.setItem('barrz_token', data.token);
         onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'google' });
       } else {
-        setErrorMsg(data.error || 'Error al iniciar sesión con Google.');
+        setErrorMsg(data.error || t.auth.google_error);
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('No se pudo conectar con el servidor.');
+      setErrorMsg(t.auth.server_error);
     } finally {
       setIsSubmitting(false);
     }
@@ -235,12 +236,12 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       });
       const data = await res.json();
       if (res.ok) {
-        alert('Código re-enviado!');
+        alert(t.auth.code_resent_alert);
       } else {
         setErrorMsg(data.error);
       }
     } catch (err) {
-      setErrorMsg('Error al reenviar código.');
+      setErrorMsg(t.auth.code_resend_error);
     }
   };
 
@@ -252,7 +253,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       {step !== 'auth_choice' && (
         <button className="btn-auth-back" onClick={onBack}>
           <ArrowLeft size={18} />
-          <span>Atrás</span>
+          <span>{t.common.back}</span>
         </button>
       )}
 
@@ -273,22 +274,22 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
                 <Compass size={24} className="inside-icon pink-text" />
               </div>
             </div>
-            <h2 className="step-title font-graffiti text-glow-teal">1. Navegando la App</h2>
+            <h2 className="step-title font-graffiti text-glow-teal">{t.auth.onboarding_1_title}</h2>
             <p className="step-description">
-              Bienvenido al laboratorio de freestyle definitivo. Navegá por los diferentes mazos de cartas, desafíos dinámicos y bases instrumentales.
+              {t.auth.onboarding_1_desc}
             </p>
             <div className="feature-bullets">
               <div className="bullet-item">
                 <Radio size={16} className="pink-text" />
-                <span>Interactividad en tiempo real</span>
+                <span>{t.auth.onboarding_1_bullet_1}</span>
               </div>
               <div className="bullet-item">
                 <Radio size={16} className="teal-text" />
-                <span>Cronómetro de rimas incorporado</span>
+                <span>{t.auth.onboarding_1_bullet_2}</span>
               </div>
             </div>
             <button className="btn-neon-pink w-100" onClick={() => onNext('onboarding_2')}>
-              <span>Continuar</span>
+              <span>{t.common.continue}</span>
               <ArrowRight size={18} />
             </button>
           </div>
@@ -303,22 +304,22 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
                 <HelpCircle size={24} className="inside-icon teal-text" />
               </div>
             </div>
-            <h2 className="step-title font-graffiti text-glow-pink">2. Beats y Conexión</h2>
+            <h2 className="step-title font-graffiti text-glow-pink">{t.auth.onboarding_2_title}</h2>
             <p className="step-description">
-              Para disfrutar de la experiencia al 100%, sincronizá tus bases directamente con Spotify. Abrí el enlace de cada beat para reproducirlo en segundo plano.
+              {t.auth.onboarding_2_desc}
             </p>
             <div className="feature-bullets">
               <div className="bullet-item">
                 <Radio size={16} className="teal-text" />
-                <span>Integración con Spotify Premium y Free</span>
+                <span>{t.auth.onboarding_2_bullet_1}</span>
               </div>
               <div className="bullet-item">
                 <Radio size={16} className="pink-text" />
-                <span>Estadísticas de batallas e informes</span>
+                <span>{t.auth.onboarding_2_bullet_2}</span>
               </div>
             </div>
             <button className="btn-neon-teal w-100" onClick={() => onNext('auth_choice')}>
-              <span>Comenzar Registro</span>
+              <span>{t.auth.start_registration}</span>
               <ArrowRight size={18} />
             </button>
           </div>
@@ -327,17 +328,17 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         {/* STEP 3: AUTH CHOICE */}
         {step === 'auth_choice' && (
           <div className="step-content fade-in">
-            <h2 className="step-title font-graffiti text-glow-pink">INGRESÁ</h2>
-            <p className="step-sub">Introduce tu correo electrónico para iniciar sesión o registrarte.</p>
+            <h2 className="step-title font-graffiti text-glow-pink">{t.auth.enter_title}</h2>
+            <p className="step-sub">{t.auth.enter_sub}</p>
 
             <form onSubmit={handleEmailSubmit} className="auth-form">
               <div className="input-group">
-                <label>Correo Electrónico</label>
+                <label>{t.auth.email_label}</label>
                 <div className="input-with-icon">
                   <Mail size={18} className="input-icon" />
                   <input
                     type="text"
-                    placeholder="nombre@correo.com"
+                    placeholder={t.auth.email_placeholder}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isSubmitting}
@@ -348,13 +349,13 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
               {errorMsg && <p className="error-message">{errorMsg}</p>}
 
               <button type="submit" className="btn-neon-pink w-100" disabled={isSubmitting}>
-                <span>CONTINUAR</span>
+                <span>{t.auth.enter_btn}</span>
                 <ArrowRight size={18} />
               </button>
             </form>
 
             <div className="divider-or">
-              <span>O</span>
+              <span>{t.auth.google_or}</span>
             </div>
 
             <div className="google-btn-wrapper">
@@ -370,7 +371,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
               <svg className="spotify-icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
               </svg>
-              <span>{isSpotifyLinked ? 'Spotify Vinculado ✓' : 'Vincular con Spotify'}</span>
+              <span>{isSpotifyLinked ? t.auth.spotify_linked_btn : t.auth.spotify_link_btn}</span>
             </button>
           </div>
         )}
@@ -379,23 +380,23 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         {step === 'auth_password' && (
           <form onSubmit={handlePasswordSubmit} className="step-content fade-in">
             <h2 className="step-title font-graffiti text-glow-teal">
-              {isLogin ? 'INICIAR SESIÓN' : 'CREAR CONTRASEÑA'}
+              {isLogin ? t.auth.login_title : t.auth.create_title}
             </h2>
             <p className="step-sub">
               {isLogin 
-                ? 'Ingresá tu contraseña para acceder a tu cuenta.' 
-                : 'Escribe una clave segura para proteger tus registros y puntuaciones.'
+                ? t.auth.login_sub 
+                : t.auth.create_sub
               }
             </p>
 
             <div className="auth-form">
               <div className="input-group">
-                <label>Contraseña</label>
+                <label>{t.auth.password_label}</label>
                 <div className="input-with-icon">
                   <Lock size={18} className="input-icon" />
                   <input
                     type="password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={t.auth.pass_sub_placeholder}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isSubmitting}
@@ -406,7 +407,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
               {errorMsg && <p className="error-message">{errorMsg}</p>}
 
               <button type="submit" className="btn-neon-teal w-100" disabled={isSubmitting}>
-                <span>{isSubmitting ? 'PROCESANDO...' : (isLogin ? 'INGRESAR' : 'SIGUIENTE')}</span>
+                <span>{isSubmitting ? t.auth.processing_btn : (isLogin ? t.auth.login_btn : t.auth.next_btn)}</span>
                 <ArrowRight size={18} />
               </button>
             </div>
@@ -419,9 +420,9 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
             <div className="illustration-wrapper">
               <ShieldCheck size={48} className="teal-text pulse-teal-anim" />
             </div>
-            <h2 className="step-title font-graffiti text-glow-pink">VERIFICA TU CORREO</h2>
+            <h2 className="step-title font-graffiti text-glow-pink">{t.auth.verify_code_title}</h2>
             <p className="step-description">
-              Enviamos un código de verificación de 6 dígitos a <strong className="white-text">{email}</strong>. Ingresalo abajo para continuar:
+              {t.auth.verify_code_desc_1} <strong className="white-text">{email}</strong>{t.auth.verify_code_desc_2}
             </p>
 
             <div className="code-input-container">
@@ -449,12 +450,12 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
             {errorMsg && <p className="error-message">{errorMsg}</p>}
 
             <button type="submit" className="btn-neon-pink w-100 mt-20" disabled={isSubmitting}>
-              <span>{isSubmitting ? 'VERIFICANDO...' : 'COMPLETAR REGISTRO'}</span>
+              <span>{isSubmitting ? t.auth.verifying : t.auth.complete_reg}</span>
               <ArrowRight size={18} />
             </button>
             
             <p className="resend-text">
-              ¿No recibiste el código? <button type="button" className="btn-link" onClick={handleResendCode} disabled={isSubmitting}>Reenviar código</button>
+              {t.auth.no_code_prompt} <button type="button" className="btn-link" onClick={handleResendCode} disabled={isSubmitting}>{t.auth.resend_code}</button>
             </p>
           </form>
         )}
@@ -463,3 +464,4 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
     </div>
   );
 };
+
