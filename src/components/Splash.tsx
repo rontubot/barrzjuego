@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Play, BookOpen } from 'lucide-react';
 import './Splash.css';
 
@@ -10,81 +10,6 @@ interface SplashProps {
 export const Splash: React.FC<SplashProps> = ({ onStartGame, fromGame = false }) => {
   const [showRules, setShowRules] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
-
-  const playIntroSFX = (force = false) => {
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      
-      // Evitar reproducir varias veces si ya sonó
-      if ((window as any).__barrz_audio_logo_played && !force) return;
-      
-      const ctx = new AudioContext();
-      if (ctx.state === 'suspended' && !force) {
-        return; // Esperar a la interacción
-      }
-      
-      (window as any).__barrz_audio_logo_played = true;
-      
-      const osc = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      const filter = ctx.createBiquadFilter();
-      
-      osc.connect(filter);
-      osc2.connect(filter);
-      filter.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      // Sub-bass frequency sweep
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(140, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(45, ctx.currentTime + 1.2);
-      
-      // High scratch overlay
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(800, ctx.currentTime);
-      osc2.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.6);
-      
-      // Low pass filter sweep
-      filter.type = 'lowpass';
-      filter.Q.value = 8;
-      filter.frequency.setValueAtTime(300, ctx.currentTime);
-      filter.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 1.2);
-      
-      // Gain envelope
-      gainNode.gain.setValueAtTime(0.18, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
-      
-      osc.start(ctx.currentTime);
-      osc2.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 1.6);
-      osc2.stop(ctx.currentTime + 1.6);
-    } catch (e) {
-      console.log("AudioContext blocked or failed to initialize:", e);
-    }
-  };
-
-  useEffect(() => {
-    // Only play intro SFX if not returning from active gameplay
-    if (!fromGame) {
-      playIntroSFX();
-      
-      const handleGesture = () => {
-        playIntroSFX(true); // Forzar reproducción en primer clic si no sonó antes
-        document.removeEventListener('click', handleGesture);
-        document.removeEventListener('touchstart', handleGesture);
-      };
-      
-      document.addEventListener('click', handleGesture);
-      document.addEventListener('touchstart', handleGesture);
-      
-      return () => {
-        document.removeEventListener('click', handleGesture);
-        document.removeEventListener('touchstart', handleGesture);
-      };
-    }
-  }, [fromGame]);
 
   return (
     <div className="splash-container">

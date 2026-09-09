@@ -302,11 +302,12 @@ function App() {
       case 'tutorial_ask':
         setGameState('splash');
         break;
-      case 'link_spotify':
-        setGameState('tutorial_ask');
-        break;
       case 'mode_selection':
-        setGameState('link_spotify');
+        if (localStorage.getItem('barrz_spotify_linked') === 'true') {
+          setGameState('tutorial_ask');
+        } else {
+          setGameState('link_spotify');
+        }
         break;
       case 'setup_individual':
         setGameState('mode_selection');

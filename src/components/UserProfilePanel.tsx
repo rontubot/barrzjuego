@@ -31,6 +31,61 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     return saved !== null ? parseFloat(saved) : 0.35;
   });
   const [showSavedAlert, setShowSavedAlert] = useState(false);
+  const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
+
+  // Verificar estado de vinculación de Spotify al abrir el panel
+  useEffect(() => {
+    if (isOpen) {
+      const token = localStorage.getItem('barrz_token');
+      if (token) {
+        fetch(getApiUrl('/api/spotify/status'), {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.linked) {
+              setIsSpotifyLinked(true);
+              localStorage.setItem('barrz_spotify_linked', 'true');
+            } else {
+              setIsSpotifyLinked(false);
+              localStorage.removeItem('barrz_spotify_linked');
+            }
+          })
+          .catch(() => {
+            setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
+          });
+      } else {
+        setIsSpotifyLinked(false);
+      }
+    }
+  }, [isOpen]);
+
+  const handleConnectSpotify = () => {
+    const token = localStorage.getItem('barrz_token');
+    if (!token) {
+      alert('Debes iniciar sesión con tu cuenta para asociar Spotify.');
+      return;
+    }
+    sessionStorage.setItem('barrz_spotify_return_step', gameState);
+    window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
+  };
+
+  const handleDisconnectSpotify = async () => {
+    const token = localStorage.getItem('barrz_token');
+    if (token) {
+      try {
+        await fetch(getApiUrl('/api/spotify/unlink'), {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (err) {
+        console.error('Error al desvincular Spotify:', err);
+      }
+    }
+    localStorage.removeItem('barrz_spotify_linked');
+    setIsSpotifyLinked(false);
+    triggerSaveToast();
+  };
 
   // Estados para la edición de perfil
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -687,6 +742,39 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                       ENGLISH
                     </button>
                   </div>
+                </div>
+
+                {/* Integración de Spotify */}
+                <div className="setting-row-vertical" style={{ background: 'rgba(29, 185, 84, 0.06)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(29, 185, 84, 0.25)', marginTop: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="#1DB954">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
+                      </svg>
+                      <span className="setting-title font-base">Cuenta Spotify</span>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSpotifyLinked ? '#1DB954' : 'var(--text-muted)' }}>
+                      {isSpotifyLinked ? '● VINCULADA' : 'NO VINCULADA'}
+                    </span>
+                  </div>
+                  <span className="setting-desc mb-10">
+                    {isSpotifyLinked 
+                      ? 'Tu cuenta está asociada para streaming de instrumentales oficiales.' 
+                      : 'Vincula tu cuenta de Spotify para reproducir instrumentales en alta calidad.'}
+                  </span>
+                  <button
+                    type="button"
+                    className={`btn-group-option ${isSpotifyLinked ? 'active' : ''}`}
+                    onClick={isSpotifyLinked ? handleDisconnectSpotify : handleConnectSpotify}
+                    style={{
+                      width: '100%',
+                      borderColor: isSpotifyLinked ? 'rgba(255, 0, 127, 0.4)' : '#1DB954',
+                      color: isSpotifyLinked ? 'var(--neon-pink)' : '#1DB954',
+                      background: 'rgba(0, 0, 0, 0.35)'
+                    }}
+                  >
+                    {isSpotifyLinked ? 'Desvincular Cuenta de Spotify' : 'Conectar con Spotify'}
+                  </button>
                 </div>
               </div>
             </div>

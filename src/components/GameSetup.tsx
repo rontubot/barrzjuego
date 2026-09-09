@@ -316,7 +316,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {/* ── TUTORIAL / REGLAS DIRECTO ──────────────────────────────────── */}
       {step === 'tutorial_ask' && (
         <div className="tutorial-card-view fade-in">
-          <div className="tutorial-card-wrapper" onClick={() => onNext('link_spotify')}>
+          <div className="tutorial-card-wrapper" onClick={() => onNext(isSpotifyLinked ? 'mode_selection' : 'link_spotify')}>
             <img 
               src="/CARTAS DESAFIO/carta REGLAS JUEGO.png" 
               alt="Reglas del Juego" 
@@ -326,7 +326,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               className="tutorial-continue-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                onNext('link_spotify');
+                onNext(isSpotifyLinked ? 'mode_selection' : 'link_spotify');
               }}
             >
               <span>CONTINUAR</span>
