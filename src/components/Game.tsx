@@ -133,6 +133,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Diálogos de confirmación
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSpotifyRequiredModal, setShowSpotifyRequiredModal] = useState(false);
+  const [isSpotifyChecking, setIsSpotifyChecking] = useState(false);
 
   // Temporizador para desafíos
   const [timerSeconds, setTimerSeconds] = useState(60);
@@ -145,6 +147,72 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const votingPlayers = playerNames.filter(name => name !== activePlayer);
   const currentVoter = votingPlayers[currentVoterIndex] || 'Votante';
 
+  const getApiUrl = (path: string) => {
+    const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+    return `${base}${path}`;
+  };
+
+  const handleConnectSpotifyFromGame = () => {
+    const token = localStorage.getItem('barrz_token');
+    if (!token) {
+      alert(t.auth.spotify_need_auth);
+      return;
+    }
+    sessionStorage.setItem('barrz_spotify_return_step', 'game');
+    window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
+  };
+
+  const handleRecheckSpotify = async () => {
+    const token = localStorage.getItem('barrz_token');
+    if (!token) {
+      setShowSpotifyRequiredModal(true);
+      return;
+    }
+    setIsSpotifyChecking(true);
+    try {
+      const res = await fetch(getApiUrl('/api/spotify/status'), {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.linked) {
+        localStorage.setItem('barrz_spotify_linked', 'true');
+        setShowSpotifyRequiredModal(false);
+        spotifyPlayer.init();
+      } else {
+        localStorage.removeItem('barrz_spotify_linked');
+        setShowSpotifyRequiredModal(true);
+        spotifyPlayer.disconnect();
+      }
+    } catch (e) {
+      console.warn('Error comprobando estado de Spotify:', e);
+      if (localStorage.getItem('barrz_spotify_linked') !== 'true') {
+        setShowSpotifyRequiredModal(true);
+      }
+    } finally {
+      setIsSpotifyChecking(false);
+    }
+  };
+
+  // Verificar sesión de Spotify en el juego y suscribirse al reproductor
+  useEffect(() => {
+    const isLinked = localStorage.getItem('barrz_spotify_linked') === 'true';
+    if (!isLinked) {
+      setShowSpotifyRequiredModal(true);
+    } else {
+      handleRecheckSpotify();
+    }
+
+    const unsubscribe = spotifyPlayer.subscribe((state) => {
+      if (state.error && state.error.includes('expirada')) {
+        setShowSpotifyRequiredModal(true);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // Helper de animación de salida para volver al menú
   const triggerExitToMenu = () => {
     spotifyPlayer.pause();
@@ -154,7 +222,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }, 450);
   };
 
-  // Reproducir automáticamente el beat si el reproductor está listo
+  // Reproducir automáticamente el beat a través de Spotify Web Playback SDK
   useEffect(() => {
     if (activeBeat && spotifyPlayer.isPlayerReady() && subState === 'playing') {
       spotifyPlayer.playTrack(activeBeat.spotifyUri);
@@ -370,6 +438,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   const handleResetConfirmed = () => {
     setShowResetConfirm(false);
+    spotifyPlayer.pause();
     setCurrentRound(1);
     setIsReplicaActive(false);
     setReplicaPlayers([]);
@@ -462,6 +531,51 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         onConfirm={handleResetConfirmed}
         onCancel={() => setShowResetConfirm(false)}
       />
+
+      {/* MODAL BLOQUEANTE DE SESIÓN DE SPOTIFY REQUERIDA */}
+      {showSpotifyRequiredModal && (
+        <div className="spotify-required-modal-overlay fade-in">
+          <div className="spotify-required-modal glass-panel glow-teal text-center">
+            <div className="spotify-setup-logo-container pulse-teal-anim">
+              <svg className="spotify-setup-icon" viewBox="0 0 24 24" width="56" height="56" fill="#1DB954">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
+              </svg>
+            </div>
+            <h2 className="font-graffiti text-glow-teal mt-10">SESIÓN DE SPOTIFY REQUERIDA</h2>
+            <p className="spotify-modal-desc">
+              Para escuchar las instrumentales completas y que cada rima sume reproducciones oficiales y monetizadas a los beatmakers en Spotify, necesitás iniciar sesión con tu cuenta de Spotify.
+            </p>
+            <div className="spotify-modal-buttons">
+              <button 
+                type="button" 
+                className="btn-spotify-connect-action pulse-teal-anim"
+                onClick={handleConnectSpotifyFromGame}
+              >
+                <span>INICIAR SESIÓN CON SPOTIFY</span>
+              </button>
+              <button 
+                type="button" 
+                className="btn-retry-spotify"
+                onClick={handleRecheckSpotify}
+                disabled={isSpotifyChecking}
+              >
+                <RefreshCw size={16} className={isSpotifyChecking ? 'spin-anim' : ''} />
+                <span>{isSpotifyChecking ? 'Comprobando sesión...' : 'Reintentar detección'}</span>
+              </button>
+              <button 
+                type="button" 
+                className="btn-back-to-menu-sub"
+                onClick={() => {
+                  setShowSpotifyRequiredModal(false);
+                  triggerExitToMenu();
+                }}
+              >
+                Volver al Menú Principal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={`game-container ${isExiting ? 'exiting' : ''}`}>
         <div className="grunge-overlay"></div>

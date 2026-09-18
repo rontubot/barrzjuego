@@ -367,10 +367,25 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
             )}
           </div>
 
-          <button className="btn-neon-pink w-100 mt-20" onClick={() => onNext('mode_selection')}>
+          <button 
+            className={`btn-neon-pink w-100 mt-20 ${!isSpotifyLinked ? 'disabled-btn' : ''}`} 
+            disabled={!isSpotifyLinked}
+            onClick={() => {
+              if (!isSpotifyLinked) {
+                alert('Es obligatorio vincular tu cuenta de Spotify para jugar y reproducir los beats.');
+                return;
+              }
+              onNext('mode_selection');
+            }}
+          >
             <span>{t.setup.continue_to_modes}</span>
             <ArrowRight size={18} />
           </button>
+          {!isSpotifyLinked && (
+            <p className="font-base pink-text mt-10" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+              * Es obligatorio vincular tu cuenta de Spotify para jugar y que cada beat sume reproducciones reales.
+            </p>
+          )}
         </div>
       )}
 
