@@ -722,7 +722,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   </div>
 
                   {isSpotifyLinked && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0, 0, 0, 0.4)', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0, 0, 0, 0.4)', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(29, 185, 84, 0.3)' }}>
                       {spotifyUser?.avatar_url ? (
                         <img src={spotifyUser.avatar_url} alt="Spotify User" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
                       ) : (
@@ -732,10 +732,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                       )}
                       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {spotifyUser?.display_name || userSession?.username || 'Cuenta Spotify'}
+                          {spotifyUser?.display_name || (spotifyUser?.email ? spotifyUser.email.split('@')[0] : 'Cuenta Spotify Vinculada')}
                         </span>
                         <span style={{ fontSize: '0.7rem', color: '#1DB954', fontWeight: 700 }}>
-                          {spotifyUser?.product === 'free' ? 'Spotify Free' : 'Spotify Premium ⭐'}
+                          {spotifyUser?.product === 'premium' ? 'Spotify Premium ⭐' : 'Spotify Conectado'}
                         </span>
                       </div>
                     </div>

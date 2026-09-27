@@ -79,6 +79,103 @@ const getUserProfileData = async (userId) => {
   }
 };
 
+// Helper: Consultar y guardar perfil completo de Spotify
+const fetchAndSaveSpotifyProfile = async (userId, accessToken) => {
+  try {
+    const meRes = await fetch('https://api.spotify.com/v1/me', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      const spotifyDisplayName = meData.display_name || meData.id || 'Usuario Spotify';
+      const spotifyEmail = meData.email || null;
+      const spotifyProduct = meData.product || 'free';
+      const spotifyAvatarUrl = (meData.images && meData.images.length > 0) ? meData.images[0].url : null;
+
+      await db.query(
+        `UPDATE users 
+         SET spotify_display_name = $1, 
+             spotify_email = $2, 
+             spotify_product = $3, 
+             spotify_avatar_url = $4 
+         WHERE id = $5`,
+        [spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl, userId]
+      );
+
+      return {
+        display_name: spotifyDisplayName,
+        email: spotifyEmail,
+        product: spotifyProduct,
+        avatar_url: spotifyAvatarUrl
+      };
+    }
+  } catch (err) {
+    console.error('Error al sincronizar perfil de Spotify:', err);
+  }
+  return null;
+};
+
+// Helper: Refrescar token de Spotify si es necesario
+const getOrRefreshSpotifyToken = async (userId) => {
+  const userRes = await db.query(
+    'SELECT spotify_access_token, spotify_refresh_token, spotify_token_expires_at FROM users WHERE id = $1',
+    [userId]
+  );
+  
+  if (userRes.rows.length === 0) {
+    throw new Error('Usuario no encontrado.');
+  }
+
+  const { spotify_access_token, spotify_refresh_token, spotify_token_expires_at } = userRes.rows[0];
+
+  if (!spotify_refresh_token) {
+    throw new Error('Spotify no está vinculado en esta cuenta.');
+  }
+
+  // Si el token aún es válido (más de 1 minuto de margen), devolverlo
+  if (spotify_access_token && spotify_token_expires_at && new Date(spotify_token_expires_at) > new Date(Date.now() + 60000)) {
+    return spotify_access_token;
+  }
+
+  // Si expiró o está a punto de expirar, refrescar
+  const client_id = process.env.SPOTIFY_CLIENT_ID;
+  const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
+
+  const refreshRes = await fetch('https://accounts.spotify.com/api/token', {
+     method: 'POST',
+     headers: {
+       'Content-Type': 'application/x-www-form-urlencoded',
+       'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64')
+     },
+     body: new URLSearchParams({
+       grant_type: 'refresh_token',
+       refresh_token: spotify_refresh_token
+     }).toString()
+  });
+
+  const refreshData = await refreshRes.json();
+  if (!refreshRes.ok || refreshData.error) {
+    console.error('Error al refrescar token de Spotify:', refreshData);
+    throw new Error('No se pudo refrescar el token de Spotify.');
+  }
+
+  const newAccessToken = refreshData.access_token;
+  const newRefreshToken = refreshData.refresh_token || spotify_refresh_token;
+  const expiresAt = new Date(Date.now() + (refreshData.expires_in || 3600) * 1000);
+
+  // Actualizar en base de datos conservando o actualizando el refresh_token
+  await db.query(
+    `UPDATE users 
+     SET spotify_access_token = $1, 
+         spotify_refresh_token = $2, 
+         spotify_token_expires_at = $3 
+     WHERE id = $4`,
+    [newAccessToken, newRefreshToken, expiresAt, userId]
+  );
+
+  return newAccessToken;
+};
+
 // --- ENDPOINTS DE API ---
 
 // 1. Enviar código de verificación por correo
@@ -299,6 +396,26 @@ app.get('/api/auth/verify-token', async (req, res) => {
       user.username = defaultUsername;
     }
 
+    // Auto-sincronizar perfil de Spotify si está vinculado pero no tiene los datos guardados
+    let spotifyUserObj = null;
+    if (user.spotify_refresh_token) {
+      if (user.spotify_display_name) {
+        spotifyUserObj = {
+          display_name: user.spotify_display_name,
+          email: user.spotify_email,
+          product: user.spotify_product,
+          avatar_url: user.spotify_avatar_url
+        };
+      } else {
+        try {
+          const accessToken = await getOrRefreshSpotifyToken(user.id);
+          spotifyUserObj = await fetchAndSaveSpotifyProfile(user.id, accessToken);
+        } catch (e) {
+          console.warn('No se pudo sincronizar perfil de Spotify en verify-token:', e.message);
+        }
+      }
+    }
+
     // Obtener estadísticas e historial reales
     const profileData = await getUserProfileData(user.id);
 
@@ -310,12 +427,7 @@ app.get('/api/auth/verify-token', async (req, res) => {
       avatar_type: user.avatar_type,
       custom_avatar_url: user.custom_avatar_url,
       spotify_linked: Boolean(user.spotify_refresh_token),
-      spotify_user: user.spotify_refresh_token ? {
-        display_name: user.spotify_display_name,
-        email: user.spotify_email,
-        product: user.spotify_product,
-        avatar_url: user.spotify_avatar_url
-      } : null,
+      spotify_user: spotifyUserObj,
       stats: profileData.stats,
       history: profileData.history
     });
@@ -547,16 +659,14 @@ app.get('/api/spotify/login', (req, res) => {
     return res.status(500).send('Error: SPOTIFY_CLIENT_ID no configurado en el servidor.');
   }
 
-  // Permisos completos para Web Playback SDK y control del reproductor
-  const scope = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state user-read-currently-playing app-remote-control';
-
-  // Redirigir a la pantalla de autorización de Spotify (sin forzar dialog para permitir SSO con la app de Spotify)
+  // Redirigir a la pantalla de autorización de Spotify solicitando confirmación explícita
   const queryParams = new URLSearchParams({
     response_type: 'code',
     client_id: client_id,
     scope: scope,
     redirect_uri: redirect_uri,
-    state: userToken
+    state: userToken,
+    show_dialog: 'true'
   });
 
   res.redirect(`https://accounts.spotify.com/authorize?${queryParams.toString()}`);
@@ -621,40 +731,18 @@ app.get('/api/spotify/callback', async (req, res) => {
     const { access_token, refresh_token, expires_in } = tokenData;
     const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-    // Obtener información del perfil del usuario de Spotify
-    let spotifyDisplayName = null;
-    let spotifyEmail = null;
-    let spotifyProduct = 'premium';
-    let spotifyAvatarUrl = null;
-
-    try {
-      const meRes = await fetch('https://api.spotify.com/v1/me', {
-        headers: { 'Authorization': `Bearer ${access_token}` }
-      });
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        spotifyDisplayName = meData.display_name || meData.id || 'Usuario Spotify';
-        spotifyEmail = meData.email || null;
-        spotifyProduct = meData.product || 'premium';
-        spotifyAvatarUrl = (meData.images && meData.images.length > 0) ? meData.images[0].url : null;
-      }
-    } catch (profileErr) {
-      console.warn('No se pudo obtener información del perfil de Spotify:', profileErr);
-    }
-
-    // Guardar tokens y perfil de Spotify en la tabla de usuarios
+    // Guardar tokens de Spotify en la tabla de usuarios
     await db.query(
       `UPDATE users 
        SET spotify_access_token = $1, 
            spotify_refresh_token = $2, 
-           spotify_token_expires_at = $3,
-           spotify_display_name = $4,
-           spotify_email = $5,
-           spotify_product = $6,
-           spotify_avatar_url = $7 
-       WHERE id = $8`,
-      [access_token, refresh_token, expiresAt, spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl, userId]
+           spotify_token_expires_at = $3
+       WHERE id = $4`,
+      [access_token, refresh_token, expiresAt, userId]
     );
+
+    // Obtener y guardar información del perfil del usuario de Spotify
+    await fetchAndSaveSpotifyProfile(userId, access_token);
 
     // Redirigir de regreso indicando éxito
     res.redirect(getRedirectUrl('spotify_success=true'));
@@ -663,67 +751,6 @@ app.get('/api/spotify/callback', async (req, res) => {
     res.redirect(getRedirectUrl(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`));
   }
 });
-
-// Helper: Refrescar token de Spotify si es necesario
-const getOrRefreshSpotifyToken = async (userId) => {
-  const userRes = await db.query(
-    'SELECT spotify_access_token, spotify_refresh_token, spotify_token_expires_at FROM users WHERE id = $1',
-    [userId]
-  );
-  
-  if (userRes.rows.length === 0) {
-    throw new Error('Usuario no encontrado.');
-  }
-
-  const { spotify_access_token, spotify_refresh_token, spotify_token_expires_at } = userRes.rows[0];
-
-  if (!spotify_refresh_token) {
-    throw new Error('Spotify no está vinculado en esta cuenta.');
-  }
-
-  // Si el token aún es válido (más de 1 minuto de margen), devolverlo
-  if (spotify_access_token && spotify_token_expires_at && new Date(spotify_token_expires_at) > new Date(Date.now() + 60000)) {
-    return spotify_access_token;
-  }
-
-  // Si expiró o está a punto de expirar, refrescar
-  const client_id = process.env.SPOTIFY_CLIENT_ID;
-  const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
-
-  const refreshRes = await fetch('https://accounts.spotify.com/api/token', {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/x-www-form-urlencoded',
-       'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64')
-     },
-     body: new URLSearchParams({
-       grant_type: 'refresh_token',
-       refresh_token: spotify_refresh_token
-     }).toString()
-  });
-
-  const refreshData = await refreshRes.json();
-  if (!refreshRes.ok || refreshData.error) {
-    console.error('Error al refrescar token de Spotify:', refreshData);
-    throw new Error('No se pudo refrescar el token de Spotify.');
-  }
-
-  const newAccessToken = refreshData.access_token;
-  const newRefreshToken = refreshData.refresh_token || spotify_refresh_token;
-  const expiresAt = new Date(Date.now() + (refreshData.expires_in || 3600) * 1000);
-
-  // Actualizar en base de datos conservando o actualizando el refresh_token
-  await db.query(
-    `UPDATE users 
-     SET spotify_access_token = $1, 
-         spotify_refresh_token = $2, 
-         spotify_token_expires_at = $3 
-     WHERE id = $4`,
-    [newAccessToken, newRefreshToken, expiresAt, userId]
-  );
-
-  return newAccessToken;
-};
 
 // Desvincular Spotify de la cuenta de usuario de forma explícita
 app.post('/api/spotify/unlink', async (req, res) => {
@@ -768,19 +795,33 @@ app.get('/api/spotify/status', async (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRes = await db.query(
-      'SELECT spotify_refresh_token, spotify_display_name, spotify_email, spotify_product, spotify_avatar_url FROM users WHERE id = $1',
+      'SELECT id, spotify_refresh_token, spotify_display_name, spotify_email, spotify_product, spotify_avatar_url FROM users WHERE id = $1',
       [decoded.id]
     );
     const user = userRes.rows[0];
 
+    let spotifyUserData = null;
+    if (user && user.spotify_refresh_token) {
+      if (user.spotify_display_name) {
+        spotifyUserData = {
+          display_name: user.spotify_display_name,
+          email: user.spotify_email,
+          product: user.spotify_product,
+          avatar_url: user.spotify_avatar_url
+        };
+      } else {
+        try {
+          const accessToken = await getOrRefreshSpotifyToken(user.id);
+          spotifyUserData = await fetchAndSaveSpotifyProfile(user.id, accessToken);
+        } catch (e) {
+          console.warn('No se pudo recuperar perfil de Spotify en status:', e.message);
+        }
+      }
+    }
+
     res.json({
       linked: !!(user && user.spotify_refresh_token),
-      spotify_user: user && user.spotify_refresh_token ? {
-        display_name: user.spotify_display_name,
-        email: user.spotify_email,
-        product: user.spotify_product,
-        avatar_url: user.spotify_avatar_url
-      } : null
+      spotify_user: spotifyUserData
     });
   } catch (err) {
     res.status(401).json({ error: 'Token inválido.' });

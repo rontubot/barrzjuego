@@ -398,10 +398,10 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {spotifyUser?.display_name || userSession?.username || 'Cuenta Spotify'}
+                    {spotifyUser?.display_name || (spotifyUser?.email ? spotifyUser.email.split('@')[0] : 'Cuenta Spotify Vinculada')}
                   </span>
                   <span style={{ fontSize: '0.75rem', color: '#1DB954', fontWeight: 700 }}>
-                    {spotifyUser?.product === 'free' ? 'Spotify Free' : 'Spotify Premium ⭐'}
+                    {spotifyUser?.product === 'premium' ? 'Spotify Premium ⭐' : 'Spotify Conectado'}
                   </span>
                 </div>
               </div>
