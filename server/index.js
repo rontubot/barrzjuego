@@ -659,6 +659,9 @@ app.get('/api/spotify/login', (req, res) => {
     return res.status(500).send('Error: SPOTIFY_CLIENT_ID no configurado en el servidor.');
   }
 
+  // Permisos completos para Web Playback SDK y control del reproductor
+  const scope = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state user-read-currently-playing app-remote-control';
+
   // Redirigir a la pantalla de autorización de Spotify solicitando confirmación explícita
   const queryParams = new URLSearchParams({
     response_type: 'code',
