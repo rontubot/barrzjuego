@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
@@ -149,8 +149,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const votingPlayers = playerNames.filter(name => name !== activePlayer);
   const currentVoter = votingPlayers[currentVoterIndex] || 'Votante';
 
-  const [isBeatPlaying, setIsBeatPlaying] = useState(false);
-
   const getApiUrl = (path: string) => {
     const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
     return `${base}${path}`;
@@ -224,7 +222,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
 
     const unsubscribe = spotifyPlayer.subscribe((state) => {
-      setIsBeatPlaying(state.isPlaying);
       if (state.error && state.error.includes('expirada')) {
         setShowSpotifyRequiredModal(true);
       }
@@ -253,16 +250,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       spotifyPlayer.pauseTrack();
     }
   }, [activeBeat, subState]);
-
-  // Control manual de Play/Pausa exclusivo de Spotify
-  const toggleBeatPlayback = () => {
-    if (!activeBeat) return;
-    if (isBeatPlaying) {
-      spotifyPlayer.pauseTrack();
-    } else {
-      spotifyPlayer.playTrack(activeBeat.spotifyUri);
-    }
-  };
 
   // Manejador del temporizador
   useEffect(() => {
@@ -895,76 +882,16 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                             </div>
 
                             <div className="spotify-embed-card-container fade-in">
-                              <div className="spotify-card-overlay">
-                                <div className="spotify-overlay-header">
-                                  <div className="spotify-api-badge">
-                                    <span className={`pulse-dot ${isBeatPlaying ? 'pulsing' : ''}`}></span>
-                                    <span>{localStorage.getItem('barrz_spotify_linked') === 'true' ? 'SPOTIFY SYNC' : 'BEAT MASTER HQ'}</span>
-                                  </div>
-                                  {activeBeat.spotifyUrl && (
-                                    <a 
-                                      href={activeBeat.spotifyUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="btn-open-spotify-external"
-                                      onClick={async (e) => {
-                                        if (Capacitor.isNativePlatform()) {
-                                          e.preventDefault();
-                                          await Browser.open({ url: activeBeat.spotifyUrl, windowName: '_system' });
-                                        }
-                                      }}
-                                    >
-                                      <span>Spotify</span>
-                                      <ExternalLink size={11} />
-                                    </a>
-                                  )}
-                                </div>
-
-                                <div className="spotify-overlay-body">
-                                  <div className={`spotify-vinyl-container ${isBeatPlaying ? 'spinning' : ''}`} onClick={toggleBeatPlayback} style={{ cursor: 'pointer' }}>
-                                    <div className="spotify-vinyl-disc">
-                                      <div className="spotify-vinyl-center"></div>
-                                    </div>
-                                  </div>
-                                  <h4 className="spotify-overlay-title">{activeBeat.name}</h4>
-                                  <span className="spotify-overlay-artist">{activeBeat.bpm} BPM • Instrumental</span>
-                                </div>
-
-                                <div className="spotify-overlay-footer">
-                                  <div className="spotify-stream-indicator" style={{ textAlign: 'center', fontSize: '0.7rem', color: isBeatPlaying ? '#1DB954' : 'var(--text-muted)', fontWeight: 600 }}>
-                                    {isBeatPlaying ? '● Reproduciendo en Spotify' : 'Pausado en Spotify'}
-                                  </div>
-
-                                  <div className="spotify-controls">
-                                    <button 
-                                      type="button" 
-                                      className="spotify-btn-sub" 
-                                      onClick={handlePrevBeat}
-                                      title="Beat anterior"
-                                    >
-                                      <ChevronLeft size={20} />
-                                    </button>
-
-                                    <button 
-                                      type="button" 
-                                      className="spotify-btn-play-pause" 
-                                      onClick={toggleBeatPlayback}
-                                      title={isBeatPlaying ? "Pausar beat" : "Reproducir beat"}
-                                    >
-                                      {isBeatPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
-                                    </button>
-
-                                    <button 
-                                      type="button" 
-                                      className="spotify-btn-sub" 
-                                      onClick={handleNextBeat}
-                                      title="Siguiente beat"
-                                    >
-                                      <ChevronRight size={20} />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
+                              <iframe
+                                title={activeBeat.name}
+                                src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
+                                width="100%"
+                                height="100%"
+                                frameBorder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                loading="lazy"
+                                className="spotify-official-embed-iframe"
+                              />
                             </div>
                           </div>
                         </div>
