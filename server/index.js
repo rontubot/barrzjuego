@@ -320,7 +320,7 @@ app.get('/api/auth/verify-token', async (req, res) => {
 
 // Endpoint para proveer el Client ID público configurado en Railway
 app.get('/api/auth/google-config', (req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID_APP || process.env.GOOGLE_CLIENT_ID || '';
+  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID_APP || '';
   res.json({ clientId });
 });
 
