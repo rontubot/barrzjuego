@@ -5,7 +5,15 @@ const config: CapacitorConfig = {
   appName: 'Barrz Freestyle',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    androidScheme: 'https',
+    allowNavigation: [
+      'accounts.spotify.com',
+      'open.spotify.com',
+      'barrzjuego.com',
+      '*.barrzjuego.com',
+      '*.spotify.com',
+      '*.scdn.co'
+    ]
   },
   plugins: {
     GoogleAuth: {

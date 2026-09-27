@@ -37,6 +37,7 @@ public class MainActivity extends BridgeActivity {
             CookieManager cookieManager = CookieManager.getInstance();
             cookieManager.setAcceptCookie(true);
             cookieManager.setAcceptThirdPartyCookies(webView, true);
+            cookieManager.flush();
 
             // Google bloquea inicios de sesión en WebView si detecta '; wv' en el User-Agent.
             // Al removerlo, Google reconoce el navegador como Chrome estándar y permite el login.
