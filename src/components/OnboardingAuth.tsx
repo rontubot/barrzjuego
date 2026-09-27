@@ -27,7 +27,19 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const [isLogin, setIsLogin] = useState(false);
 
   useEffect(() => {
-    if (step === 'auth_choice') {
+    try {
+      GoogleAuth.initialize({
+        clientId: '103522205562-b9r1r76scj8g7btrhfs8a209t7h6j3s1.apps.googleusercontent.com',
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      });
+    } catch (e) {
+      console.warn('GoogleAuth.initialize error:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step === 'auth_choice' && !Capacitor.isNativePlatform()) {
       const initGoogle = () => {
         // @ts-ignore
         if (window.google?.accounts?.id) {
