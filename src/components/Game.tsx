@@ -142,6 +142,30 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [timerSeconds, setTimerSeconds] = useState(60);
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<any>(null);
+  const beatAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopBeatAudio = () => {
+    if (beatAudioRef.current) {
+      beatAudioRef.current.pause();
+      beatAudioRef.current = null;
+    }
+  };
+
+  const playBeatAudio = (audioUrl?: string) => {
+    stopBeatAudio();
+    if (!audioUrl) return;
+    try {
+      const audio = new Audio(audioUrl);
+      audio.loop = true;
+      audio.volume = 0.9;
+      beatAudioRef.current = audio;
+      audio.play().catch(err => {
+        console.warn('Audio playback notice:', err);
+      });
+    } catch (e) {
+      console.warn('Audio init notice:', e);
+    }
+  };
 
   // Toast flotante de estado en pantalla
   const [debugToast, setDebugToast] = useState<string | null>(null);
@@ -243,11 +267,14 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     return () => {
       window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
       unsubscribe();
+      stopBeatAudio();
+      spotifyPlayer.pauseTrack();
     };
   }, []);
 
   // Helper de animación de salida para volver al menú
   const triggerExitToMenu = () => {
+    stopBeatAudio();
     spotifyPlayer.pauseTrack();
     setIsBeatPlaying(false);
     setIsExiting(true);
@@ -259,6 +286,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Pausar reproducción cuando no se está jugando activamente
   useEffect(() => {
     if (subState !== 'playing') {
+      stopBeatAudio();
       spotifyPlayer.pauseTrack();
       setIsBeatPlaying(false);
     }
@@ -330,7 +358,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const nextBeat = BEATS_DECK[prevIndex];
     setActiveBeat(nextBeat);
     if (isBeatPlaying) {
-      spotifyPlayer.playTrack(nextBeat.spotifyUri);
+      playBeatAudio(nextBeat.audioUrl);
+      spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
     }
   };
 
@@ -340,12 +369,14 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const nextBeat = BEATS_DECK[nextIndex];
     setActiveBeat(nextBeat);
     if (isBeatPlaying) {
-      spotifyPlayer.playTrack(nextBeat.spotifyUri);
+      playBeatAudio(nextBeat.audioUrl);
+      spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
     }
   };
 
   const handleFinishImprovisation = () => {
     setTimerRunning(false);
+    stopBeatAudio();
     spotifyPlayer.pauseTrack();
     setIsBeatPlaying(false);
     
@@ -507,21 +538,16 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const togglePlayBeat = async (beat: BeatCard | null) => {
     if (!beat) return;
     if (isBeatPlaying) {
-      showToast('⏸️ Pausando Spotify...');
+      showToast('⏸️ Beat pausado');
+      stopBeatAudio();
       await spotifyPlayer.pauseTrack();
       setIsBeatPlaying(false);
-      showToast('Spotify en pausa ⏸️');
     } else {
-      showToast('🎵 Enviando orden de reproducción a Spotify...');
       setIsBeatPlaying(true);
-      const ok = await spotifyPlayer.playTrack(beat.spotifyUri);
-      if (ok) {
-        showToast('¡Reproduciendo en Spotify oficial! 🟢');
-      } else {
-        const err = spotifyPlayer.getState().error;
-        showToast(`⚠️ ${err || 'No se pudo reproducir en Spotify. Abre la app de Spotify.'}`);
-        setIsBeatPlaying(false);
-      }
+      playBeatAudio(beat.audioUrl);
+      showToast('🎵 Reproduciendo beat instrumental completo 🟢');
+      // Intentar sincronizar con Spotify remoto en segundo plano
+      spotifyPlayer.playTrack(beat.spotifyUri).catch(() => {});
     }
   };
 
@@ -535,6 +561,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const pauseTimer = () => {
     setTimerRunning(false);
     if (isBeatPlaying) {
+      stopBeatAudio();
       spotifyPlayer.pauseTrack();
       setIsBeatPlaying(false);
     }
@@ -543,6 +570,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const resetTimer = () => {
     setTimerRunning(false);
     if (isBeatPlaying) {
+      stopBeatAudio();
       spotifyPlayer.pauseTrack();
       setIsBeatPlaying(false);
     }
