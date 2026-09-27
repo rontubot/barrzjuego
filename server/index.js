@@ -318,6 +318,12 @@ app.get('/api/auth/verify-token', async (req, res) => {
   }
 });
 
+// Endpoint para proveer el Client ID público configurado en Railway
+app.get('/api/auth/google-config', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID_APP || process.env.GOOGLE_CLIENT_ID || '';
+  res.json({ clientId });
+});
+
 // 5. Google Login (Verificación del token JWT de Google)
 app.post('/api/auth/google-login', async (req, res) => {
   const { credential } = req.body;

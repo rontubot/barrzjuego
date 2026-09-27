@@ -27,45 +27,60 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const [isLogin, setIsLogin] = useState(false);
 
   useEffect(() => {
-    try {
-      GoogleAuth.initialize({
-        clientId: '103522205562-b9r1r76scj8g7btrhfs8a209t7h6j3s1.apps.googleusercontent.com',
-        scopes: ['profile', 'email'],
-        grantOfflineAccess: true,
-      });
-    } catch (e) {
-      console.warn('GoogleAuth.initialize error:', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (step === 'auth_choice' && !Capacitor.isNativePlatform()) {
-      const initGoogle = () => {
-        // @ts-ignore
-        if (window.google?.accounts?.id) {
-          // @ts-ignore
-          window.google.accounts.id.initialize({
-            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '103522205562-b9r1r76scj8g7btrhfs8a209t7h6j3s1.apps.googleusercontent.com',
-            callback: handleGoogleCredentialResponse
-          });
-          
-          // @ts-ignore
-          window.google.accounts.id.renderButton(
-            document.getElementById('google-signin-btn-container'),
-            { 
-              theme: 'outline', 
-              size: 'large', 
-              text: 'signin_with',
-              shape: 'pill',
-              width: 320,
-              logo_alignment: 'center'
-            }
-          );
-        } else {
-          setTimeout(initGoogle, 500);
+    const setupGoogleAuth = async () => {
+      try {
+        let clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+        
+        // Obtener el Client ID configurado dinámicamente en Railway
+        const res = await fetch(getApiUrl('/api/auth/google-config')).catch(() => null);
+        if (res && res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data.clientId) clientId = data.clientId;
         }
-      };
-      initGoogle();
+
+        if (clientId) {
+          if (Capacitor.isNativePlatform()) {
+            GoogleAuth.initialize({
+              clientId: clientId,
+              scopes: ['profile', 'email'],
+              grantOfflineAccess: true,
+            });
+          } else {
+            const initGoogle = () => {
+              // @ts-ignore
+              if (window.google?.accounts?.id) {
+                // @ts-ignore
+                window.google.accounts.id.initialize({
+                  client_id: clientId,
+                  callback: handleGoogleCredentialResponse
+                });
+                
+                // @ts-ignore
+                window.google.accounts.id.renderButton(
+                  document.getElementById('google-signin-btn-container'),
+                  { 
+                    theme: 'outline', 
+                    size: 'large', 
+                    text: 'signin_with',
+                    shape: 'pill',
+                    width: 320,
+                    logo_alignment: 'center'
+                  }
+                );
+              } else {
+                setTimeout(initGoogle, 500);
+              }
+            };
+            initGoogle();
+          }
+        }
+      } catch (e) {
+        console.warn('Error configurando Google Auth desde servidor:', e);
+      }
+    };
+
+    if (step === 'auth_choice') {
+      setupGoogleAuth();
     }
   }, [step]);
 
