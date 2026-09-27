@@ -126,9 +126,40 @@ function App() {
       }
     }).then(h => { listenerHandle = h; });
 
+    // 3. Sincronizar estado con el servidor al regresar la app a primer plano
+    let stateChangeHandle: any = null;
+    CapApp.addListener('appStateChange', (state) => {
+      if (state.isActive) {
+        const token = localStorage.getItem('barrz_token');
+        if (token) {
+          fetch(getApiUrl('/api/spotify/status'), {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.linked) {
+                localStorage.setItem('barrz_spotify_linked', 'true');
+                setUserSession(prev => {
+                  if (!prev) return prev;
+                  const updated = { ...prev, spotify_linked: true };
+                  localStorage.setItem('barrz_session', JSON.stringify(updated));
+                  return updated;
+                });
+                window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true } }));
+                spotifyPlayer.init();
+              }
+            })
+            .catch(() => {});
+        }
+      }
+    }).then(h => { stateChangeHandle = h; });
+
     return () => {
       if (listenerHandle) {
         listenerHandle.remove();
+      }
+      if (stateChangeHandle) {
+        stateChangeHandle.remove();
       }
     };
   }, []);
