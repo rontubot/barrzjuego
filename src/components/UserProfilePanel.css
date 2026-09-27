@@ -3,11 +3,11 @@
 /* Contenedor flotante en esquina superior derecha */
 .top-profile-bar-row {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   z-index: 100;
 }
 

@@ -44,6 +44,7 @@
   z-index: 5;
   background: var(--card-bg);
   border-radius: 24px;
+  margin: auto 0;
 }
 
 .lobby-user-badge {
@@ -1391,16 +1392,22 @@
 @media (max-width: 768px) {
   .setup-outer-container {
     overflow-y: auto;
-    justify-content: flex-start;
-    padding: 60px 12px 24px;
+    justify-content: center;
+    padding: max(70px, calc(env(safe-area-inset-top) + 60px)) 16px max(30px, calc(env(safe-area-inset-bottom) + 20px));
     height: auto;
     min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .setup-card {
+    margin: auto 0;
   }
 
   .setup-individual-screen {
     height: auto;
     gap: 16px;
     padding-bottom: 24px;
+    margin: auto 0;
   }
 
   .individual-custom-content {

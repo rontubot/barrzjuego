@@ -336,8 +336,8 @@ app.post('/api/auth/google-login', async (req, res) => {
 
     const { email, sub: googleId, aud } = payload;
 
-    // Opcional: Validar client ID si está configurado en las variables de entorno del servidor
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    // Validar client ID si está configurado en las variables de entorno del servidor
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID_APP;
     if (GOOGLE_CLIENT_ID && aud !== GOOGLE_CLIENT_ID) {
       return res.status(400).json({ error: 'El ID de cliente de Google no coincide con el de esta aplicación.' });
     }

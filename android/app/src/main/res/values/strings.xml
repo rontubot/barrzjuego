@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Barrz Freestyle</string>
+    <string name="title_activity_main">Barrz Freestyle</string>
+    <string name="package_name">com.barrz.freestyle</string>
+    <string name="custom_url_scheme">com.barrz.freestyle</string>
+    <string name="server_client_id">103522205562-b9r1r76scj8g7btrhfs8a209t7h6j3s1.apps.googleusercontent.com</string>
+</resources>
