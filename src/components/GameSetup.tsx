@@ -152,9 +152,17 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     }
     localStorage.removeItem('barrz_spotify_linked');
     setIsSpotifyLinked(false);
+    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false } }));
   };
 
   useEffect(() => {
+    const onSpotifyStatusChange = (e: any) => {
+      const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
+      setIsSpotifyLinked(linked);
+    };
+
+    window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
+
     const checkSpotifyStatus = async () => {
       const token = localStorage.getItem('barrz_token');
       if (!token) return;
@@ -176,6 +184,10 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     };
 
     checkSpotifyStatus();
+
+    return () => {
+      window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
+    };
   }, [step]);
 
   // Sincronizar el competidor 1 con los datos de perfil del usuario logueado

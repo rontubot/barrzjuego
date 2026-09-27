@@ -88,6 +88,13 @@ function App() {
       const urlParams = new URLSearchParams(paramsStr);
       if (urlParams.get('spotify_success') === 'true') {
         localStorage.setItem('barrz_spotify_linked', 'true');
+        setUserSession(prev => {
+          if (!prev) return prev;
+          const updated = { ...prev, spotify_linked: true };
+          localStorage.setItem('barrz_session', JSON.stringify(updated));
+          return updated;
+        });
+        window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true } }));
         spotifyPlayer.init();
         const returnStep = sessionStorage.getItem('barrz_spotify_return_step');
         sessionStorage.removeItem('barrz_spotify_return_step');
@@ -97,6 +104,7 @@ function App() {
       } else if (urlParams.get('spotify_error')) {
         const err = urlParams.get('spotify_error');
         console.warn('Spotify auth returned error:', err);
+        window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false, error: err } }));
       }
     };
 
@@ -249,6 +257,7 @@ function App() {
     localStorage.removeItem('barrz_session');
     localStorage.removeItem('barrz_token');
     localStorage.removeItem('barrz_spotify_linked');
+    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false } }));
     spotifyPlayer.disconnect();
     setGameState('auth_choice');
   };

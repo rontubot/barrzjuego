@@ -35,6 +35,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
 
   // Verificar estado de vinculación de Spotify al abrir el panel
   useEffect(() => {
+    const onSpotifyStatusChange = (e: any) => {
+      const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
+      setIsSpotifyLinked(linked);
+    };
+    window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
+
     if (isOpen) {
       const token = localStorage.getItem('barrz_token');
       if (token) {
@@ -58,6 +64,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
         setIsSpotifyLinked(false);
       }
     }
+
+    return () => {
+      window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
+    };
   }, [isOpen]);
 
   const handleConnectSpotify = async () => {
@@ -92,6 +102,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     }
     localStorage.removeItem('barrz_spotify_linked');
     setIsSpotifyLinked(false);
+    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false } }));
     triggerSaveToast();
   };
 

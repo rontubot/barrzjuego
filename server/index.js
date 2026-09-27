@@ -630,7 +630,7 @@ app.get('/api/spotify/callback', async (req, res) => {
     res.redirect(getRedirectUrl('spotify_success=true'));
   } catch (err) {
     console.error('Error en Spotify Callback:', err);
-    res.redirect(getRedirectUrl('spotify_error=server_auth_error'));
+    res.redirect(getRedirectUrl(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`));
   }
 });
 
