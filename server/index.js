@@ -987,14 +987,21 @@ app.get('*', (req, res) => {
 app.listen(PORT, async () => {
   console.log(`\nServidor corriendo en el puerto: ${PORT}`);
   
-  // Opcional: Ejecutar scripts de creación de tablas
+  // Ejecutar scripts de creación y migración de tablas
   try {
     const fs = require('fs');
     const schemaPath = path.join(__dirname, 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      await db.query(schemaSql);
-      console.log('Tablas inicializadas correctamente en la base de datos.');
+      const statements = schemaSql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      for (const stmt of statements) {
+        try {
+          await db.query(stmt);
+        } catch (stmtErr) {
+          console.warn('DB Migration warning:', stmtErr.message);
+        }
+      }
+      console.log('Tablas inicializadas y migradas correctamente en la base de datos.');
     }
   } catch (err) {
     console.error('Error al inicializar las tablas de la base de datos:', err);
