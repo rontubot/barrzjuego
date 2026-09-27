@@ -190,9 +190,14 @@ class SpotifyPlayerService {
 
   public async playTrack(spotifyUri: string): Promise<boolean> {
     const appToken = localStorage.getItem('barrz_token');
-    if (!appToken) return false;
+    if (!appToken) {
+      this.error = 'No has iniciado sesión en Barrz.';
+      this.notify();
+      return false;
+    }
 
     try {
+      console.log('🎵 [SpotifyPlayer] Enviando comando Play a Spotify:', spotifyUri);
       const res = await fetch(getApiUrl('/api/spotify/control'), {
         method: 'POST',
         headers: {
@@ -207,19 +212,21 @@ class SpotifyPlayerService {
       });
 
       const data = await res.json();
+      console.log('🎵 [SpotifyPlayer] Respuesta del servidor:', data);
       if (res.ok && data.success) {
         this.isPlaying = true;
+        this.error = null;
         this.notify();
         return true;
       } else {
-        if (data.error) {
-          this.error = data.error;
-          this.notify();
-        }
+        this.error = data.error || 'Error al conectar con Spotify.';
+        this.notify();
         return false;
       }
     } catch (e: any) {
-      console.error('Error enviando comando play a Spotify:', e.message);
+      console.error('🎵 [SpotifyPlayer] Error enviando comando play a Spotify:', e.message);
+      this.error = 'Error de red con el servidor: ' + e.message;
+      this.notify();
       return false;
     }
   }
@@ -229,6 +236,7 @@ class SpotifyPlayerService {
     if (!appToken) return false;
 
     try {
+      console.log('🎵 [SpotifyPlayer] Enviando comando Pause a Spotify');
       const res = await fetch(getApiUrl('/api/spotify/control'), {
         method: 'POST',
         headers: {
@@ -248,7 +256,7 @@ class SpotifyPlayerService {
       }
       return false;
     } catch (e: any) {
-      console.error('Error enviando comando pause a Spotify:', e.message);
+      console.error('🎵 [SpotifyPlayer] Error enviando comando pause a Spotify:', e.message);
       return false;
     }
   }

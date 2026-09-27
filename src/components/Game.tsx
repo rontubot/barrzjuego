@@ -143,6 +143,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef<any>(null);
 
+  // Toast flotante de estado en pantalla
+  const [debugToast, setDebugToast] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setDebugToast(msg);
+    setTimeout(() => {
+      setDebugToast(prev => prev === msg ? null : prev);
+    }, 4500);
+  };
+
   // Lista de competidores activos en la ronda actual (en réplica solo participan los empatados)
   const activeRoundPlayers = isReplicaActive ? replicaPlayers : playerNames;
   const activePlayer = activeRoundPlayers[currentPlayerIndex] || activeRoundPlayers[0];
@@ -498,11 +507,21 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const togglePlayBeat = async (beat: BeatCard | null) => {
     if (!beat) return;
     if (isBeatPlaying) {
+      showToast('⏸️ Pausando Spotify...');
       await spotifyPlayer.pauseTrack();
       setIsBeatPlaying(false);
+      showToast('Spotify en pausa ⏸️');
     } else {
+      showToast('🎵 Enviando orden de reproducción a Spotify...');
       setIsBeatPlaying(true);
-      await spotifyPlayer.playTrack(beat.spotifyUri);
+      const ok = await spotifyPlayer.playTrack(beat.spotifyUri);
+      if (ok) {
+        showToast('¡Reproduciendo en Spotify oficial! 🟢');
+      } else {
+        const err = spotifyPlayer.getState().error;
+        showToast(`⚠️ ${err || 'No se pudo reproducir en Spotify. Abre la app de Spotify.'}`);
+        setIsBeatPlaying(false);
+      }
     }
   };
 
@@ -632,6 +651,30 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {debugToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          background: 'rgba(15, 15, 25, 0.95)',
+          color: '#00F0FF',
+          padding: '12px 20px',
+          borderRadius: '30px',
+          border: '1px solid #00F0FF',
+          boxShadow: '0 0 20px rgba(0, 240, 255, 0.4), 0 8px 32px rgba(0,0,0,0.8)',
+          fontSize: '0.85rem',
+          fontWeight: 800,
+          textAlign: 'center',
+          maxWidth: '90%',
+          animation: 'fadeIn 0.3s ease',
+          pointerEvents: 'none'
+        }}>
+          {debugToast}
         </div>
       )}
 

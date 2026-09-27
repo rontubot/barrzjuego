@@ -15,6 +15,15 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Request Logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[HTTP] ${req.method} ${req.originalUrl || req.url} -> ${res.statusCode} (${Date.now() - start}ms)`);
+  });
+  next();
+});
+
 // Helper: generate 6-digit random code
 const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -878,6 +887,8 @@ app.post('/api/spotify/control', async (req, res) => {
   const token = authHeader.split(' ')[1];
   const { action, uri, device_id, position_ms } = req.body;
 
+  console.log(`\n🎵 [SPOTIFY CONTROL REQUEST] Action: "${action}" | URI: "${uri}" | Device: "${device_id || 'default'}"`);
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.id;
@@ -921,14 +932,19 @@ app.post('/api/spotify/control', async (req, res) => {
       body: body
     });
 
+    console.log(`[SPOTIFY API] Response status from ${spotifyEndpoint}: ${spotifyRes.status}`);
+
     if (spotifyRes.status === 404 && action === 'play') {
       try {
         const devRes = await fetch('https://api.spotify.com/v1/me/player/devices', {
           headers: { 'Authorization': `Bearer ${spotifyToken}` }
         });
         const devData = await devRes.json();
+        console.log('[SPOTIFY DEVICES AVAILABLE]:', devData?.devices?.map(d => ({ id: d.id, name: d.name, type: d.type, active: d.is_active })));
+
         if (devData && devData.devices && devData.devices.length > 0) {
           const targetDev = devData.devices.find(d => d.is_active) || devData.devices[0];
+          console.log(`[SPOTIFY RETRY] Retrying play on device "${targetDev.name}" (${targetDev.id})...`);
           const retryEndpoint = `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(targetDev.id)}`;
           spotifyRes = await fetch(retryEndpoint, {
             method: 'PUT',
@@ -938,6 +954,7 @@ app.post('/api/spotify/control', async (req, res) => {
             },
             body: body
           });
+          console.log(`[SPOTIFY RETRY RESULT] Status: ${spotifyRes.status}`);
         }
       } catch (devErr) {
         console.warn('Error al buscar dispositivos alternativos de Spotify:', devErr);
@@ -945,19 +962,22 @@ app.post('/api/spotify/control', async (req, res) => {
     }
 
     if (spotifyRes.status === 404) {
-       return res.status(404).json({ error: 'No se detectó un dispositivo activo en tu cuenta de Spotify. Abre la app de Spotify o activa el reproductor web.' });
+       console.warn('[SPOTIFY 404] No active playback device found on user account.');
+       return res.status(404).json({ error: 'No se detectó un dispositivo activo en tu cuenta de Spotify. Abre la app de Spotify o activa el reproductor.' });
     }
 
     if (spotifyRes.status === 403) {
-       return res.status(403).json({ error: 'Se requiere Spotify Premium para reproducir por streaming.' });
+       console.warn('[SPOTIFY 403] Premium required or restricted.');
+       return res.status(403).json({ error: 'Se requiere Spotify Premium para reproducir por streaming remoto.' });
     }
 
     if (!spotifyRes.ok && spotifyRes.status !== 204 && spotifyRes.status !== 200) {
        const errData = await spotifyRes.json().catch(() => ({}));
-       console.error('Error controlando Spotify:', errData);
+       console.error('[SPOTIFY API ERROR RESPONSE]:', errData);
        return res.status(400).json({ error: 'Error al enviar comando a Spotify.', details: errData });
     }
 
+    console.log(`✅ [SPOTIFY SUCCESS] Command "${action}" executed cleanly.`);
     res.json({ success: true });
   } catch (err) {
     console.error('Error en Spotify control endpoint:', err);
