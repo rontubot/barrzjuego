@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Cloud, ArrowRight, ArrowLeft, Mail, Lock, ShieldCheck, HelpCircle, Compass, Radio } from 'lucide-react';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { useI18n } from '../i18n/LanguageContext';
 import './OnboardingAuth.css';
 
@@ -84,13 +85,22 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
     }
   }, [step]);
 
-  const handleSpotifyToggle = () => {
+  const handleSpotifyToggle = async () => {
     const token = localStorage.getItem('barrz_token');
     if (!token) {
       setErrorMsg(t.auth.spotify_need_auth);
       return;
     }
-    window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
+    sessionStorage.setItem('barrz_spotify_return_step', step);
+    const isMobile = Capacitor.isNativePlatform();
+    const stateVal = isMobile ? `${token}:app` : token;
+    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
+
+    if (isMobile) {
+      await Browser.open({ url: authUrl, windowName: '_self' });
+    } else {
+      window.location.href = authUrl;
+    }
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {

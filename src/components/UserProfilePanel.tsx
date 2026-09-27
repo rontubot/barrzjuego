@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2, Globe } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { BattleDetailView } from './BattleDetailView';
 import { useI18n } from '../i18n/LanguageContext';
 import './UserProfilePanel.css';
@@ -58,14 +60,22 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     }
   }, [isOpen]);
 
-  const handleConnectSpotify = () => {
+  const handleConnectSpotify = async () => {
     const token = localStorage.getItem('barrz_token');
     if (!token) {
       alert('Debes iniciar sesión con tu cuenta para asociar Spotify.');
       return;
     }
     sessionStorage.setItem('barrz_spotify_return_step', gameState);
-    window.location.href = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
+    const isMobile = Capacitor.isNativePlatform();
+    const stateVal = isMobile ? `${token}:app` : token;
+    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
+
+    if (isMobile) {
+      await Browser.open({ url: authUrl, windowName: '_self' });
+    } else {
+      window.location.href = authUrl;
+    }
   };
 
   const handleDisconnectSpotify = async () => {

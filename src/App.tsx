@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { App as CapApp } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { Splash } from './components/Splash';
 import { OnboardingAuth } from './components/OnboardingAuth';
 import { GameSetup } from './components/GameSetup';
@@ -80,23 +82,47 @@ function App() {
   const [userSession, setUserSession] = useState<UserSession | null>(null);
   const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
 
-  // Escuchar callback de Spotify desde URL
+  // Escuchar callback de Spotify desde URL Web y Deep Links móviles
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('spotify_success') === 'true') {
-      localStorage.setItem('barrz_spotify_linked', 'true');
-      spotifyPlayer.init();
-      const returnStep = sessionStorage.getItem('barrz_spotify_return_step');
-      sessionStorage.removeItem('barrz_spotify_return_step');
-      if (returnStep) {
-        setGameState(returnStep as GameState);
+    const handleSpotifyResult = (paramsStr: string) => {
+      const urlParams = new URLSearchParams(paramsStr);
+      if (urlParams.get('spotify_success') === 'true') {
+        localStorage.setItem('barrz_spotify_linked', 'true');
+        spotifyPlayer.init();
+        const returnStep = sessionStorage.getItem('barrz_spotify_return_step');
+        sessionStorage.removeItem('barrz_spotify_return_step');
+        if (returnStep) {
+          setGameState(returnStep as GameState);
+        }
+      } else if (urlParams.get('spotify_error')) {
+        const err = urlParams.get('spotify_error');
+        console.warn('Spotify auth returned error:', err);
       }
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (urlParams.get('spotify_error')) {
-      const err = urlParams.get('spotify_error');
-      console.warn('Spotify auth returned error:', err);
+    };
+
+    // 1. Caso Web
+    if (window.location.search) {
+      handleSpotifyResult(window.location.search);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
+    // 2. Caso Móvil (Deep link com.barrz.freestyle://...)
+    let listenerHandle: any = null;
+    CapApp.addListener('appUrlOpen', (data) => {
+      if (data?.url) {
+        Browser.close().catch(() => {});
+        const queryIdx = data.url.indexOf('?');
+        if (queryIdx !== -1) {
+          handleSpotifyResult(data.url.substring(queryIdx));
+        }
+      }
+    }).then(h => { listenerHandle = h; });
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    };
   }, []);
 
   // Inicializar SDK de Spotify si ya está vinculado

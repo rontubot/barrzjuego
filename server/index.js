@@ -560,13 +560,23 @@ app.get('/api/spotify/login', (req, res) => {
 // Callback de Spotify
 app.get('/api/spotify/callback', async (req, res) => {
   const code = req.query.code || null;
-  const userToken = req.query.state || null;
+  const rawState = req.query.state || '';
   const error = req.query.error || null;
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+  const isMobileApp = rawState.endsWith(':app') || req.query.platform === 'app';
+  const userToken = isMobileApp ? rawState.replace(':app', '') : rawState;
+
+  const getRedirectUrl = (params) => {
+    if (isMobileApp) {
+      return `com.barrz.freestyle://spotify-callback?${params}`;
+    }
+    return `${frontendUrl}?${params}`;
+  };
+
   if (error || !code || !userToken) {
     console.error('Spotify auth error or cancelled:', error);
-    return res.redirect(`${frontendUrl}?spotify_error=${encodeURIComponent(error || 'cancelled')}`);
+    return res.redirect(getRedirectUrl(`spotify_error=${encodeURIComponent(error || 'cancelled')}`));
   }
 
   const client_id = process.env.SPOTIFY_CLIENT_ID;
@@ -600,7 +610,7 @@ app.get('/api/spotify/callback', async (req, res) => {
 
     if (!tokenRes.ok || tokenData.error) {
       console.error('Error al obtener tokens de Spotify:', tokenData);
-      return res.redirect(`${frontendUrl}?spotify_error=token_exchange_failed`);
+      return res.redirect(getRedirectUrl('spotify_error=token_exchange_failed'));
     }
 
     const { access_token, refresh_token, expires_in } = tokenData;
@@ -616,11 +626,11 @@ app.get('/api/spotify/callback', async (req, res) => {
       [access_token, refresh_token, expiresAt, userId]
     );
 
-    // Redirigir de regreso al frontend indicando éxito
-    res.redirect(`${frontendUrl}?spotify_success=true`);
+    // Redirigir de regreso indicando éxito
+    res.redirect(getRedirectUrl('spotify_success=true'));
   } catch (err) {
     console.error('Error en Spotify Callback:', err);
-    res.redirect(`${frontendUrl}?spotify_error=server_auth_error`);
+    res.redirect(getRedirectUrl('spotify_error=server_auth_error'));
   }
 });
 
