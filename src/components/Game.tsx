@@ -203,6 +203,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
   };
 
+  // Estado de reproducción del beat
+  const [isBeatPlaying, setIsBeatPlaying] = useState(false);
+
   // Escuchar cambios de estado de Spotify y del reproductor en tiempo real
   useEffect(() => {
     const onSpotifyStatusChange = (e: any) => {
@@ -222,6 +225,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
 
     const unsubscribe = spotifyPlayer.subscribe((state) => {
+      setIsBeatPlaying(state.isPlaying);
       if (state.error && state.error.includes('expirada')) {
         setShowSpotifyRequiredModal(true);
       }
@@ -236,20 +240,20 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Helper de animación de salida para volver al menú
   const triggerExitToMenu = () => {
     spotifyPlayer.pauseTrack();
+    setIsBeatPlaying(false);
     setIsExiting(true);
     setTimeout(() => {
       onBackToMenu();
     }, 450);
   };
 
-  // Reproducción automática oficial por Spotify al estar en turno
+  // Pausar reproducción cuando no se está jugando activamente
   useEffect(() => {
-    if (activeBeat && subState === 'playing') {
-      openAndPlayInSpotify(activeBeat);
-    } else if (subState !== 'playing') {
+    if (subState !== 'playing') {
       spotifyPlayer.pauseTrack();
+      setIsBeatPlaying(false);
     }
-  }, [activeBeat, subState]);
+  }, [subState]);
 
   // Manejador del temporizador
   useEffect(() => {
@@ -314,18 +318,27 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const handlePrevBeat = () => {
     const currentIndex = BEATS_DECK.findIndex(b => b.id === activeBeat?.id);
     const prevIndex = (currentIndex - 1 + BEATS_DECK.length) % BEATS_DECK.length;
-    setActiveBeat(BEATS_DECK[prevIndex]);
+    const nextBeat = BEATS_DECK[prevIndex];
+    setActiveBeat(nextBeat);
+    if (isBeatPlaying) {
+      spotifyPlayer.playTrack(nextBeat.spotifyUri);
+    }
   };
 
   const handleNextBeat = () => {
     const currentIndex = BEATS_DECK.findIndex(b => b.id === activeBeat?.id);
     const nextIndex = (currentIndex + 1) % BEATS_DECK.length;
-    setActiveBeat(BEATS_DECK[nextIndex]);
+    const nextBeat = BEATS_DECK[nextIndex];
+    setActiveBeat(nextBeat);
+    if (isBeatPlaying) {
+      spotifyPlayer.playTrack(nextBeat.spotifyUri);
+    }
   };
 
   const handleFinishImprovisation = () => {
     setTimerRunning(false);
-    spotifyPlayer.pause();
+    spotifyPlayer.pauseTrack();
+    setIsBeatPlaying(false);
     
     if (mode === 'solo') {
       advanceToNextTurn(scores);
@@ -482,30 +495,38 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     setSubState('ready');
   };
 
-  const openAndPlayInSpotify = (beat: BeatCard | null) => {
+  const togglePlayBeat = async (beat: BeatCard | null) => {
     if (!beat) return;
-    spotifyPlayer.playTrack(beat.spotifyUri);
-    if (beat.spotifyUri) {
-      const trackId = beat.spotifyUri.replace('spotify:track:', '');
-      window.location.href = `spotify:track:${trackId}`;
+    if (isBeatPlaying) {
+      await spotifyPlayer.pauseTrack();
+      setIsBeatPlaying(false);
+    } else {
+      setIsBeatPlaying(true);
+      await spotifyPlayer.playTrack(beat.spotifyUri);
     }
   };
 
   const startTimer = () => {
     setTimerRunning(true);
-    if (activeBeat) {
-      spotifyPlayer.playTrack(activeBeat.spotifyUri);
+    if (activeBeat && !isBeatPlaying) {
+      togglePlayBeat(activeBeat);
     }
   };
 
   const pauseTimer = () => {
     setTimerRunning(false);
-    spotifyPlayer.pauseTrack();
+    if (isBeatPlaying) {
+      spotifyPlayer.pauseTrack();
+      setIsBeatPlaying(false);
+    }
   };
 
   const resetTimer = () => {
     setTimerRunning(false);
-    spotifyPlayer.pauseTrack();
+    if (isBeatPlaying) {
+      spotifyPlayer.pauseTrack();
+      setIsBeatPlaying(false);
+    }
     setTimerSeconds(activeChallenge?.timeLimit ? Math.min(activeChallenge.timeLimit, 60) : 60);
   };
 
@@ -909,33 +930,41 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               />
                             </div>
 
-                            <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'center', zIndex: 10, position: 'relative' }}>
+                            <div style={{ marginTop: '10px', display: 'flex', gap: '8px', justifyContent: 'center', zIndex: 10, position: 'relative' }}>
                               <button
                                 type="button"
-                                className="btn-spotify-app-direct pulse-teal-anim"
+                                className={`btn-spotify-app-direct ${isBeatPlaying ? 'playing' : 'pulse-teal-anim'}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openAndPlayInSpotify(activeBeat);
+                                  togglePlayBeat(activeBeat);
                                 }}
                                 style={{
-                                  background: '#1DB954',
-                                  color: '#000',
+                                  background: isBeatPlaying ? 'rgba(255, 0, 127, 0.9)' : '#1DB954',
+                                  color: isBeatPlaying ? '#fff' : '#000',
                                   fontWeight: 800,
-                                  fontSize: '0.78rem',
+                                  fontSize: '0.82rem',
                                   border: 'none',
-                                  borderRadius: '20px',
-                                  padding: '6px 14px',
+                                  borderRadius: '24px',
+                                  padding: '8px 18px',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: '6px',
+                                  gap: '8px',
                                   cursor: 'pointer',
-                                  boxShadow: '0 0 12px rgba(29, 185, 84, 0.4)'
+                                  boxShadow: isBeatPlaying ? '0 0 15px rgba(255, 0, 127, 0.5)' : '0 0 15px rgba(29, 185, 84, 0.5)',
+                                  transition: 'all 0.2s ease'
                                 }}
                               >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="#000">
-                                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
-                                </svg>
-                                <span>Reproducir en App de Spotify 🟢</span>
+                                {isBeatPlaying ? (
+                                  <>
+                                    <Pause size={16} fill="currentColor" />
+                                    <span>Pausar Beat ⏸️</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play size={16} fill="currentColor" />
+                                    <span>Reproducir en Spotify 🟢</span>
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>
