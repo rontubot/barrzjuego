@@ -833,7 +833,7 @@ app.post('/api/spotify/control', async (req, res) => {
       body = JSON.stringify({ device_ids: [device_id], play: false });
     }
 
-    const spotifyRes = await fetch(spotifyEndpoint, {
+    let spotifyRes = await fetch(spotifyEndpoint, {
       method: method,
       headers: {
         'Authorization': `Bearer ${spotifyToken}`,
@@ -841,6 +841,29 @@ app.post('/api/spotify/control', async (req, res) => {
       },
       body: body
     });
+
+    if (spotifyRes.status === 404 && action === 'play') {
+      try {
+        const devRes = await fetch('https://api.spotify.com/v1/me/player/devices', {
+          headers: { 'Authorization': `Bearer ${spotifyToken}` }
+        });
+        const devData = await devRes.json();
+        if (devData && devData.devices && devData.devices.length > 0) {
+          const targetDev = devData.devices.find(d => d.is_active) || devData.devices[0];
+          const retryEndpoint = `https://api.spotify.com/v1/me/player/play?device_id=${encodeURIComponent(targetDev.id)}`;
+          spotifyRes = await fetch(retryEndpoint, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${spotifyToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: body
+          });
+        }
+      } catch (devErr) {
+        console.warn('Error al buscar dispositivos alternativos de Spotify:', devErr);
+      }
+    }
 
     if (spotifyRes.status === 404) {
        return res.status(404).json({ error: 'No se detectó un dispositivo activo en tu cuenta de Spotify. Abre la app de Spotify o activa el reproductor web.' });

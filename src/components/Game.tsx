@@ -149,19 +149,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const votingPlayers = playerNames.filter(name => name !== activePlayer);
   const currentVoter = votingPlayers[currentVoterIndex] || 'Votante';
 
-  // Reproductor de Audio nativo para beats completos continuos (sin cortes de 30s)
-  const gameAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isBeatPlaying, setIsBeatPlaying] = useState(false);
-  const [beatProgress, setBeatProgress] = useState(0);
-  const [beatCurrentTime, setBeatCurrentTime] = useState('0:00');
-  const [beatDurationTime, setBeatDurationTime] = useState('0:00');
-
-  const formatTime = (secs: number) => {
-    if (isNaN(secs) || secs < 0) return '0:00';
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
 
   const getApiUrl = (path: string) => {
     const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
@@ -217,12 +205,13 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
   };
 
-  // Escuchar cambios de estado de Spotify en tiempo real
+  // Escuchar cambios de estado de Spotify y del reproductor en tiempo real
   useEffect(() => {
     const onSpotifyStatusChange = (e: any) => {
       const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
       if (linked) {
         setShowSpotifyRequiredModal(false);
+        spotifyPlayer.init();
       }
     };
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
@@ -235,6 +224,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
 
     const unsubscribe = spotifyPlayer.subscribe((state) => {
+      setIsBeatPlaying(state.isPlaying);
       if (state.error && state.error.includes('expirada')) {
         setShowSpotifyRequiredModal(true);
       }
@@ -248,91 +238,29 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   // Helper de animación de salida para volver al menú
   const triggerExitToMenu = () => {
-    if (gameAudioRef.current) {
-      gameAudioRef.current.pause();
-      gameAudioRef.current = null;
-    }
-    spotifyPlayer.pause();
+    spotifyPlayer.pauseTrack();
     setIsExiting(true);
     setTimeout(() => {
       onBackToMenu();
     }, 450);
   };
 
-  // Reproducción automática del beat activo (Audio HQ Completo + Spotify SDK)
+  // Reproducción automática exclusiva por Spotify al estar en turno
   useEffect(() => {
-    if (!activeBeat) return;
-
-    if (gameAudioRef.current) {
-      gameAudioRef.current.pause();
-      gameAudioRef.current = null;
-    }
-
-    if (activeBeat.audioUrl) {
-      const audio = new Audio(activeBeat.audioUrl);
-      audio.loop = true;
-      audio.volume = 0.85;
-
-      audio.ontimeupdate = () => {
-        if (audio.duration) {
-          setBeatProgress((audio.currentTime / audio.duration) * 100);
-          setBeatCurrentTime(formatTime(audio.currentTime));
-          setBeatDurationTime(formatTime(audio.duration));
-        }
-      };
-
-      audio.onplay = () => setIsBeatPlaying(true);
-      audio.onpause = () => setIsBeatPlaying(false);
-
-      gameAudioRef.current = audio;
-
-      if (subState === 'playing') {
-        audio.play().catch(err => console.log('Reproducción de beat iniciada:', err));
-      }
-    }
-
-    if (spotifyPlayer.isPlayerReady() && subState === 'playing') {
+    if (activeBeat && subState === 'playing') {
       spotifyPlayer.playTrack(activeBeat.spotifyUri);
+    } else if (subState !== 'playing') {
+      spotifyPlayer.pauseTrack();
     }
+  }, [activeBeat, subState]);
 
-    return () => {
-      if (gameAudioRef.current) {
-        gameAudioRef.current.pause();
-      }
-    };
-  }, [activeBeat]);
-
-  // Manejo de cambio de subState (pausar al salir de 'playing')
-  useEffect(() => {
-    if (subState === 'playing') {
-      if (gameAudioRef.current && gameAudioRef.current.paused) {
-        gameAudioRef.current.play().catch(() => {});
-      }
-      if (activeBeat && spotifyPlayer.isPlayerReady()) {
-        spotifyPlayer.playTrack(activeBeat.spotifyUri);
-      }
-    } else {
-      if (gameAudioRef.current) {
-        gameAudioRef.current.pause();
-      }
-      spotifyPlayer.pause();
-    }
-  }, [subState]);
-
-  // Control manual de Play/Pausa del Beat
+  // Control manual de Play/Pausa exclusivo de Spotify
   const toggleBeatPlayback = () => {
-    if (gameAudioRef.current) {
-      if (gameAudioRef.current.paused) {
-        gameAudioRef.current.play().catch(() => {});
-        if (activeBeat && spotifyPlayer.isPlayerReady()) {
-          spotifyPlayer.playTrack(activeBeat.spotifyUri);
-        }
-        setIsBeatPlaying(true);
-      } else {
-        gameAudioRef.current.pause();
-        spotifyPlayer.pause();
-        setIsBeatPlaying(false);
-      }
+    if (!activeBeat) return;
+    if (isBeatPlaying) {
+      spotifyPlayer.pauseTrack();
+    } else {
+      spotifyPlayer.playTrack(activeBeat.spotifyUri);
     }
   };
 
@@ -1003,12 +931,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                 </div>
 
                                 <div className="spotify-overlay-footer">
-                                  <div className="spotify-progress-container">
-                                    <span className="spotify-time">{beatCurrentTime}</span>
-                                    <div className="spotify-progress-bar-wrap">
-                                      <div className="spotify-progress-bar-fill" style={{ width: `${beatProgress}%` }}></div>
-                                    </div>
-                                    <span className="spotify-time">{beatDurationTime}</span>
+                                  <div className="spotify-stream-indicator" style={{ textAlign: 'center', fontSize: '0.7rem', color: isBeatPlaying ? '#1DB954' : 'var(--text-muted)', fontWeight: 600 }}>
+                                    {isBeatPlaying ? '● Reproduciendo en Spotify' : 'Pausado en Spotify'}
                                   </div>
 
                                   <div className="spotify-controls">
