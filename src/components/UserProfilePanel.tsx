@@ -32,12 +32,22 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
   });
   const [showSavedAlert, setShowSavedAlert] = useState(false);
   const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
+  const [spotifyUser, setSpotifyUser] = useState<any>(() => userSession?.spotify_user || null);
+
+  useEffect(() => {
+    if (userSession?.spotify_user) {
+      setSpotifyUser(userSession.spotify_user);
+    }
+  }, [userSession]);
 
   // Verificar estado de vinculación de Spotify al abrir el panel
   useEffect(() => {
     const onSpotifyStatusChange = (e: any) => {
       const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
       setIsSpotifyLinked(linked);
+      if (e.detail?.spotify_user) {
+        setSpotifyUser(e.detail.spotify_user);
+      }
     };
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
 
@@ -51,9 +61,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
           .then(data => {
             if (data && data.linked) {
               setIsSpotifyLinked(true);
+              setSpotifyUser(data.spotify_user || null);
               localStorage.setItem('barrz_spotify_linked', 'true');
             } else {
               setIsSpotifyLinked(false);
+              setSpotifyUser(null);
               localStorage.removeItem('barrz_spotify_linked');
             }
           })
@@ -82,7 +94,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
 
     if (isMobile) {
-      await Browser.open({ url: authUrl, windowName: '_self' });
+      await Browser.open({ url: authUrl, windowName: '_system' });
     } else {
       window.location.href = authUrl;
     }
@@ -102,7 +114,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     }
     localStorage.removeItem('barrz_spotify_linked');
     setIsSpotifyLinked(false);
-    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false } }));
+    setSpotifyUser(null);
+    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false, spotify_user: null } }));
     triggerSaveToast();
   };
 
@@ -695,23 +708,45 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                 </div>
 
                 {/* Integración de Spotify */}
-                <div className="setting-row-vertical" style={{ background: 'rgba(29, 185, 84, 0.06)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(29, 185, 84, 0.25)' }}>
+                <div className="setting-row-vertical" style={{ background: 'rgba(29, 185, 84, 0.08)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(29, 185, 84, 0.3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="#1DB954">
+                      <svg viewBox="0 0 24 24" width="22" height="22" fill="#1DB954">
                         <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
                       </svg>
-                      <span className="setting-title font-base">{t.settings.spotify_title}</span>
+                      <span className="setting-title font-base" style={{ fontSize: '0.95rem' }}>{t.settings.spotify_title}</span>
                     </div>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: isSpotifyLinked ? '#1DB954' : 'var(--text-muted)' }}>
                       {isSpotifyLinked ? t.settings.spotify_linked_badge : t.settings.spotify_unlinked_badge}
                     </span>
                   </div>
+
+                  {isSpotifyLinked && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0, 0, 0, 0.4)', padding: '10px 12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                      {spotifyUser?.avatar_url ? (
+                        <img src={spotifyUser.avatar_url} alt="Spotify User" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1DB954', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 800 }}>
+                          {(spotifyUser?.display_name || 'S').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {spotifyUser?.display_name || userSession?.username || 'Cuenta Spotify'}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: '#1DB954', fontWeight: 700 }}>
+                          {spotifyUser?.product === 'free' ? 'Spotify Free' : 'Spotify Premium ⭐'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <span className="setting-desc mb-10">
                     {isSpotifyLinked 
-                      ? t.settings.spotify_desc_linked 
+                      ? 'Tu cuenta está conectada. Los beats sonarán completos y sumarán reproducciones oficiales.' 
                       : t.settings.spotify_desc_unlinked}
                   </span>
+
                   <button
                     type="button"
                     className={`btn-group-option ${isSpotifyLinked ? 'active' : ''}`}

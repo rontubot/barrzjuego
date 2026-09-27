@@ -111,6 +111,13 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
 
   // Vinculación de Spotify
   const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
+  const [spotifyUser, setSpotifyUser] = useState<any>(() => userSession?.spotify_user || null);
+
+  useEffect(() => {
+    if (userSession?.spotify_user) {
+      setSpotifyUser(userSession.spotify_user);
+    }
+  }, [userSession]);
 
   const getApiUrl = (path: string) => {
     const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
@@ -130,7 +137,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
 
     if (isMobile) {
-      await Browser.open({ url: authUrl, windowName: '_self' });
+      await Browser.open({ url: authUrl, windowName: '_system' });
     } else {
       window.location.href = authUrl;
     }
@@ -152,13 +159,17 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     }
     localStorage.removeItem('barrz_spotify_linked');
     setIsSpotifyLinked(false);
-    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false } }));
+    setSpotifyUser(null);
+    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false, spotify_user: null } }));
   };
 
   useEffect(() => {
     const onSpotifyStatusChange = (e: any) => {
       const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
       setIsSpotifyLinked(linked);
+      if (e.detail?.spotify_user) {
+        setSpotifyUser(e.detail.spotify_user);
+      }
     };
 
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
@@ -173,9 +184,11 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
         const data = await res.json();
         if (res.ok && data.linked) {
           setIsSpotifyLinked(true);
+          setSpotifyUser(data.spotify_user || null);
           localStorage.setItem('barrz_spotify_linked', 'true');
         } else if (res.ok && !data.linked) {
           setIsSpotifyLinked(false);
+          setSpotifyUser(null);
           localStorage.removeItem('barrz_spotify_linked');
         }
       } catch (e) {
@@ -374,6 +387,26 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
           </p>
 
           <div className="spotify-link-action-box">
+            {isSpotifyLinked && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0, 0, 0, 0.4)', padding: '12px 16px', borderRadius: '12px', marginBottom: '16px', border: '1px solid rgba(29, 185, 84, 0.3)', width: '100%', maxWidth: '340px' }}>
+                {spotifyUser?.avatar_url ? (
+                  <img src={spotifyUser.avatar_url} alt="Spotify User" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#1DB954', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 800, fontSize: '1.2rem' }}>
+                    {(spotifyUser?.display_name || userSession?.username || 'S').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {spotifyUser?.display_name || userSession?.username || 'Cuenta Spotify'}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#1DB954', fontWeight: 700 }}>
+                    {spotifyUser?.product === 'free' ? 'Spotify Free' : 'Spotify Premium ⭐'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <button 
               type="button" 
               className={`btn-spotify-link-setup ${isSpotifyLinked ? 'linked' : ''}`}
@@ -382,7 +415,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               {isSpotifyLinked ? t.setup.spotify_disconnect : t.setup.spotify_connect}
             </button>
             {isSpotifyLinked && (
-              <span className="spotify-user-meta font-base">
+              <span className="spotify-user-meta font-base" style={{ marginTop: '8px' }}>
                 {t.setup.spotify_streaming_active}
               </span>
             )}

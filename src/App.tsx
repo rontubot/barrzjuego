@@ -40,6 +40,13 @@ interface UserSession {
   avatar?: string;
   avatar_type?: string;
   custom_avatar_url?: string | null;
+  spotify_linked?: boolean;
+  spotify_user?: {
+    display_name?: string;
+    email?: string;
+    product?: string;
+    avatar_url?: string;
+  } | null;
   stats?: {
     totalBattles: number;
     wins: number;
@@ -88,13 +95,33 @@ function App() {
       const urlParams = new URLSearchParams(paramsStr);
       if (urlParams.get('spotify_success') === 'true') {
         localStorage.setItem('barrz_spotify_linked', 'true');
-        setUserSession(prev => {
-          if (!prev) return prev;
-          const updated = { ...prev, spotify_linked: true };
-          localStorage.setItem('barrz_session', JSON.stringify(updated));
-          return updated;
-        });
-        window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true } }));
+        const token = localStorage.getItem('barrz_token');
+        if (token) {
+          fetch(getApiUrl('/api/spotify/status'), {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.linked) {
+                setUserSession(prev => {
+                  if (!prev) return prev;
+                  const updated = { ...prev, spotify_linked: true, spotify_user: data.spotify_user };
+                  localStorage.setItem('barrz_session', JSON.stringify(updated));
+                  return updated;
+                });
+                window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true, spotify_user: data.spotify_user } }));
+              }
+            })
+            .catch(() => {});
+        } else {
+          setUserSession(prev => {
+            if (!prev) return prev;
+            const updated = { ...prev, spotify_linked: true };
+            localStorage.setItem('barrz_session', JSON.stringify(updated));
+            return updated;
+          });
+          window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true } }));
+        }
         spotifyPlayer.init();
         const returnStep = sessionStorage.getItem('barrz_spotify_return_step');
         sessionStorage.removeItem('barrz_spotify_return_step');
@@ -141,11 +168,11 @@ function App() {
                 localStorage.setItem('barrz_spotify_linked', 'true');
                 setUserSession(prev => {
                   if (!prev) return prev;
-                  const updated = { ...prev, spotify_linked: true };
+                  const updated = { ...prev, spotify_linked: true, spotify_user: data.spotify_user };
                   localStorage.setItem('barrz_session', JSON.stringify(updated));
                   return updated;
                 });
-                window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true } }));
+                window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true, spotify_user: data.spotify_user } }));
                 spotifyPlayer.init();
               }
             })
@@ -209,6 +236,8 @@ function App() {
               avatar: data.avatar,
               avatar_type: data.avatar_type,
               custom_avatar_url: data.custom_avatar_url,
+              spotify_linked: data.spotify_linked,
+              spotify_user: data.spotify_user,
               stats: data.stats,
               history: data.history,
               loggedIn: true,

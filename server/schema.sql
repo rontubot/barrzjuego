@@ -46,4 +46,8 @@ ALTER TABLE game_history ADD COLUMN IF NOT EXISTS details TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_access_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_refresh_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_token_expires_at TIMESTAMP;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_display_name VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_email VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_product VARCHAR(50);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS spotify_avatar_url TEXT;
 

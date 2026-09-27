@@ -283,7 +283,7 @@ app.get('/api/auth/verify-token', async (req, res) => {
     
     // Obtener perfil completo
     const userRes = await db.query(
-      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url, spotify_refresh_token FROM users WHERE id = $1',
+      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url, spotify_refresh_token, spotify_display_name, spotify_email, spotify_product, spotify_avatar_url FROM users WHERE id = $1',
       [decoded.id]
     );
     if (userRes.rows.length === 0) {
@@ -310,6 +310,12 @@ app.get('/api/auth/verify-token', async (req, res) => {
       avatar_type: user.avatar_type,
       custom_avatar_url: user.custom_avatar_url,
       spotify_linked: Boolean(user.spotify_refresh_token),
+      spotify_user: user.spotify_refresh_token ? {
+        display_name: user.spotify_display_name,
+        email: user.spotify_email,
+        product: user.spotify_product,
+        avatar_url: user.spotify_avatar_url
+      } : null,
       stats: profileData.stats,
       history: profileData.history
     });
@@ -544,14 +550,13 @@ app.get('/api/spotify/login', (req, res) => {
   // Permisos completos para Web Playback SDK y control del reproductor
   const scope = 'streaming user-read-email user-read-private user-modify-playback-state user-read-playback-state user-read-currently-playing app-remote-control';
 
-  // Redirigir a la pantalla de autorización de Spotify
+  // Redirigir a la pantalla de autorización de Spotify (sin forzar dialog para permitir SSO con la app de Spotify)
   const queryParams = new URLSearchParams({
     response_type: 'code',
     client_id: client_id,
     scope: scope,
     redirect_uri: redirect_uri,
-    state: userToken,
-    show_dialog: 'true'
+    state: userToken
   });
 
   res.redirect(`https://accounts.spotify.com/authorize?${queryParams.toString()}`);
@@ -616,14 +621,39 @@ app.get('/api/spotify/callback', async (req, res) => {
     const { access_token, refresh_token, expires_in } = tokenData;
     const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-    // Guardar tokens de Spotify en la tabla de usuarios
+    // Obtener información del perfil del usuario de Spotify
+    let spotifyDisplayName = null;
+    let spotifyEmail = null;
+    let spotifyProduct = 'premium';
+    let spotifyAvatarUrl = null;
+
+    try {
+      const meRes = await fetch('https://api.spotify.com/v1/me', {
+        headers: { 'Authorization': `Bearer ${access_token}` }
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        spotifyDisplayName = meData.display_name || meData.id || 'Usuario Spotify';
+        spotifyEmail = meData.email || null;
+        spotifyProduct = meData.product || 'premium';
+        spotifyAvatarUrl = (meData.images && meData.images.length > 0) ? meData.images[0].url : null;
+      }
+    } catch (profileErr) {
+      console.warn('No se pudo obtener información del perfil de Spotify:', profileErr);
+    }
+
+    // Guardar tokens y perfil de Spotify en la tabla de usuarios
     await db.query(
       `UPDATE users 
        SET spotify_access_token = $1, 
            spotify_refresh_token = $2, 
-           spotify_token_expires_at = $3 
-       WHERE id = $4`,
-      [access_token, refresh_token, expiresAt, userId]
+           spotify_token_expires_at = $3,
+           spotify_display_name = $4,
+           spotify_email = $5,
+           spotify_product = $6,
+           spotify_avatar_url = $7 
+       WHERE id = $8`,
+      [access_token, refresh_token, expiresAt, spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl, userId]
     );
 
     // Redirigir de regreso indicando éxito
@@ -710,7 +740,11 @@ app.post('/api/spotify/unlink', async (req, res) => {
       `UPDATE users 
        SET spotify_access_token = NULL, 
            spotify_refresh_token = NULL, 
-           spotify_token_expires_at = NULL 
+           spotify_token_expires_at = NULL,
+           spotify_display_name = NULL,
+           spotify_email = NULL,
+           spotify_product = NULL,
+           spotify_avatar_url = NULL 
        WHERE id = $1`,
       [decoded.id]
     );
@@ -734,13 +768,19 @@ app.get('/api/spotify/status', async (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userRes = await db.query(
-      'SELECT spotify_refresh_token FROM users WHERE id = $1',
+      'SELECT spotify_refresh_token, spotify_display_name, spotify_email, spotify_product, spotify_avatar_url FROM users WHERE id = $1',
       [decoded.id]
     );
     const user = userRes.rows[0];
 
     res.json({
-      linked: !!(user && user.spotify_refresh_token)
+      linked: !!(user && user.spotify_refresh_token),
+      spotify_user: user && user.spotify_refresh_token ? {
+        display_name: user.spotify_display_name,
+        email: user.spotify_email,
+        product: user.spotify_product,
+        avatar_url: user.spotify_avatar_url
+      } : null
     });
   } catch (err) {
     res.status(401).json({ error: 'Token inválido.' });
