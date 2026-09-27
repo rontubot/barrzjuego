@@ -91,36 +91,42 @@ function App() {
 
   // Escuchar callback de Spotify desde URL Web y Deep Links móviles
   useEffect(() => {
-    const handleSpotifyResult = (paramsStr: string) => {
+    const handleSpotifyResult = async (paramsStr: string) => {
       const urlParams = new URLSearchParams(paramsStr);
       if (urlParams.get('spotify_success') === 'true') {
         localStorage.setItem('barrz_spotify_linked', 'true');
-        const token = localStorage.getItem('barrz_token');
+        const incomingToken = urlParams.get('token');
+        if (incomingToken) {
+          localStorage.setItem('barrz_token', incomingToken);
+        }
+        const token = incomingToken || localStorage.getItem('barrz_token');
         if (token) {
-          fetch(getApiUrl('/api/spotify/status'), {
-            headers: { 'Authorization': `Bearer ${token}` }
-          })
-            .then(res => res.json())
-            .then(data => {
-              if (data && data.linked) {
-                setUserSession(prev => {
-                  if (!prev) return prev;
-                  const updated = { ...prev, spotify_linked: true, spotify_user: data.spotify_user };
-                  localStorage.setItem('barrz_session', JSON.stringify(updated));
-                  return updated;
-                });
-                window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true, spotify_user: data.spotify_user } }));
-              }
-            })
-            .catch(() => {});
-        } else {
-          setUserSession(prev => {
-            if (!prev) return prev;
-            const updated = { ...prev, spotify_linked: true };
-            localStorage.setItem('barrz_session', JSON.stringify(updated));
-            return updated;
-          });
-          window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true } }));
+          try {
+            const res = await fetch(getApiUrl('/api/auth/verify-token'), {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              const updatedSession: UserSession = {
+                loggedIn: true,
+                email: data.email,
+                username: data.username,
+                avatar: data.avatar,
+                avatar_type: data.avatar_type,
+                custom_avatar_url: data.custom_avatar_url,
+                spotify_linked: data.spotify_linked,
+                spotify_user: data.spotify_user,
+                stats: data.stats,
+                history: data.history,
+                method: 'google'
+              };
+              setUserSession(updatedSession);
+              localStorage.setItem('barrz_session', JSON.stringify(updatedSession));
+              window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: true, spotify_user: data.spotify_user } }));
+            }
+          } catch (err) {
+            console.error('Error al sincronizar sesión post-Spotify:', err);
+          }
         }
         spotifyPlayer.init();
         const returnStep = sessionStorage.getItem('barrz_spotify_return_step');

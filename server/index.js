@@ -680,15 +680,10 @@ app.get('/api/spotify/callback', async (req, res) => {
   const code = req.query.code || null;
   const rawState = req.query.state || '';
   const error = req.query.error || null;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-  const isMobileApp = rawState.endsWith(':app') || req.query.platform === 'app';
-  const userToken = isMobileApp ? rawState.replace(':app', '') : rawState;
+  const frontendUrl = process.env.FRONTEND_URL || 'https://barrzjuego.com';
+  const userToken = (rawState || '').replace(':app', '');
 
   const getRedirectUrl = (params) => {
-    if (isMobileApp) {
-      return `com.barrz.freestyle://spotify-callback?${params}`;
-    }
     return `${frontendUrl}?${params}`;
   };
 
@@ -747,8 +742,8 @@ app.get('/api/spotify/callback', async (req, res) => {
     // Obtener y guardar información del perfil del usuario de Spotify
     await fetchAndSaveSpotifyProfile(userId, access_token);
 
-    // Redirigir de regreso indicando éxito
-    res.redirect(getRedirectUrl('spotify_success=true'));
+    // Redirigir de regreso al frontend indicando éxito y conservando la sesión
+    res.redirect(getRedirectUrl(`spotify_success=true&token=${encodeURIComponent(userToken)}`));
   } catch (err) {
     console.error('Error en Spotify Callback:', err);
     res.redirect(getRedirectUrl(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`));

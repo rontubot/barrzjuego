@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, User, Play, Pause, ArrowLeft, Plus, Minus, UserPlus, Check, RefreshCw, ArrowRight } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { useI18n } from '../i18n/LanguageContext';
@@ -124,7 +122,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     return `${base}${path}`;
   };
 
-  const handleSpotifyConnect = async () => {
+  const handleSpotifyConnect = () => {
     const token = localStorage.getItem('barrz_token');
     if (!token) {
       alert(t.auth.spotify_need_auth);
@@ -132,15 +130,8 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     }
     // Guardar pantalla de retorno
     sessionStorage.setItem('barrz_spotify_return_step', step);
-    const isMobile = Capacitor.isNativePlatform();
-    const stateVal = isMobile ? `${token}:app` : token;
-    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
-
-    if (isMobile) {
-      await Browser.open({ url: authUrl, windowName: '_system' });
-    } else {
-      window.location.href = authUrl;
-    }
+    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
+    window.location.href = authUrl;
   };
 
   const handleSpotifyDisconnect = async () => {
