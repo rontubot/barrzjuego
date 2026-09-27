@@ -242,10 +242,10 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }, 450);
   };
 
-  // Reproducción automática exclusiva por Spotify al estar en turno
+  // Reproducción automática oficial por Spotify al estar en turno
   useEffect(() => {
     if (activeBeat && subState === 'playing') {
-      spotifyPlayer.playTrack(activeBeat.spotifyUri);
+      openAndPlayInSpotify(activeBeat);
     } else if (subState !== 'playing') {
       spotifyPlayer.pauseTrack();
     }
@@ -477,20 +477,35 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     setCurrentPlayerIndex(startIndex !== -1 ? startIndex : 0);
 
     setActiveBeat(null);
-    setActiveChallenge(null);
-    setSelectedBeatForTurn(null);
-    setSelectedChallengeForTurn(null);
-    setTimerRunning(false);
-    setTimerSeconds(60);
     setBeatFlipped(false);
     setChallengeFlipped(false);
     setSubState('ready');
   };
 
-  const startTimer = () => setTimerRunning(true);
-  const pauseTimer = () => setTimerRunning(false);
+  const openAndPlayInSpotify = (beat: BeatCard | null) => {
+    if (!beat) return;
+    spotifyPlayer.playTrack(beat.spotifyUri);
+    if (beat.spotifyUri) {
+      const trackId = beat.spotifyUri.replace('spotify:track:', '');
+      window.location.href = `spotify:track:${trackId}`;
+    }
+  };
+
+  const startTimer = () => {
+    setTimerRunning(true);
+    if (activeBeat) {
+      spotifyPlayer.playTrack(activeBeat.spotifyUri);
+    }
+  };
+
+  const pauseTimer = () => {
+    setTimerRunning(false);
+    spotifyPlayer.pauseTrack();
+  };
+
   const resetTimer = () => {
     setTimerRunning(false);
+    spotifyPlayer.pauseTrack();
     setTimerSeconds(activeChallenge?.timeLimit ? Math.min(activeChallenge.timeLimit, 60) : 60);
   };
 
@@ -892,6 +907,36 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                 loading="lazy"
                                 className="spotify-official-embed-iframe"
                               />
+                            </div>
+
+                            <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'center', zIndex: 10, position: 'relative' }}>
+                              <button
+                                type="button"
+                                className="btn-spotify-app-direct pulse-teal-anim"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openAndPlayInSpotify(activeBeat);
+                                }}
+                                style={{
+                                  background: '#1DB954',
+                                  color: '#000',
+                                  fontWeight: 800,
+                                  fontSize: '0.78rem',
+                                  border: 'none',
+                                  borderRadius: '20px',
+                                  padding: '6px 14px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  cursor: 'pointer',
+                                  boxShadow: '0 0 12px rgba(29, 185, 84, 0.4)'
+                                }}
+                              >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="#000">
+                                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
+                                </svg>
+                                <span>Reproducir en App de Spotify 🟢</span>
+                              </button>
                             </div>
                           </div>
                         </div>
