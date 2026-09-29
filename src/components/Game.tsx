@@ -23,6 +23,7 @@ const DEATHMATCH_THEMES = [
 interface GameProps {
   onBackToMenu: () => void;
   onGameSaved?: (stats: any, history: any) => void;
+  userSession?: any;
   gameSettings?: {
     mode: 'solo' | 'multiplayer';
     subMode?: 'random' | 'custom';
@@ -37,7 +38,7 @@ interface GameProps {
   };
 }
 
-export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSettings }) => {
+export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSettings, userSession }) => {
   const { t } = useI18n();
   // Configuración del juego (valores de props o valores por defecto)
   const mode = gameSettings?.mode || 'multiplayer';
@@ -610,6 +611,63 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     return { name, points, rank: currentRank };
   });
 
+  const getPlayerAvatar = (playerName: string): string => {
+    const isMainUser = (userSession?.username && playerName === userSession.username) ||
+      (!userSession?.username && (playerName === 'Freestyler A' || playerName === 'Mi Práctica'));
+
+    if (isMainUser) {
+      if (userSession?.avatar_type === 'custom' && userSession?.custom_avatar_url) {
+        return userSession.custom_avatar_url;
+      }
+      if (userSession?.spotify_user?.avatar_url) {
+        return userSession.spotify_user.avatar_url;
+      }
+      if (userSession?.avatar && userSession.avatar !== 'crown' && userSession.avatar !== 'null' && userSession.avatar.trim() !== '') {
+        return userSession.avatar;
+      }
+      const localAvatar = localStorage.getItem('barrz_user_avatar');
+      if (localAvatar && localAvatar !== 'crown' && localAvatar !== 'null' && localAvatar.trim() !== '') {
+        return localAvatar;
+      }
+    }
+
+    const assignedAvatar = gameSettings?.avatars?.[playerName];
+    if (assignedAvatar && assignedAvatar !== 'crown' && assignedAvatar !== 'null' && assignedAvatar.trim() !== '') {
+      return assignedAvatar;
+    }
+
+    return '🎤';
+  };
+
+  const renderAvatarContent = (avatarValue: string, imgClassName: string = "podium-pillar-img", fallbackSize: number = 24) => {
+    const isImg = avatarValue && (
+      avatarValue.startsWith('/') ||
+      avatarValue.startsWith('data:image/') ||
+      avatarValue.startsWith('http://') ||
+      avatarValue.startsWith('https://') ||
+      avatarValue.startsWith('blob:')
+    );
+
+    if (isImg) {
+      return (
+        <img
+          src={avatarValue}
+          alt="Avatar"
+          className={imgClassName}
+          onError={(e) => {
+            (e.currentTarget as HTMLElement).style.display = 'none';
+          }}
+        />
+      );
+    }
+
+    if (avatarValue && avatarValue.trim() !== '') {
+      return <span className="avatar-emoji-text">{avatarValue}</span>;
+    }
+
+    return <User size={fallbackSize} className="podium-pillar-icon" />;
+  };
+
   return (
     <>
       <ConfirmDialog
@@ -723,11 +781,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
               </div>
               <div className="player-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ fontSize: '1.2rem', lineHeight: 1, width: '1.5rem', height: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '50%' }}>
-                  {(gameSettings?.avatars?.[activePlayer]?.startsWith('/') || gameSettings?.avatars?.[activePlayer]?.startsWith('data:image/')) ? (
-                    <img src={gameSettings?.avatars?.[activePlayer]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    gameSettings?.avatars?.[activePlayer] || '🎤'
-                  )}
+                  {renderAvatarContent(getPlayerAvatar(activePlayer), "hud-avatar-thumb", 16)}
                 </span>
                 <span>{activePlayer}</span>
               </div>
@@ -743,12 +797,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         {subState === 'ready' && (
           <div className="ready-screen-content glass-panel glow-teal text-center fade-in">
             <div className="ready-avatar-wrapper">
-              <div className="avatar-circle" style={{ fontSize: (gameSettings?.avatars?.[activePlayer]?.startsWith('/') || gameSettings?.avatars?.[activePlayer]?.startsWith('data:image/')) ? '0' : '3rem', overflow: 'hidden' }}>
-                {(gameSettings?.avatars?.[activePlayer]?.startsWith('/') || gameSettings?.avatars?.[activePlayer]?.startsWith('data:image/')) ? (
-                  <img src={gameSettings?.avatars?.[activePlayer]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  gameSettings?.avatars?.[activePlayer] || '🎙'
-                )}
+              <div className="avatar-circle" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {renderAvatarContent(getPlayerAvatar(activePlayer), "ready-avatar-img", 48)}
               </div>
             </div>
             
@@ -1137,11 +1187,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                   <span className="voter-label font-base">{t.game.voter_turn_label}</span>
                   <div className="voter-name-badge pulse-teal-anim" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ width: '1.5rem', height: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderRadius: '50%' }}>
-                      {(gameSettings?.avatars?.[currentVoter]?.startsWith('/') || gameSettings?.avatars?.[currentVoter]?.startsWith('data:image/')) ? (
-                        <img src={gameSettings?.avatars?.[currentVoter]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        gameSettings?.avatars?.[currentVoter] || '🎤'
-                      )}
+                      {renderAvatarContent(getPlayerAvatar(currentVoter), "voter-avatar-thumb", 16)}
                     </span>
                     <span>{currentVoter}</span>
                   </div>
@@ -1251,16 +1297,16 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     {ranksList[1].rank === 1 && <span className="winner-trophy">👑</span>}
                     <span className="podium-rank">{ranksList[1].rank}</span>
                     <span className={`podium-name ${ranksList[1].rank === 1 ? 'pink-text' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                      {(gameSettings?.avatars?.[ranksList[1].name]?.startsWith('/') || gameSettings?.avatars?.[ranksList[1].name]?.startsWith('data:image/')) ? (
-                        <img src={gameSettings?.avatars?.[ranksList[1].name]} alt="" style={{ width: '1.25rem', height: '1.25rem', borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : (
-                        <span>{gameSettings?.avatars?.[ranksList[1].name] || '🎤'}</span>
-                      )}
+                      <span className="podium-avatar-inline-wrap">
+                        {renderAvatarContent(getPlayerAvatar(ranksList[1].name), "podium-player-thumb", 14)}
+                      </span>
                       <span>{ranksList[1].name}</span>
                     </span>
                     <span className="podium-score">{ranksList[1].points} {t.common.points}</span>
                     <div className={`podium-pillar ${ranksList[1].rank === 1 ? 'pillar-first glow-pink' : 'pillar-second'}`}>
-                      <User size={32} className="podium-pillar-icon" />
+                      <div className="podium-pillar-avatar-badge">
+                        {renderAvatarContent(getPlayerAvatar(ranksList[1].name), "podium-pillar-img", 28)}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1271,16 +1317,16 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     <span className="winner-trophy">👑</span>
                     <span className="podium-rank">{ranksList[0].rank}</span>
                     <span className="podium-name pink-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                      {(gameSettings?.avatars?.[ranksList[0].name]?.startsWith('/') || gameSettings?.avatars?.[ranksList[0].name]?.startsWith('data:image/')) ? (
-                        <img src={gameSettings?.avatars?.[ranksList[0].name]} alt="" style={{ width: '1.25rem', height: '1.25rem', borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : (
-                        <span>{gameSettings?.avatars?.[ranksList[0].name] || '🎤'}</span>
-                      )}
+                      <span className="podium-avatar-inline-wrap">
+                        {renderAvatarContent(getPlayerAvatar(ranksList[0].name), "podium-player-thumb", 14)}
+                      </span>
                       <span>{ranksList[0].name}</span>
                     </span>
                     <span className="podium-score">{ranksList[0].points} {t.common.points}</span>
                     <div className="podium-pillar pillar-first glow-pink">
-                      <User size={40} className="podium-pillar-icon first-place" />
+                      <div className="podium-pillar-avatar-badge first-place">
+                        {renderAvatarContent(getPlayerAvatar(ranksList[0].name), "podium-pillar-img first-place", 36)}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1291,11 +1337,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     {ranksList[2].rank === 1 && <span className="winner-trophy">👑</span>}
                     <span className="podium-rank">{ranksList[2].rank}</span>
                     <span className={`podium-name ${ranksList[2].rank === 1 ? 'pink-text' : ranksList[2].rank === 2 ? 'teal-text' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                      {(gameSettings?.avatars?.[ranksList[2].name]?.startsWith('/') || gameSettings?.avatars?.[ranksList[2].name]?.startsWith('data:image/')) ? (
-                        <img src={gameSettings?.avatars?.[ranksList[2].name]} alt="" style={{ width: '1.25rem', height: '1.25rem', borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : (
-                        <span>{gameSettings?.avatars?.[ranksList[2].name] || '🎤'}</span>
-                      )}
+                      <span className="podium-avatar-inline-wrap">
+                        {renderAvatarContent(getPlayerAvatar(ranksList[2].name), "podium-player-thumb", 14)}
+                      </span>
                       <span>{ranksList[2].name}</span>
                     </span>
                     <span className="podium-score">{ranksList[2].points} {t.common.points}</span>
@@ -1306,7 +1350,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                           ? 'pillar-second' 
                           : 'pillar-third'
                     }`}>
-                      <User size={28} className="podium-pillar-icon" />
+                      <div className="podium-pillar-avatar-badge">
+                        {renderAvatarContent(getPlayerAvatar(ranksList[2].name), "podium-pillar-img", 24)}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1327,11 +1373,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                       <tr key={name} className={rank === 1 ? 'winner-row' : ''}>
                         <td>#{rank}</td>
                         <td style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
-                          {(gameSettings?.avatars?.[name]?.startsWith('/') || gameSettings?.avatars?.[name]?.startsWith('data:image/')) ? (
-                            <img src={gameSettings?.avatars?.[name]} alt="" style={{ width: '1.25rem', height: '1.25rem', borderRadius: '50%', objectFit: 'cover' }} />
-                          ) : (
-                            <span style={{ marginRight: '8px' }}>{gameSettings?.avatars?.[name] || '🎤'}</span>
-                          )}
+                          <span className="leaderboard-avatar-wrap">
+                            {renderAvatarContent(getPlayerAvatar(name), "leaderboard-player-thumb", 16)}
+                          </span>
                           <span>{name}</span>
                         </td>
                         <td><strong>{points}</strong> {t.common.points}</td>

@@ -508,6 +508,7 @@ function App() {
         key={`${gameSettings.players.join(',')}-${gameSettings.mode}-${gameSettings.roundsCount}`}
         onBackToMenu={handleBackToMenu}
         gameSettings={gameSettings}
+        userSession={userSession}
         onGameSaved={(stats, history) => {
           setUserSession(prev => {
             if (!prev) return prev;

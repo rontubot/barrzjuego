@@ -595,17 +595,22 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
                 className={`btn-individual-start ${!canStart ? 'disabled' : 'pulse-teal-anim'}`}
                 disabled={!canStart}
                 onClick={() => {
-                  // Stop preview audio if playing
                   if (previewAudioRef.current) {
                     previewAudioRef.current.pause();
                     previewAudioRef.current = null;
                     setPreviewingBeatId(null);
                   }
+                  const soloName = userSession?.username || 'Mi Práctica';
+                  const rawAv = userSession?.avatar === 'crown' ? '' : userSession?.avatar;
+                  const soloAvatar = (userSession?.avatar_type === 'custom' && userSession?.custom_avatar_url)
+                    ? userSession.custom_avatar_url
+                    : (userSession?.spotify_user?.avatar_url || rawAv || '🎤');
+
                   onNext('game', {
                     mode: 'solo',
                     subMode: individualSubMode,
-                    players: ['Mi Práctica'],
-                    avatars: { 'Mi Práctica': '🎤' },
+                    players: [soloName],
+                    avatars: { [soloName]: soloAvatar },
                     roundsCount: 3,
                     selectedCategories: ['palabras', 'tematicas', 'terminaciones'],
                     initialBeat: individualSubMode === 'custom' ? selectedBeat : null,
