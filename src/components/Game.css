@@ -2,11 +2,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100vh;
   min-height: 100dvh;
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-  gap: clamp(10px, 2vh, 18px);
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  gap: 12px;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
@@ -55,23 +55,25 @@
   justify-content: space-between;
   align-items: center;
   margin: 0 auto;
-  z-index: 5;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .btn-back {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: 12px;
   font-family: var(--font-base);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .btn-back:hover {
@@ -84,26 +86,40 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 24px;
+  padding: 6px 14px;
   border-radius: 14px;
+  max-width: calc(100% - 120px);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .turn-label {
   font-family: var(--font-base);
   font-weight: 900;
-  font-size: 0.8rem;
-  letter-spacing: 2px;
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .player-name {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-family: var(--font-graffiti);
-  font-size: 1.15rem;
+  font-size: clamp(0.82rem, 3.5vw, 1.1rem);
   color: var(--text-primary);
   margin-top: 2px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.player-name span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
 }
 
 .btn-reset-game {
@@ -1016,15 +1032,17 @@
 .ready-screen-content {
   width: 100%;
   max-width: 440px;
-  padding: 40px 24px;
-  margin: 0 auto;
+  padding: 32px 20px;
+  margin: auto 0;
   z-index: 5;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .ready-avatar-wrapper {
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .avatar-circle {
@@ -1058,24 +1076,29 @@
 }
 
 .ready-player-title {
-  font-size: 2.2rem;
-  margin: 10px 0;
+  font-size: clamp(1.15rem, 5.2vw, 2rem);
+  margin: 8px 0 12px 0;
   color: var(--neon-teal);
   text-shadow: 0 0 10px var(--neon-teal-glow);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  line-height: 1.25;
+  padding: 0 6px;
 }
 
 .ready-score-hint {
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-secondary);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .ready-description {
   font-size: 0.85rem;
   line-height: 1.6;
   color: var(--text-muted);
-  margin-bottom: 30px;
+  margin-bottom: 26px;
 }
 
 .btn-comenzar-turno {
@@ -1111,9 +1134,11 @@
 .scoring-screen-content {
   width: 100%;
   max-width: 440px;
-  padding: 40px 24px;
-  margin: 0 auto;
+  padding: 32px 20px;
+  margin: auto 0;
   z-index: 5;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .scoring-icon-wrapper {
@@ -1146,6 +1171,8 @@
   line-height: 1.5;
   color: var(--text-secondary);
   margin-bottom: 24px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .stars-rating-container {
@@ -1189,9 +1216,11 @@
 .gameover-screen-content {
   width: 100%;
   max-width: 600px;
-  padding: 30px 24px;
-  margin: 0 auto;
+  padding: 30px 20px;
+  margin: auto 0;
   z-index: 5;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .gameover-logo-container {
@@ -1253,7 +1282,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
+  max-width: 100%;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+.podium-name span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 85px;
 }
 
 .podium-avatar-inline-wrap {
@@ -1504,9 +1542,11 @@
 .replica-screen-content {
   width: 100%;
   max-width: 500px;
-  padding: 40px 24px;
-  margin: 0 auto;
+  padding: 32px 20px;
+  margin: auto 0;
   z-index: 5;
+  overflow: hidden;
+  box-sizing: border-box;
   border-color: rgba(255, 0, 0, 0.4) !important;
   box-shadow: 0 0 20px rgba(255, 0, 0, 0.25), inset 0 0 10px rgba(255, 0, 0, 0.1) !important;
 }

@@ -5,8 +5,8 @@
   justify-content: center;
   min-height: 100vh;
   min-height: 100dvh;
-  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
-  gap: clamp(16px, 3.5vh, 32px);
+  padding: max(20px, env(safe-area-inset-top)) 20px max(50px, env(safe-area-inset-bottom));
+  gap: clamp(24px, 4.5vh, 44px);
   position: relative;
   overflow: hidden;
   z-index: 2;
@@ -484,13 +484,18 @@
 
 /* Footer */
 .splash-footer {
+  position: absolute;
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px));
+  left: 0;
+  right: 0;
   text-align: center;
   font-size: 0.72rem;
   color: var(--text-muted);
   font-weight: 500;
   letter-spacing: 0.5px;
   z-index: 5;
-  margin-top: 4vh;
+  pointer-events: none;
+  padding: 0 16px;
 }
 
 .fade-in {
