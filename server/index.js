@@ -125,64 +125,100 @@ const fetchAndSaveSpotifyProfile = async (userId, accessToken) => {
 };
 
 // Helper: Refrescar token de Spotify si es necesario
+const spotifyRefreshPromises = new Map();
+
 const getOrRefreshSpotifyToken = async (userId) => {
-  const userRes = await db.query(
-    'SELECT spotify_access_token, spotify_refresh_token, spotify_token_expires_at FROM users WHERE id = $1',
-    [userId]
-  );
-  
-  if (userRes.rows.length === 0) {
-    throw new Error('Usuario no encontrado.');
+  if (spotifyRefreshPromises.has(userId)) {
+    return spotifyRefreshPromises.get(userId);
   }
 
-  const { spotify_access_token, spotify_refresh_token, spotify_token_expires_at } = userRes.rows[0];
+  const promise = (async () => {
+    const userRes = await db.query(
+      'SELECT spotify_access_token, spotify_refresh_token, spotify_token_expires_at FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userRes.rows.length === 0) {
+      throw new Error('Usuario no encontrado.');
+    }
 
-  if (!spotify_refresh_token) {
-    throw new Error('Spotify no está vinculado en esta cuenta.');
+    const { spotify_access_token, spotify_refresh_token, spotify_token_expires_at } = userRes.rows[0];
+
+    if (!spotify_refresh_token) {
+      throw new Error('Spotify no está vinculado en esta cuenta.');
+    }
+
+    // Si el token aún es válido (más de 1 minuto de margen), devolverlo
+    if (spotify_access_token && spotify_token_expires_at && new Date(spotify_token_expires_at) > new Date(Date.now() + 60000)) {
+      return spotify_access_token;
+    }
+
+    // Si expiró o está a punto de expirar, refrescar
+    const client_id = process.env.SPOTIFY_CLIENT_ID;
+    const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
+
+    if (!client_id || !client_secret) {
+      throw new Error('Credenciales de Spotify no configuradas en el servidor.');
+    }
+
+    const refreshRes = await fetch('https://accounts.spotify.com/api/token', {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/x-www-form-urlencoded',
+         'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64')
+       },
+       body: new URLSearchParams({
+         grant_type: 'refresh_token',
+         refresh_token: spotify_refresh_token
+       }).toString()
+    });
+
+    const refreshData = await refreshRes.json();
+    if (!refreshRes.ok || refreshData.error) {
+      console.error(`[SPOTIFY REFRESH ERROR] Usuario ${userId}:`, refreshData);
+      
+      // Si el error es invalid_grant (token revocado en Spotify), limpiar en DB para no dejar estado corrupto
+      if (refreshData.error === 'invalid_grant') {
+        console.warn(`[SPOTIFY] Refresh token revocado para usuario ${userId}. Limpiando vinculación.`);
+        await db.query(
+          `UPDATE users 
+           SET spotify_access_token = NULL, 
+               spotify_refresh_token = NULL, 
+               spotify_token_expires_at = NULL,
+               spotify_display_name = NULL,
+               spotify_email = NULL,
+               spotify_product = NULL,
+               spotify_avatar_url = NULL
+           WHERE id = $1`,
+          [userId]
+        );
+      }
+      throw new Error('No se pudo refrescar el token de Spotify: ' + (refreshData.error_description || refreshData.error));
+    }
+
+    const newAccessToken = refreshData.access_token;
+    const newRefreshToken = refreshData.refresh_token || spotify_refresh_token;
+    const expiresAt = new Date(Date.now() + (refreshData.expires_in || 3600) * 1000);
+
+    // Actualizar en base de datos conservando o actualizando el refresh_token
+    await db.query(
+      `UPDATE users 
+       SET spotify_access_token = $1, 
+           spotify_refresh_token = $2, 
+           spotify_token_expires_at = $3 
+       WHERE id = $4`,
+      [newAccessToken, newRefreshToken, expiresAt, userId]
+    );
+
+    return newAccessToken;
+  })();
+
+  spotifyRefreshPromises.set(userId, promise);
+  try {
+    return await promise;
+  } finally {
+    spotifyRefreshPromises.delete(userId);
   }
-
-  // Si el token aún es válido (más de 1 minuto de margen), devolverlo
-  if (spotify_access_token && spotify_token_expires_at && new Date(spotify_token_expires_at) > new Date(Date.now() + 60000)) {
-    return spotify_access_token;
-  }
-
-  // Si expiró o está a punto de expirar, refrescar
-  const client_id = process.env.SPOTIFY_CLIENT_ID;
-  const client_secret = process.env.SPOTIFY_CLIENT_SECRET;
-
-  const refreshRes = await fetch('https://accounts.spotify.com/api/token', {
-     method: 'POST',
-     headers: {
-       'Content-Type': 'application/x-www-form-urlencoded',
-       'Authorization': 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64')
-     },
-     body: new URLSearchParams({
-       grant_type: 'refresh_token',
-       refresh_token: spotify_refresh_token
-     }).toString()
-  });
-
-  const refreshData = await refreshRes.json();
-  if (!refreshRes.ok || refreshData.error) {
-    console.error('Error al refrescar token de Spotify:', refreshData);
-    throw new Error('No se pudo refrescar el token de Spotify.');
-  }
-
-  const newAccessToken = refreshData.access_token;
-  const newRefreshToken = refreshData.refresh_token || spotify_refresh_token;
-  const expiresAt = new Date(Date.now() + (refreshData.expires_in || 3600) * 1000);
-
-  // Actualizar en base de datos conservando o actualizando el refresh_token
-  await db.query(
-    `UPDATE users 
-     SET spotify_access_token = $1, 
-         spotify_refresh_token = $2, 
-         spotify_token_expires_at = $3 
-     WHERE id = $4`,
-    [newAccessToken, newRefreshToken, expiresAt, userId]
-  );
-
-  return newAccessToken;
 };
 
 // --- ENDPOINTS DE API ---
@@ -364,6 +400,12 @@ app.post('/api/auth/login', async (req, res) => {
       avatar_type: user.avatar_type,
       custom_avatar_url: user.custom_avatar_url,
       spotify_linked: Boolean(user.spotify_refresh_token),
+      spotify_user: user.spotify_refresh_token ? {
+        display_name: user.spotify_display_name,
+        email: user.spotify_email,
+        product: user.spotify_product,
+        avatar_url: user.spotify_avatar_url
+      } : null,
       stats: profileData.stats,
       history: profileData.history,
       loggedIn: true,
@@ -520,7 +562,7 @@ app.post('/api/auth/google-login', async (req, res) => {
 
     // Obtener los datos completos
     const userProfileRes = await db.query(
-      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url, spotify_refresh_token FROM users WHERE id = $1',
+      'SELECT id, email, username, avatar, avatar_type, custom_avatar_url, spotify_refresh_token, spotify_display_name, spotify_email, spotify_product, spotify_avatar_url FROM users WHERE id = $1',
       [user.id]
     );
     const fullUser = userProfileRes.rows[0];
@@ -540,6 +582,12 @@ app.post('/api/auth/google-login', async (req, res) => {
       avatar_type: fullUser.avatar_type,
       custom_avatar_url: fullUser.custom_avatar_url,
       spotify_linked: Boolean(fullUser.spotify_refresh_token),
+      spotify_user: fullUser.spotify_refresh_token ? {
+        display_name: fullUser.spotify_display_name,
+        email: fullUser.spotify_email,
+        product: fullUser.spotify_product,
+        avatar_url: fullUser.spotify_avatar_url
+      } : null,
       stats: profileData.stats,
       history: profileData.history,
       loggedIn: true,
@@ -690,15 +738,99 @@ app.get('/api/spotify/callback', async (req, res) => {
   const rawState = req.query.state || '';
   const error = req.query.error || null;
   const frontendUrl = process.env.FRONTEND_URL || 'https://barrzjuego.com';
+  
+  const isApp = (rawState || '').includes(':app');
   const userToken = (rawState || '').replace(':app', '');
 
-  const getRedirectUrl = (params) => {
-    return `${frontendUrl}?${params}`;
+  const sendResponse = (params) => {
+    if (isApp) {
+      const deepLink = `com.barrz.freestyle://spotify?${params}`;
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>BARRZ Freestyle - Spotify</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body {
+              background: #0a0a14;
+              color: #ffffff;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+              box-sizing: border-box;
+              text-align: center;
+            }
+            .card {
+              background: rgba(255, 255, 255, 0.05);
+              border: 1px solid #1DB954;
+              border-radius: 16px;
+              padding: 30px;
+              max-width: 400px;
+              width: 100%;
+              box-shadow: 0 0 25px rgba(29, 185, 84, 0.3);
+            }
+            .logo {
+              width: 64px;
+              height: 64px;
+              margin-bottom: 16px;
+            }
+            h2 {
+              margin: 0 0 10px 0;
+              color: #1DB954;
+              font-size: 1.4rem;
+            }
+            p {
+              color: #aaa;
+              font-size: 0.95rem;
+              line-height: 1.4;
+              margin-bottom: 24px;
+            }
+            .btn {
+              display: inline-block;
+              background: #1DB954;
+              color: #000;
+              font-weight: bold;
+              text-decoration: none;
+              padding: 14px 28px;
+              border-radius: 30px;
+              font-size: 1rem;
+              box-shadow: 0 0 15px rgba(29, 185, 84, 0.4);
+            }
+          </style>
+          <script>
+            window.location.href = "${deepLink}";
+            setTimeout(function() {
+              var btn = document.getElementById('open-app-btn');
+              if (btn) btn.style.display = 'inline-block';
+            }, 600);
+          </script>
+        </head>
+        <body>
+          <div class="card">
+            <svg class="logo" viewBox="0 0 24 24" fill="#1DB954">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
+            </svg>
+            <h2>¡Cuenta de Spotify Vinculada!</h2>
+            <p>Regresando a Barrz Freestyle...</p>
+            <a id="open-app-btn" class="btn" href="${deepLink}">VOLVER A LA APP</a>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+    return res.redirect(`${frontendUrl}?${params}`);
   };
 
   if (error || !code || !userToken) {
     console.error('Spotify auth error or cancelled:', error);
-    return res.redirect(getRedirectUrl(`spotify_error=${encodeURIComponent(error || 'cancelled')}`));
+    return sendResponse(`spotify_error=${encodeURIComponent(error || 'cancelled')}`);
   }
 
   const client_id = process.env.SPOTIFY_CLIENT_ID;
@@ -732,7 +864,7 @@ app.get('/api/spotify/callback', async (req, res) => {
 
     if (!tokenRes.ok || tokenData.error) {
       console.error('Error al obtener tokens de Spotify:', tokenData);
-      return res.redirect(getRedirectUrl('spotify_error=token_exchange_failed'));
+      return sendResponse('spotify_error=token_exchange_failed');
     }
 
     const { access_token, refresh_token, expires_in } = tokenData;
@@ -752,10 +884,10 @@ app.get('/api/spotify/callback', async (req, res) => {
     await fetchAndSaveSpotifyProfile(userId, access_token);
 
     // Redirigir de regreso al frontend indicando éxito y conservando la sesión
-    res.redirect(getRedirectUrl(`spotify_success=true&token=${encodeURIComponent(userToken)}`));
+    return sendResponse(`spotify_success=true&token=${encodeURIComponent(userToken)}`);
   } catch (err) {
     console.error('Error en Spotify Callback:', err);
-    res.redirect(getRedirectUrl(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`));
+    return sendResponse(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`);
   }
 });
 

@@ -1,4 +1,6 @@
 // Spotify Web Playback SDK & API Service for BARRZ
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 declare global {
   interface Window {
@@ -7,7 +9,7 @@ declare global {
   }
 }
 
-const getApiUrl = (path: string) => {
+export const getApiUrl = (path: string) => {
   const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
   return `${base}${path}`;
 };
@@ -22,6 +24,84 @@ export interface SpotifyPlayerState {
 }
 
 type StateListener = (state: SpotifyPlayerState) => void;
+
+/**
+ * Conectar cuenta de Spotify mediante OAuth 2.0
+ * En móvil (Android/iOS) utiliza Chrome Custom Tabs / In-App Browser y deep link custom scheme.
+ * En Web realiza la redirección estándar.
+ */
+export async function connectSpotify(returnStep?: string) {
+  const token = localStorage.getItem('barrz_token');
+  if (!token) {
+    alert('Debes iniciar sesión con tu cuenta para asociar Spotify.');
+    return;
+  }
+  if (returnStep) {
+    localStorage.setItem('barrz_spotify_return_step', returnStep);
+  }
+  const isMobile = Capacitor.isNativePlatform();
+  const stateVal = isMobile ? `${token}:app` : token;
+  const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
+
+  if (isMobile) {
+    await Browser.open({ url: authUrl, windowName: '_system' });
+  } else {
+    window.location.href = authUrl;
+  }
+}
+
+/**
+ * Desvincular Spotify de la cuenta de Barrz tanto en el servidor como localmente
+ */
+export async function disconnectSpotify(): Promise<boolean> {
+  const token = localStorage.getItem('barrz_token');
+  if (token) {
+    try {
+      await fetch(getApiUrl('/api/spotify/unlink'), {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.error('Error al desvincular Spotify en servidor:', err);
+    }
+  }
+  localStorage.removeItem('barrz_spotify_linked');
+  spotifyPlayer.disconnect();
+  window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false, spotify_user: null } }));
+  return true;
+}
+
+/**
+ * Comprobar el estado real de vinculación de Spotify con el servidor.
+ * Protegido contra fallos transitorios de red para no perder la sesión localmente.
+ */
+export async function checkSpotifyStatus(): Promise<{ linked: boolean; spotify_user?: any }> {
+  const token = localStorage.getItem('barrz_token');
+  if (!token) {
+    return { linked: false };
+  }
+  try {
+    const res = await fetch(getApiUrl('/api/spotify/status'), {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.linked) {
+        localStorage.setItem('barrz_spotify_linked', 'true');
+        spotifyPlayer.init();
+        return { linked: true, spotify_user: data.spotify_user };
+      } else if (data && data.linked === false) {
+        localStorage.removeItem('barrz_spotify_linked');
+        spotifyPlayer.disconnect();
+        return { linked: false };
+      }
+    }
+  } catch (err) {
+    console.warn('Error al verificar estado de Spotify en servidor:', err);
+  }
+  // En caso de corte de red, conservamos el estado existente para no desconectar al usuario
+  return { linked: localStorage.getItem('barrz_spotify_linked') === 'true' };
+}
 
 class SpotifyPlayerService {
   private player: any = null;
@@ -86,7 +166,7 @@ class SpotifyPlayerService {
         return data.access_token;
       }
     } catch (e: any) {
-      console.warn('Error fetching Spotify access token:', e.message);
+      console.warn('Error al obtener token de acceso de Spotify:', e.message);
     }
     return null;
   }
@@ -94,8 +174,23 @@ class SpotifyPlayerService {
   public async init() {
     if (typeof window === 'undefined') return;
     const isLinked = localStorage.getItem('barrz_spotify_linked') === 'true';
-    if (!isLinked) return;
+    if (!isLinked) {
+      this.isReady = false;
+      this.notify();
+      return;
+    }
 
+    // En plataforma móvil (Capacitor Android / iOS), las WebViews no soportan Widevine DRM
+    // requerido por el Spotify Web Playback SDK (https://sdk.scdn.co/spotify-player.js).
+    // Por ende, marcamos el servicio como listo para control Web API / Embed sin cargar el SDK incompatible.
+    if (Capacitor.isNativePlatform()) {
+      this.isReady = true;
+      this.error = null;
+      this.notify();
+      return;
+    }
+
+    // En navegadores web de escritorio, cargar e inicializar el Spotify Web Playback SDK
     if (this.player) return;
 
     if (!document.getElementById('spotify-player-sdk')) {
@@ -121,78 +216,82 @@ class SpotifyPlayerService {
     const token = await this.fetchAccessToken();
     if (!token) return;
 
-    this.player = new window.Spotify.Player({
-      name: 'BARRZ Cypher Player',
-      getOAuthToken: async (cb: (token: string) => void) => {
-        const freshToken = await this.fetchAccessToken();
-        if (freshToken) cb(freshToken);
-      },
-      volume: 0.85
-    });
+    try {
+      this.player = new window.Spotify.Player({
+        name: 'BARRZ Cypher Player',
+        getOAuthToken: async (cb: (token: string) => void) => {
+          const freshToken = await this.fetchAccessToken();
+          if (freshToken) cb(freshToken);
+        },
+        volume: 0.85
+      });
 
-    // Ready
-    this.player.addListener('ready', ({ device_id }: { device_id: string }) => {
-      console.log('Spotify Web Playback SDK Listo con Device ID:', device_id);
-      this.deviceId = device_id;
-      this.isReady = true;
-      this.error = null;
-      this.notify();
-    });
-
-    // Not Ready
-    this.player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
-      console.warn('Device ID ha quedado inactivo:', device_id);
-      this.isReady = false;
-      this.notify();
-    });
-
-    // State change
-    this.player.addListener('player_state_changed', (state: any) => {
-      if (!state) {
-        this.isPlaying = false;
-        this.currentTrack = null;
-      } else {
-        this.isPlaying = !state.paused;
-        this.currentTrack = state.track_window?.current_track?.name || null;
-      }
-      this.notify();
-    });
-
-    // Errors
-    this.player.addListener('initialization_error', ({ message }: { message: string }) => {
-      console.error('Spotify Init Error:', message);
-      this.error = message;
-      this.notify();
-    });
-
-    this.player.addListener('authentication_error', async ({ message }: { message: string }) => {
-      console.warn('Spotify Auth Warning:', message);
-      const freshToken = await this.fetchAccessToken();
-      if (!freshToken) {
-        this.error = 'Sesión de Spotify expirada. Reconectá tu cuenta.';
+      // Ready
+      this.player.addListener('ready', ({ device_id }: { device_id: string }) => {
+        console.log('Spotify Web Playback SDK Listo con Device ID:', device_id);
+        this.deviceId = device_id;
+        this.isReady = true;
+        this.error = null;
         this.notify();
-      }
-    });
+      });
 
-    this.player.addListener('account_error', ({ message }: { message: string }) => {
-      console.warn('Spotify Account Error (Requiere Premium):', message);
-      this.isPremium = false;
-      this.error = 'Se requiere Spotify Premium para streaming en vivo.';
+      // Not Ready
+      this.player.addListener('not_ready', ({ device_id }: { device_id: string }) => {
+        console.warn('Device ID de Spotify inactivo:', device_id);
+        this.isReady = false;
+        this.notify();
+      });
+
+      // State change
+      this.player.addListener('player_state_changed', (state: any) => {
+        if (!state) {
+          this.isPlaying = false;
+          this.currentTrack = null;
+        } else {
+          this.isPlaying = !state.paused;
+          this.currentTrack = state.track_window?.current_track?.name || null;
+        }
+        this.notify();
+      });
+
+      // Errors
+      this.player.addListener('initialization_error', ({ message }: { message: string }) => {
+        console.warn('Spotify Init Warning:', message);
+        // Si falla en navegador no compatible, mantener listo para control remoto Web API
+        this.isReady = true;
+        this.notify();
+      });
+
+      this.player.addListener('authentication_error', async ({ message }: { message: string }) => {
+        console.warn('Spotify Auth Warning:', message);
+        const freshToken = await this.fetchAccessToken();
+        if (!freshToken) {
+          this.error = 'Sesión de Spotify expirada. Reconectá tu cuenta.';
+          this.notify();
+        }
+      });
+
+      this.player.addListener('account_error', ({ message }: { message: string }) => {
+        console.warn('Spotify Account Warning (Requiere Premium para SDK directo):', message);
+        this.isPremium = false;
+        this.notify();
+      });
+
+      this.player.addListener('playback_error', ({ message }: { message: string }) => {
+        console.warn('Spotify Playback Notice:', message);
+      });
+
+      await this.player.connect();
+    } catch (e: any) {
+      console.warn('No se pudo inicializar Spotify Web Player:', e.message);
+      this.isReady = true;
       this.notify();
-    });
-
-    this.player.addListener('playback_error', ({ message }: { message: string }) => {
-      console.error('Spotify Playback Error:', message);
-    });
-
-    await this.player.connect();
+    }
   }
 
   public async playTrack(spotifyUri: string): Promise<boolean> {
     const appToken = localStorage.getItem('barrz_token');
     if (!appToken) {
-      this.error = 'No has iniciado sesión en Barrz.';
-      this.notify();
       return false;
     }
 
@@ -211,23 +310,28 @@ class SpotifyPlayerService {
         })
       });
 
-      const data = await res.json();
-      console.log('🎵 [SpotifyPlayer] Respuesta del servidor:', data);
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         this.isPlaying = true;
         this.error = null;
         this.notify();
         return true;
       } else {
-        this.error = data.error || 'Error al conectar con Spotify.';
+        // Si el error es 404 (sin dispositivo remoto activo), no consideramos expirada la sesión
+        if (res.status === 404) {
+          console.info('ℹ️ [SpotifyPlayer] No se detectó dispositivo Spotify activo. La instrumental local continuará sonando.');
+        } else {
+          console.warn('⚠️ [SpotifyPlayer] Respuesta de control:', data.error);
+        }
+        this.isPlaying = true;
         this.notify();
-        return false;
+        return true;
       }
     } catch (e: any) {
-      console.error('🎵 [SpotifyPlayer] Error enviando comando play a Spotify:', e.message);
-      this.error = 'Error de red con el servidor: ' + e.message;
+      console.warn('🎵 [SpotifyPlayer] Aviso de red en control Spotify:', e.message);
+      this.isPlaying = true;
       this.notify();
-      return false;
+      return true;
     }
   }
 
@@ -236,7 +340,6 @@ class SpotifyPlayerService {
     if (!appToken) return false;
 
     try {
-      console.log('🎵 [SpotifyPlayer] Enviando comando Pause a Spotify');
       const res = await fetch(getApiUrl('/api/spotify/control'), {
         method: 'POST',
         headers: {
@@ -256,7 +359,7 @@ class SpotifyPlayerService {
       }
       return false;
     } catch (e: any) {
-      console.error('🎵 [SpotifyPlayer] Error enviando comando pause a Spotify:', e.message);
+      console.warn('🎵 [SpotifyPlayer] Aviso al pausar Spotify:', e.message);
       return false;
     }
   }
@@ -271,7 +374,9 @@ class SpotifyPlayerService {
 
   public disconnect() {
     if (this.player) {
-      this.player.disconnect();
+      try {
+        this.player.disconnect();
+      } catch {}
       this.player = null;
     }
     this.isReady = false;

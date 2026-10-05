@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
-import { spotifyPlayer } from '../services/spotifyPlayer';
+import { spotifyPlayer, connectSpotify, checkSpotifyStatus } from '../services/spotifyPlayer';
 import { useI18n } from '../i18n/LanguageContext';
 import './Game.css';
 
@@ -183,53 +181,21 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const votingPlayers = playerNames.filter(name => name !== activePlayer);
   const currentVoter = votingPlayers[currentVoterIndex] || 'Votante';
 
-  const getApiUrl = (path: string) => {
-    const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
-    return `${base}${path}`;
-  };
-
   const handleConnectSpotifyFromGame = async () => {
-    const token = localStorage.getItem('barrz_token');
-    if (!token) {
-      alert(t.auth.spotify_need_auth);
-      return;
-    }
-    sessionStorage.setItem('barrz_spotify_return_step', 'game');
-    const isMobile = Capacitor.isNativePlatform();
-    const stateVal = isMobile ? `${token}:app` : token;
-    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
-
-    if (isMobile) {
-      await Browser.open({ url: authUrl, windowName: '_self' });
-    } else {
-      window.location.href = authUrl;
+    try {
+      await connectSpotify('game');
+    } catch (err: any) {
+      alert(err.message || t.auth.spotify_need_auth);
     }
   };
 
   const handleRecheckSpotify = async () => {
-    const token = localStorage.getItem('barrz_token');
-    if (!token) {
-      setShowSpotifyRequiredModal(true);
-      return;
-    }
     setIsSpotifyChecking(true);
     try {
-      const res = await fetch(getApiUrl('/api/spotify/status'), {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok && data.linked) {
-        localStorage.setItem('barrz_spotify_linked', 'true');
+      const status = await checkSpotifyStatus();
+      if (status.linked) {
         setShowSpotifyRequiredModal(false);
-        spotifyPlayer.init();
       } else {
-        localStorage.removeItem('barrz_spotify_linked');
-        setShowSpotifyRequiredModal(true);
-        spotifyPlayer.disconnect();
-      }
-    } catch (e) {
-      console.warn('Error comprobando estado de Spotify:', e);
-      if (localStorage.getItem('barrz_spotify_linked') !== 'true') {
         setShowSpotifyRequiredModal(true);
       }
     } finally {
@@ -259,7 +225,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
 
     const unsubscribe = spotifyPlayer.subscribe((state) => {
-      setIsBeatPlaying(state.isPlaying);
       if (state.error && state.error.includes('expirada')) {
         setShowSpotifyRequiredModal(true);
       }

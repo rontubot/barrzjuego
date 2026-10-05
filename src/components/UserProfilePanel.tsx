@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2, Globe } from 'lucide-react';
 import { BattleDetailView } from './BattleDetailView';
 import { useI18n } from '../i18n/LanguageContext';
+import { connectSpotify, disconnectSpotify, checkSpotifyStatus } from '../services/spotifyPlayer';
 import './UserProfilePanel.css';
 
 const getApiUrl = (path: string) => {
@@ -50,29 +51,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
 
     if (isOpen) {
-      const token = localStorage.getItem('barrz_token');
-      if (token) {
-        fetch(getApiUrl('/api/spotify/status'), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.linked) {
-              setIsSpotifyLinked(true);
-              setSpotifyUser(data.spotify_user || null);
-              localStorage.setItem('barrz_spotify_linked', 'true');
-            } else {
-              setIsSpotifyLinked(false);
-              setSpotifyUser(null);
-              localStorage.removeItem('barrz_spotify_linked');
-            }
-          })
-          .catch(() => {
-            setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
-          });
-      } else {
-        setIsSpotifyLinked(false);
-      }
+      checkSpotifyStatus().then(status => {
+        setIsSpotifyLinked(status.linked);
+        if (status.spotify_user) {
+          setSpotifyUser(status.spotify_user);
+        }
+      });
     }
 
     return () => {
@@ -80,33 +64,18 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     };
   }, [isOpen]);
 
-  const handleConnectSpotify = () => {
-    const token = localStorage.getItem('barrz_token');
-    if (!token) {
-      alert('Debes iniciar sesión con tu cuenta para asociar Spotify.');
-      return;
+  const handleConnectSpotify = async () => {
+    try {
+      await connectSpotify(gameState);
+    } catch (err: any) {
+      alert(err.message || 'Error al conectar con Spotify.');
     }
-    sessionStorage.setItem('barrz_spotify_return_step', gameState);
-    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
-    window.location.href = authUrl;
   };
 
   const handleDisconnectSpotify = async () => {
-    const token = localStorage.getItem('barrz_token');
-    if (token) {
-      try {
-        await fetch(getApiUrl('/api/spotify/unlink'), {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } catch (err) {
-        console.error('Error al desvincular Spotify:', err);
-      }
-    }
-    localStorage.removeItem('barrz_spotify_linked');
+    await disconnectSpotify();
     setIsSpotifyLinked(false);
     setSpotifyUser(null);
-    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false, spotify_user: null } }));
     triggerSaveToast();
   };
 

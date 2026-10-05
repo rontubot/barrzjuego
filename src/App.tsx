@@ -118,7 +118,7 @@ function App() {
                 spotify_user: data.spotify_user,
                 stats: data.stats,
                 history: data.history,
-                method: 'google'
+                method: data.method || userSession?.method || 'email'
               };
               setUserSession(updatedSession);
               localStorage.setItem('barrz_session', JSON.stringify(updatedSession));
@@ -129,7 +129,8 @@ function App() {
           }
         }
         spotifyPlayer.init();
-        const returnStep = sessionStorage.getItem('barrz_spotify_return_step');
+        const returnStep = localStorage.getItem('barrz_spotify_return_step') || sessionStorage.getItem('barrz_spotify_return_step');
+        localStorage.removeItem('barrz_spotify_return_step');
         sessionStorage.removeItem('barrz_spotify_return_step');
         if (returnStep) {
           setGameState(returnStep as GameState);
@@ -266,13 +267,12 @@ function App() {
                 if (spRes.ok && spData.linked) {
                   localStorage.setItem('barrz_spotify_linked', 'true');
                   spotifyPlayer.init();
-                } else {
+                } else if (spRes.ok && !spData.linked) {
                   localStorage.removeItem('barrz_spotify_linked');
                   spotifyPlayer.disconnect();
                 }
               } catch {
-                localStorage.removeItem('barrz_spotify_linked');
-                spotifyPlayer.disconnect();
+                // Error de red: conservar el estado local existente
               }
             }
 
@@ -339,6 +339,8 @@ function App() {
           avatar: data.avatar,
           avatar_type: data.avatar_type,
           custom_avatar_url: data.custom_avatar_url,
+          spotify_linked: data.spotify_linked,
+          spotify_user: data.spotify_user,
           stats: data.stats,
           history: data.history,
           loggedIn: true,

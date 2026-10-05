@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Cloud, ArrowRight, ArrowLeft, Mail, Lock, ShieldCheck, HelpCircle, Compass, Radio } from 'lucide-react';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import { useI18n } from '../i18n/LanguageContext';
+import { connectSpotify } from '../services/spotifyPlayer';
 import './OnboardingAuth.css';
 
 interface OnboardingAuthProps {
@@ -86,20 +86,10 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   }, [step]);
 
   const handleSpotifyToggle = async () => {
-    const token = localStorage.getItem('barrz_token');
-    if (!token) {
-      setErrorMsg(t.auth.spotify_need_auth);
-      return;
-    }
-    sessionStorage.setItem('barrz_spotify_return_step', step);
-    const isMobile = Capacitor.isNativePlatform();
-    const stateVal = isMobile ? `${token}:app` : token;
-    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
-
-    if (isMobile) {
-      await Browser.open({ url: authUrl, windowName: '_self' });
-    } else {
-      window.location.href = authUrl;
+    try {
+      await connectSpotify(step);
+    } catch (err: any) {
+      setErrorMsg(err.message || t.auth.spotify_need_auth);
     }
   };
 
@@ -165,7 +155,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         
         if (res.ok) {
           localStorage.setItem('barrz_token', data.token);
-          onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'email' });
+          onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'email' });
         } else {
           setErrorMsg(data.error || t.auth.wrong_pass);
         }
@@ -228,7 +218,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       
       if (res.ok) {
         localStorage.setItem('barrz_token', data.token);
-        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'email' });
+        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'email' });
       } else {
         setErrorMsg(data.error || t.auth.wrong_code);
       }
@@ -253,7 +243,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('barrz_token', data.token);
-        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'google' });
+        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'google' });
       } else {
         setErrorMsg(data.error || t.auth.google_error);
       }
@@ -284,7 +274,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('barrz_token', data.token);
-        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, loggedIn: true, method: 'google' });
+        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'google' });
       } else {
         setErrorMsg(data.error || t.auth.google_error);
       }

@@ -3,6 +3,7 @@ import { Users, User, Play, Pause, ArrowLeft, Plus, Minus, UserPlus, Check, Refr
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { useI18n } from '../i18n/LanguageContext';
+import { connectSpotify, disconnectSpotify, checkSpotifyStatus } from '../services/spotifyPlayer';
 import './GameSetup.css';
 
 interface GameSetupProps {
@@ -117,41 +118,18 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
     }
   }, [userSession]);
 
-  const getApiUrl = (path: string) => {
-    const base = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
-    return `${base}${path}`;
-  };
-
-  const handleSpotifyConnect = () => {
-    const token = localStorage.getItem('barrz_token');
-    if (!token) {
-      alert(t.auth.spotify_need_auth);
-      return;
+  const handleSpotifyConnect = async () => {
+    try {
+      await connectSpotify(step);
+    } catch (err: any) {
+      alert(err.message || t.auth.spotify_need_auth);
     }
-    // Guardar pantalla de retorno
-    sessionStorage.setItem('barrz_spotify_return_step', step);
-    const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(token)}`);
-    window.location.href = authUrl;
   };
 
   const handleSpotifyDisconnect = async () => {
-    const token = localStorage.getItem('barrz_token');
-    if (token) {
-      try {
-        await fetch(getApiUrl('/api/spotify/unlink'), {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      } catch (err) {
-        console.error('Error al desvincular Spotify en servidor:', err);
-      }
-    }
-    localStorage.removeItem('barrz_spotify_linked');
+    await disconnectSpotify();
     setIsSpotifyLinked(false);
     setSpotifyUser(null);
-    window.dispatchEvent(new CustomEvent('barrz_spotify_status_changed', { detail: { linked: false, spotify_user: null } }));
   };
 
   useEffect(() => {
@@ -165,29 +143,12 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
 
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
 
-    const checkSpotifyStatus = async () => {
-      const token = localStorage.getItem('barrz_token');
-      if (!token) return;
-      try {
-        const res = await fetch(getApiUrl('/api/spotify/status'), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok && data.linked) {
-          setIsSpotifyLinked(true);
-          setSpotifyUser(data.spotify_user || null);
-          localStorage.setItem('barrz_spotify_linked', 'true');
-        } else if (res.ok && !data.linked) {
-          setIsSpotifyLinked(false);
-          setSpotifyUser(null);
-          localStorage.removeItem('barrz_spotify_linked');
-        }
-      } catch (e) {
-        setIsSpotifyLinked(localStorage.getItem('barrz_spotify_linked') === 'true');
+    checkSpotifyStatus().then(status => {
+      setIsSpotifyLinked(status.linked);
+      if (status.spotify_user) {
+        setSpotifyUser(status.spotify_user);
       }
-    };
-
-    checkSpotifyStatus();
+    });
 
     return () => {
       window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
