@@ -16,7 +16,16 @@ const config: CapacitorConfig = {
       '*.scdn.co',
       '*.spotifycdn.com',
       'spclient.wg.spotify.com',
-      '*.spotify.net'
+      '*.spotify.net',
+      'accounts.google.com',
+      '*.google.com',
+      '*.googleusercontent.com',
+      '*.gstatic.com',
+      'apis.google.com',
+      'appleid.apple.com',
+      '*.apple.com',
+      '*.facebook.com',
+      '*.fbcdn.net'
     ]
   },
   plugins: {
