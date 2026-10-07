@@ -1,6 +1,5 @@
 // Spotify Web Playback SDK & API Service for BARRZ
 import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 
 declare global {
   interface Window {
@@ -43,11 +42,10 @@ export async function connectSpotify(returnStep?: string) {
   const stateVal = isMobile ? `${token}:app` : token;
   const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
 
-  if (isMobile) {
-    await Browser.open({ url: authUrl, windowName: '_system' });
-  } else {
-    window.location.href = authUrl;
-  }
+  // Realizar la navegación SIEMPRE dentro de la propia WebView de la app.
+  // De este modo, la sesión y cookies de spotify.com quedan en el CookieManager del WebView,
+  // permitiendo que el reproductor oficial Embed (iframe) reconozca la cuenta y genere regalías oficiales.
+  window.location.href = authUrl;
 }
 
 /**

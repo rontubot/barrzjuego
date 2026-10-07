@@ -9,10 +9,14 @@ const config: CapacitorConfig = {
     allowNavigation: [
       'accounts.spotify.com',
       'open.spotify.com',
+      'api.spotify.com',
       'barrzjuego.com',
       '*.barrzjuego.com',
       '*.spotify.com',
-      '*.scdn.co'
+      '*.scdn.co',
+      '*.spotifycdn.com',
+      'spclient.wg.spotify.com',
+      '*.spotify.net'
     ]
   },
   plugins: {

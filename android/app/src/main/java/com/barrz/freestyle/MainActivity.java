@@ -19,6 +19,13 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         setupCustomWebView();
+        CookieManager.getInstance().flush();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        CookieManager.getInstance().flush();
     }
 
     private void setupCustomWebView() {

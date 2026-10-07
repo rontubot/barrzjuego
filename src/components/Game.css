@@ -1727,7 +1727,7 @@
 /* ── REPRODUCTOR OFICIAL EMBED DE SPOTIFY ─────────────────────────────── */
 .spotify-embed-card-container {
   width: 100%;
-  height: calc(100% - 44px);
+  height: calc(100% - 95px);
   background: #121212;
   border-radius: 0 0 16px 16px;
   overflow: hidden;
