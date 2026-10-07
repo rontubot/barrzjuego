@@ -1,11 +1,16 @@
 package com.barrz.freestyle;
 
 import android.app.Dialog;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Message;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
 import android.webkit.CookieManager;
+import android.webkit.JsPromptResult;
+import android.webkit.JsResult;
+import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -14,7 +19,6 @@ import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.getcapacitor.BridgeActivity;
-import com.getcapacitor.BridgeWebChromeClient;
 import com.codetrixstudio.capacitor.GoogleAuth.GoogleAuth;
 
 public class MainActivity extends BridgeActivity {
@@ -30,7 +34,6 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onResume() {
         super.onResume();
-        setupCustomWebView();
         CookieManager.getInstance().flush();
     }
 
@@ -65,9 +68,11 @@ public class MainActivity extends BridgeActivity {
                 settings.setUserAgentString(currentUserAgent.replace("; wv", ""));
             }
 
-            // Configurar WebChromeClient para interceptar ventanas emergentes (como "Continuar con Google" de Spotify)
-            // y mostrarlas dentro de un diálogo emergente en la propia app con soporte nativo de window.opener
-            webView.setWebChromeClient(new BridgeWebChromeClient(this.bridge) {
+            // Obtener el cliente original de Capacitor para delegar llamadas estándar de plugins y alertas
+            final WebChromeClient originalClient = webView.getWebChromeClient();
+
+            // Interceptar onCreateWindow para mostrar diálogos emergentes (Google OAuth en Spotify) dentro de la app
+            webView.setWebChromeClient(new WebChromeClient() {
                 @Override
                 public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
                     if (popupAuthDialog != null && popupAuthDialog.isShowing()) {
@@ -173,8 +178,6 @@ public class MainActivity extends BridgeActivity {
                         public void onPageFinished(WebView view, String url) {
                             super.onPageFinished(view, url);
                             CookieManager.getInstance().flush();
-                            // Si la autenticación en el popup finalizó y vuelve a Spotify status o callback,
-                            // cerramos el popup para que la ventana principal continúe el flujo
                             if (url != null && (url.contains("accounts.spotify.com/status") || url.contains("accounts.spotify.com/es/status") || url.contains("/api/login/google/callback"))) {
                                 view.postDelayed(() -> {
                                     if (popupAuthDialog != null && popupAuthDialog.isShowing()) {
@@ -189,6 +192,47 @@ public class MainActivity extends BridgeActivity {
                     transport.setWebView(popupWebView);
                     resultMsg.sendToTarget();
                     return true;
+                }
+
+                @Override
+                public void onPermissionRequest(PermissionRequest request) {
+                    if (originalClient != null) {
+                        originalClient.onPermissionRequest(request);
+                    } else {
+                        super.onPermissionRequest(request);
+                    }
+                }
+
+                @Override
+                public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                    if (originalClient != null) {
+                        return originalClient.onShowFileChooser(webView, filePathCallback, fileChooserParams);
+                    }
+                    return super.onShowFileChooser(webView, filePathCallback, fileChooserParams);
+                }
+
+                @Override
+                public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                    if (originalClient != null) {
+                        return originalClient.onJsAlert(view, url, message, result);
+                    }
+                    return super.onJsAlert(view, url, message, result);
+                }
+
+                @Override
+                public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                    if (originalClient != null) {
+                        return originalClient.onJsConfirm(view, url, message, result);
+                    }
+                    return super.onJsConfirm(view, url, message, result);
+                }
+
+                @Override
+                public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, JsPromptResult result) {
+                    if (originalClient != null) {
+                        return originalClient.onJsPrompt(view, url, message, defaultValue, result);
+                    }
+                    return super.onJsPrompt(view, url, message, defaultValue, result);
                 }
             });
         }
