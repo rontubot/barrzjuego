@@ -871,7 +871,9 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
           <button 
             className="btn-neon-pink w-100 mt-20 pulse-pink-anim"
             onClick={() => {
-              const finalStartingPlayer = players.includes(startingPlayer) ? startingPlayer : players[0];
+              const finalStartingPlayer = (startingPlayer && players.includes(startingPlayer))
+                ? startingPlayer
+                : players[Math.floor(Math.random() * players.length)];
               
               // Construir mapeo de jugador -> avatar emoji
               const avatarsMap: Record<string, string> = {};

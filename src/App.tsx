@@ -507,7 +507,7 @@ function App() {
     }
     mainContent = (
       <Game
-        key={`${gameSettings.players.join(',')}-${gameSettings.mode}-${gameSettings.roundsCount}`}
+        key={`${gameSettings.players.join(',')}-${gameSettings.mode}-${gameSettings.roundsCount}-${gameSettings.startingPlayer || ''}`}
         onBackToMenu={handleBackToMenu}
         gameSettings={gameSettings}
         userSession={userSession}

@@ -53,7 +53,10 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   // Estados de control de la partida
   const [currentRound, setCurrentRound] = useState(1);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(() => {
+    const idx = playerNames.indexOf(startingPlayer);
+    return idx !== -1 ? idx : 0;
+  });
   const [selectedBeatForTurn, setSelectedBeatForTurn] = useState<BeatCard | null>(null);
   const [selectedChallengeForTurn, setSelectedChallengeForTurn] = useState<ChallengeCard | null>(null);
   
