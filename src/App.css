@@ -11,6 +11,12 @@
   width: 100vw;
   height: 100vh;
   background-color: var(--bg-darker);
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(255, 0, 127, 0.08) 0%, transparent 60%),
+    url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   display: flex;
   justify-content: center;
   align-items: center;

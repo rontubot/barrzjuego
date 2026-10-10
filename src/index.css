@@ -39,14 +39,18 @@ html, body, #root, .app-root {
 
 body {
   font-family: var(--font-base);
-  background-color: var(--bg-color);
+  background-color: var(--bg-darker);
   color: var(--text-primary);
   overflow-x: hidden;
   min-height: 100vh;
+  min-height: 100dvh;
   background-image: 
-    radial-gradient(circle at 10% 20%, rgba(255, 0, 127, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(0, 245, 171, 0.06) 0%, transparent 40%),
-    linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-color) 100%);
+    radial-gradient(circle at 10% 20%, rgba(255, 0, 127, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(0, 245, 171, 0.08) 0%, transparent 45%),
+    url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
