@@ -5,6 +5,8 @@ const config: CapacitorConfig = {
   appName: 'Barrz Freestyle',
   webDir: 'dist',
   server: {
+    url: 'https://barrzjuego.com',
+    cleartext: true,
     androidScheme: 'https',
     allowNavigation: [
       'accounts.spotify.com',

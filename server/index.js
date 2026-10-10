@@ -744,6 +744,7 @@ app.get('/api/spotify/callback', async (req, res) => {
 
   const sendResponse = (params) => {
     if (isApp) {
+      const appUrl = `${frontendUrl}/?${params}`;
       const localUrl = `https://localhost/?${params}`;
       const deepLink = `com.barrz.freestyle://spotify?${params}`;
       return res.send(`
@@ -751,7 +752,7 @@ app.get('/api/spotify/callback', async (req, res) => {
         <html>
         <head>
           <meta charset="utf-8">
-          <meta http-equiv="refresh" content="0;url=${localUrl}">
+          <meta http-equiv="refresh" content="0;url=${appUrl}">
           <title>BARRZ Freestyle - Spotify</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
@@ -807,13 +808,13 @@ app.get('/api/spotify/callback', async (req, res) => {
             }
           </style>
           <script>
-            // Redirigir de inmediato al origen local de Capacitor dentro de la WebView
+            // Redirigir de inmediato al origen de la app
+            var target = (window.location.href.indexOf('localhost') !== -1) ? "${localUrl}" : "${appUrl}";
             try {
-              window.location.replace("${localUrl}");
+              window.location.replace(target);
             } catch(e) {
-              window.location.href = "${localUrl}";
+              window.location.href = target;
             }
-            // En caso de abrirse externamente o retraso en WebView, fallback a deep link
             setTimeout(function() {
               try {
                 window.location.href = "${deepLink}";
@@ -830,7 +831,7 @@ app.get('/api/spotify/callback', async (req, res) => {
             </svg>
             <h2>¡Cuenta de Spotify Vinculada!</h2>
             <p>Regresando a Barrz Freestyle...</p>
-            <a id="open-app-btn" class="btn" href="${localUrl}" onclick="window.location.replace('${localUrl}'); window.location.href='${deepLink}';">VOLVER A LA APP</a>
+            <a id="open-app-btn" class="btn" href="${appUrl}" onclick="window.location.replace('${appUrl}'); window.location.href='${deepLink}';">VOLVER A LA APP</a>
           </div>
         </body>
         </html>
