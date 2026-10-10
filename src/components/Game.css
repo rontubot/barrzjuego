@@ -1221,6 +1221,7 @@
   z-index: 5;
   overflow: hidden;
   box-sizing: border-box;
+  text-align: center;
 }
 
 .gameover-logo-container {
@@ -1236,12 +1237,16 @@
 }
 
 .gameover-main-title {
+  text-align: center;
+  width: 100%;
   font-size: 2.5rem;
   letter-spacing: 2px;
   margin-bottom: 4px;
 }
 
 .gameover-subtitle {
+  text-align: center;
+  width: 100%;
   font-size: 0.88rem;
   color: var(--text-secondary);
   margin-bottom: 30px;

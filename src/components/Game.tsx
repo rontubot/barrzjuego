@@ -1247,8 +1247,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
               <div className="gameover-logo-container">
                 <img src="/Barrzjuego.png" alt="BARRZ" className="gameover-logo-img" />
               </div>
-              <h1 className="gameover-main-title font-accent text-glow-pink">{t.game.game_over_title}</h1>
-              <p className="gameover-subtitle">{t.game.game_over_sub}</p>
+              <h1 className="gameover-main-title font-accent text-glow-pink" style={{ textAlign: 'center', width: '100%' }}>{t.game.game_over_title}</h1>
+              <p className="gameover-subtitle" style={{ textAlign: 'center', width: '100%' }}>{t.game.game_over_sub}</p>
 
               {/* PODIO VISUAL DINÁMICO CON EMPATES */}
               <div className="podium-container">

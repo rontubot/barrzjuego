@@ -69,6 +69,11 @@ body {
   background: var(--neon-pink);
 }
 
+/* Utility Classes */
+.text-center {
+  text-align: center !important;
+}
+
 /* Glassmorphism Classes */
 .glass-panel {
   background: var(--card-bg);
