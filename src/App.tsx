@@ -406,11 +406,7 @@ function App() {
         setGameState('splash');
         break;
       case 'mode_selection':
-        if (localStorage.getItem('barrz_spotify_linked') === 'true') {
-          setGameState('tutorial_ask');
-        } else {
-          setGameState('link_spotify');
-        }
+        setGameState('tutorial_ask');
         break;
       case 'setup_individual':
         setGameState('mode_selection');

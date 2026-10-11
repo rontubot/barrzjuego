@@ -302,7 +302,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
       {/* ── TUTORIAL / REGLAS DIRECTO ──────────────────────────────────── */}
       {step === 'tutorial_ask' && (
         <div className="tutorial-card-view fade-in">
-          <div className="tutorial-card-wrapper" onClick={() => onNext(isSpotifyLinked ? 'mode_selection' : 'link_spotify')}>
+          <div className="tutorial-card-wrapper" onClick={() => onNext('mode_selection')}>
             <img 
               src="/CARTAS DESAFIO/carta REGLAS JUEGO.png" 
               alt="Reglas del Juego" 
@@ -312,7 +312,7 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
               className="tutorial-continue-btn"
               onClick={(e) => {
                 e.stopPropagation();
-                onNext(isSpotifyLinked ? 'mode_selection' : 'link_spotify');
+                onNext('mode_selection');
               }}
             >
               <span>{t.setup.tutorial_continue}</span>
@@ -374,24 +374,14 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
           </div>
 
           <button 
-            className={`btn-neon-pink w-100 mt-20 ${!isSpotifyLinked ? 'disabled-btn' : ''}`} 
-            disabled={!isSpotifyLinked}
+            className="btn-neon-pink w-100 mt-20" 
             onClick={() => {
-              if (!isSpotifyLinked) {
-                alert('Es obligatorio vincular tu cuenta de Spotify para jugar y reproducir los beats.');
-                return;
-              }
               onNext('mode_selection');
             }}
           >
             <span>{t.setup.continue_to_modes}</span>
             <ArrowRight size={18} />
           </button>
-          {!isSpotifyLinked && (
-            <p className="font-base pink-text mt-10" style={{ fontSize: '0.78rem', fontWeight: 700 }}>
-              * Es obligatorio vincular tu cuenta de Spotify para jugar y que cada beat sume reproducciones reales.
-            </p>
-          )}
         </div>
       )}
 
