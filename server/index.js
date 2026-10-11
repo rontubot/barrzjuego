@@ -117,6 +117,9 @@ const fetchAndSaveSpotifyProfile = async (userId, accessToken) => {
         product: spotifyProduct,
         avatar_url: spotifyAvatarUrl
       };
+    } else {
+      const errText = await meRes.text();
+      console.error(`❌ [SPOTIFY ME ERROR] HTTP ${meRes.status} para usuario ${userId}:`, errText);
     }
   } catch (err) {
     console.error('Error al sincronizar perfil de Spotify:', err);
@@ -450,7 +453,7 @@ app.get('/api/auth/verify-token', async (req, res) => {
     // Auto-sincronizar perfil de Spotify si está vinculado pero no tiene los datos guardados
     let spotifyUserObj = null;
     if (user.spotify_refresh_token) {
-      if (user.spotify_display_name) {
+      if (user.spotify_display_name && user.spotify_product) {
         spotifyUserObj = {
           display_name: user.spotify_display_name,
           email: user.spotify_email,
@@ -1010,7 +1013,7 @@ app.get('/api/spotify/status', async (req, res) => {
 
     let spotifyUserData = null;
     if (user && user.spotify_refresh_token) {
-      if (user.spotify_display_name) {
+      if (user.spotify_display_name && user.spotify_product) {
         spotifyUserData = {
           display_name: user.spotify_display_name,
           email: user.spotify_email,
