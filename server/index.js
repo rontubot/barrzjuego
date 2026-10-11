@@ -808,7 +808,6 @@ app.get('/api/spotify/callback', async (req, res) => {
             }
           </style>
           <script>
-            // Redirigir de inmediato al origen de la app
             var target = (window.location.href.indexOf('localhost') !== -1) ? "${localUrl}" : "${appUrl}";
             try {
               window.location.replace(target);
@@ -837,11 +836,64 @@ app.get('/api/spotify/callback', async (req, res) => {
         </html>
       `);
     }
-    return res.redirect(`${frontendUrl}?${params}`);
+
+    // Web Flow: Soporte para Popup (window.opener) o Redirección Directa
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>BARRZ Freestyle - Spotify</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body {
+            background: #0a0a14;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+          }
+          .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #1DB954;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 0 25px rgba(29, 185, 84, 0.3);
+          }
+          h2 { color: #1DB954; margin: 0 0 10px 0; font-size: 1.3rem; }
+          p { color: #aaa; font-size: 0.9rem; line-height: 1.4; margin: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h2>¡Spotify Conectado con Éxito!</h2>
+          <p>Sincronizando con la partida de BARRZ...</p>
+        </div>
+        <script>
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage({ type: 'BARRZ_SPOTIFY_AUTH_RESULT', params: "${params}", success: true }, '*');
+              window.close();
+            } else {
+              window.location.href = "${frontendUrl}/?${params}";
+            }
+          } catch(e) {
+            window.location.href = "${frontendUrl}/?${params}";
+          }
+        </script>
+      </body>
+      </html>
+    `);
   };
 
   if (error || !code || !userToken) {
-    console.error('Spotify auth error or cancelled:', error);
+    console.error('⚠️ [SPOTIFY CALLBACK] Error o cancelación:', error);
     return sendResponse(`spotify_error=${encodeURIComponent(error || 'cancelled')}`);
   }
 
@@ -850,13 +902,16 @@ app.get('/api/spotify/callback', async (req, res) => {
   const redirect_uri = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:5000/api/spotify/callback';
 
   if (!client_id || !client_secret) {
+    console.error('❌ [SPOTIFY CONFIG] Credenciales SPOTIFY_CLIENT_ID o SPOTIFY_CLIENT_SECRET ausentes en el servidor.');
     return res.status(500).send('Credenciales de Spotify incompletas en el servidor.');
   }
 
   try {
-    // Decodificar usuario desde el JWT provisto en el state
     const decoded = jwt.verify(userToken, JWT_SECRET);
     const userId = decoded.id;
+
+    console.log(`\n========================================`);
+    console.log(`📥 [SPOTIFY CALLBACK] Callback recibido para usuario ID: ${userId}`);
 
     // Intercambiar el código de autorización por tokens
     const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
@@ -875,7 +930,7 @@ app.get('/api/spotify/callback', async (req, res) => {
     const tokenData = await tokenRes.json();
 
     if (!tokenRes.ok || tokenData.error) {
-      console.error('Error al obtener tokens de Spotify:', tokenData);
+      console.error('❌ [SPOTIFY CALLBACK] Error al intercambiar tokens:', tokenData);
       return sendResponse('spotify_error=token_exchange_failed');
     }
 
@@ -893,12 +948,14 @@ app.get('/api/spotify/callback', async (req, res) => {
     );
 
     // Obtener y guardar información del perfil del usuario de Spotify
-    await fetchAndSaveSpotifyProfile(userId, access_token);
+    const profile = await fetchAndSaveSpotifyProfile(userId, access_token);
+    console.log(`👤 [SPOTIFY PERFIL] Usuario: "${profile?.display_name}" | Email: "${profile?.email}" | Plan: "${(profile?.product || 'free').toUpperCase()}" | Premium: ${profile?.product === 'premium' ? '✅ SÍ' : '❌ NO (FREE)'}`);
+    console.log(`========================================\n`);
 
-    // Redirigir de regreso al frontend indicando éxito y conservando la sesión
+    // Redirigir o responder indicando éxito
     return sendResponse(`spotify_success=true&token=${encodeURIComponent(userToken)}`);
   } catch (err) {
-    console.error('Error en Spotify Callback:', err);
+    console.error('❌ [SPOTIFY CALLBACK] Error inesperado:', err);
     return sendResponse(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`);
   }
 });
@@ -970,11 +1027,16 @@ app.get('/api/spotify/status', async (req, res) => {
       }
     }
 
+    const isLinked = !!(user && user.spotify_refresh_token);
+    const userProduct = (spotifyUserData?.product || user?.spotify_product || 'none').toUpperCase();
+    console.log(`🔍 [SPOTIFY STATUS] User ID: ${decoded.id} | Linked: ${isLinked} | Plan: "${userProduct}" | User: "${spotifyUserData?.display_name || user?.spotify_display_name || 'N/A'}"`);
+
     res.json({
-      linked: !!(user && user.spotify_refresh_token),
+      linked: isLinked,
       spotify_user: spotifyUserData
     });
   } catch (err) {
+    console.warn('⚠️ [SPOTIFY STATUS] Error de autenticación en token:', err.message);
     res.status(401).json({ error: 'Token inválido.' });
   }
 });

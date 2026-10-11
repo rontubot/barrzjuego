@@ -85,11 +85,27 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showLoaderBar, setShowLoaderBar] = useState(false);
   
-  // Datos compartidos de sesión y partida
+  // Datos compartidos de sesión y partida con persistencia para no perder la partida
   const [userSession, setUserSession] = useState<UserSession | null>(null);
-  const [gameSettings, setGameSettings] = useState<GameSettings | null>(null);
+  const [gameSettings, setGameSettingsState] = useState<GameSettings | null>(() => {
+    try {
+      const saved = localStorage.getItem('barrz_active_game_settings');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
-  // Escuchar callback de Spotify desde URL Web y Deep Links móviles
+  const setGameSettings = (settings: GameSettings | null) => {
+    setGameSettingsState(settings);
+    if (settings) {
+      localStorage.setItem('barrz_active_game_settings', JSON.stringify(settings));
+    } else {
+      localStorage.removeItem('barrz_active_game_settings');
+    }
+  };
+
+  // Escuchar callback de Spotify desde URL Web, Popups y Deep Links móviles
   useEffect(() => {
     const handleSpotifyResult = async (paramsStr: string) => {
       const urlParams = new URLSearchParams(paramsStr);
@@ -142,13 +158,22 @@ function App() {
       }
     };
 
-    // 1. Caso Web
+    // 1. Caso Web Popup: Mensaje postMessage recibido directamente sin recargar la pestaña
+    const onPopupMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'BARRZ_SPOTIFY_AUTH_RESULT') {
+        console.log('🎵 [BARRZ] Resultado de OAuth recibido desde Popup:', e.data);
+        handleSpotifyResult(e.data.params || '');
+      }
+    };
+    window.addEventListener('message', onPopupMessage);
+
+    // 2. Caso Web (si se navegó en la misma pestaña)
     if (window.location.search) {
       handleSpotifyResult(window.location.search);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // 2. Caso Móvil (Deep link com.barrz.freestyle://...)
+    // 3. Caso Móvil (Deep link com.barrz.freestyle://...)
     let listenerHandle: any = null;
     CapApp.addListener('appUrlOpen', (data) => {
       if (data?.url) {
@@ -160,7 +185,7 @@ function App() {
       }
     }).then(h => { listenerHandle = h; });
 
-    // 3. Sincronizar estado con el servidor al regresar la app a primer plano
+    // 4. Sincronizar estado con el servidor al regresar la app a primer plano
     let stateChangeHandle: any = null;
     CapApp.addListener('appStateChange', (state) => {
       if (state.isActive) {
@@ -189,6 +214,7 @@ function App() {
     }).then(h => { stateChangeHandle = h; });
 
     return () => {
+      window.removeEventListener('message', onPopupMessage);
       if (listenerHandle) {
         listenerHandle.remove();
       }
@@ -276,18 +302,30 @@ function App() {
               }
             }
 
-            setGameState('splash');
+            const savedSettings = localStorage.getItem('barrz_active_game_settings');
+            const returnStep = localStorage.getItem('barrz_spotify_return_step');
+            if (returnStep === 'game' || savedSettings) {
+              setGameState('game');
+            } else {
+              setGameState('splash');
+            }
           } else {
             localStorage.removeItem('barrz_token');
             localStorage.removeItem('barrz_session');
             localStorage.removeItem('barrz_spotify_linked');
+            localStorage.removeItem('barrz_active_game_settings');
             spotifyPlayer.disconnect();
             setGameState('auth_choice');
           }
         } catch (e) {
           if (savedSession) {
             setUserSession(JSON.parse(savedSession));
-            setGameState('splash');
+            const savedSettings = localStorage.getItem('barrz_active_game_settings');
+            if (savedSettings) {
+              setGameState('game');
+            } else {
+              setGameState('splash');
+            }
           } else {
             setGameState('auth_choice');
           }
@@ -295,7 +333,12 @@ function App() {
       } else {
         if (savedSession) {
           setUserSession(JSON.parse(savedSession));
-          setGameState('splash');
+          const savedSettings = localStorage.getItem('barrz_active_game_settings');
+          if (savedSettings) {
+            setGameState('game');
+          } else {
+            setGameState('splash');
+          }
         } else {
           setGameState('auth_choice');
         }
@@ -314,7 +357,8 @@ function App() {
 
   const handleBackToMenu = () => {
     setCameFromGame(true);
-    // Al volver al menú desde el juego, regresamos directamente a Splash
+    localStorage.removeItem('barrz_active_game_settings');
+    setGameSettings(null);
     setGameState('splash');
   };
 

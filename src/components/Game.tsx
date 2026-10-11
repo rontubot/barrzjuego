@@ -142,6 +142,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Estados para la Pantalla de Carga y Verificación Pre-Partida de Spotify
   const [spotifyVerificationState, setSpotifyVerificationState] = useState<'verifying' | 'sample_detected' | 'failed' | 'success'>('verifying');
   const [verificationProgressMsg, setVerificationProgressMsg] = useState('Verificando persistencia de cuenta...');
+  const [spotifyUserData, setSpotifyUserData] = useState<any>(null);
+  const [useLocalAudio, setUseLocalAudio] = useState(false);
   const verifierControllerRef = useRef<any>(null);
   const verifierTimeoutRef = useRef<any>(null);
   const verifierContainerRef = useRef<HTMLDivElement | null>(null);
@@ -204,8 +206,11 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
     // Comprobar estado en servidor en segundo plano
     checkSpotifyStatus().then((res) => {
+      console.log('🔍 [BARRZ Game] checkSpotifyStatus:', res);
       if (res && res.linked === false) {
         onVerified(false);
+      } else if (res && res.spotify_user) {
+        setSpotifyUserData(res.spotify_user);
       }
     }).catch(() => {});
 
@@ -340,6 +345,14 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     };
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
 
+    const onPopupMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'BARRZ_SPOTIFY_AUTH_RESULT') {
+        console.log('🎵 [BARRZ Game] Resultado OAuth recibido desde Popup');
+        runSpotifyVerification();
+      }
+    };
+    window.addEventListener('message', onPopupMessage);
+
     const unsubscribe = spotifyPlayer.subscribe((state) => {
       setIsBeatPlaying(state.isPlaying);
       if (state.error && (state.error.includes('expirada') || state.error.includes('Premium'))) {
@@ -349,6 +362,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
     return () => {
       window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
+      window.removeEventListener('message', onPopupMessage);
       unsubscribe();
       if (verifierTimeoutRef.current) {
         clearTimeout(verifierTimeoutRef.current);
@@ -450,7 +464,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const nextBeat = BEATS_DECK[prevIndex];
     setActiveBeat(nextBeat);
     if (isBeatPlaying) {
-      spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+      if (useLocalAudio && nextBeat.audioUrl) {
+        stopBeatAudio();
+        const audio = new Audio(nextBeat.audioUrl);
+        audio.loop = true;
+        audio.play().catch(() => {});
+        beatAudioRef.current = audio;
+      } else {
+        spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+      }
     }
   };
 
@@ -460,7 +482,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const nextBeat = BEATS_DECK[nextIndex];
     setActiveBeat(nextBeat);
     if (isBeatPlaying) {
-      spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+      if (useLocalAudio && nextBeat.audioUrl) {
+        stopBeatAudio();
+        const audio = new Audio(nextBeat.audioUrl);
+        audio.loop = true;
+        audio.play().catch(() => {});
+        beatAudioRef.current = audio;
+      } else {
+        spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+      }
     }
   };
 
@@ -653,6 +683,23 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   const togglePlayBeat = async (beat: BeatCard | null) => {
     if (!beat) return;
+    if (useLocalAudio) {
+      if (isBeatPlaying) {
+        showToast('⏸️ Beat pausado');
+        stopBeatAudio();
+        setIsBeatPlaying(false);
+      } else if (beat.audioUrl) {
+        showToast('🎵 Reproduciendo beat local HQ');
+        stopBeatAudio();
+        const audio = new Audio(beat.audioUrl);
+        audio.loop = true;
+        audio.play().catch(() => {});
+        beatAudioRef.current = audio;
+        setIsBeatPlaying(true);
+      }
+      return;
+    }
+
     if (isBeatPlaying) {
       showToast('⏸️ Beat pausado');
       stopBeatAudio();
@@ -675,7 +722,11 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const startTimer = () => {
     setTimerRunning(true);
     if (activeBeat && !isBeatPlaying) {
-      spotifyPlayer.playTrack(activeBeat.spotifyUri).catch(() => {});
+      if (useLocalAudio) {
+        togglePlayBeat(activeBeat);
+      } else {
+        spotifyPlayer.playTrack(activeBeat.spotifyUri).catch(() => {});
+      }
     }
   };
 
@@ -845,15 +896,23 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             {spotifyVerificationState === 'sample_detected' && (
               <>
                 <h2 className="font-graffiti text-glow-pink" style={{ fontSize: '1.35rem', color: '#ff007f', margin: '10px 0' }}>
-                  SESIÓN DE SPOTIFY NO FUNCIONAL
+                  {spotifyUserData?.product === 'free' ? 'CUENTA SPOTIFY FREE DETECTADA' : 'SESIÓN DE SPOTIFY NO FUNCIONAL'}
                 </h2>
                 <div style={{ background: 'rgba(255, 0, 127, 0.12)', border: '1px solid rgba(255, 0, 127, 0.35)', borderRadius: '12px', padding: '10px 14px', margin: '8px 0', width: '100%' }}>
                   <span style={{ color: '#ff66a3', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.5px' }}>
-                    ⚠️ SOLO MUESTRA DETECTADA (30s)
+                    ⚠️ SOLO MUESTRA DETECTADA (30s) {spotifyUserData?.product ? `• PLAN ${spotifyUserData.product.toUpperCase()}` : ''}
                   </span>
                 </div>
-                <p className="spotify-modal-desc">
-                  Tu cuenta de Spotify está vinculada pero la sesión en el reproductor web no está activa o expiró, por lo que solo reproduce previews de 30 segundos. Para jugar con el tema completo, iniciá sesión nuevamente.
+                <p className="spotify-modal-desc" style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>
+                  {spotifyUserData?.product === 'free' ? (
+                    <>
+                      Tu cuenta vinculada (<strong>{spotifyUserData.display_name || spotifyUserData.email || 'Free'}</strong>) no dispone de suscripción Spotify Premium. Por políticas oficiales de Spotify, las cuentas Free solo permiten muestras de 30 segundos en reproductores externos. Podés cambiar a una cuenta Premium o jugar con los beats locales de alta fidelidad.
+                    </>
+                  ) : (
+                    <>
+                      Tu cuenta de Spotify está vinculada pero la sesión en el reproductor web no está activa o expiró, por lo que solo reproduce previews de 30 segundos. Para jugar con el tema completo oficial, iniciá sesión nuevamente.
+                    </>
+                  )}
                 </p>
                 <div className="spotify-modal-buttons">
                   <button 
@@ -861,7 +920,20 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     className="btn-spotify-connect-action pulse-teal-anim"
                     onClick={handleConnectSpotifyFromGame}
                   >
-                    <span>INICIAR SESIÓN EN SPOTIFY</span>
+                    <span>{spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'INICIAR SESIÓN EN SPOTIFY'}</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-retry-spotify"
+                    onClick={() => {
+                      setUseLocalAudio(true);
+                      setSpotifyVerificationState('success');
+                      showToast('🎵 Modo Beats Locales HQ Activado');
+                    }}
+                    style={{ background: 'rgba(0, 245, 255, 0.15)', borderColor: 'var(--neon-teal)', color: '#fff' }}
+                  >
+                    <Music size={16} color="var(--neon-teal)" />
+                    <span>Jugar con Instrumental Local HQ (Sin cortes)</span>
                   </button>
                   <button 
                     type="button" 
@@ -888,7 +960,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                   NO SE PUDO COMPROBAR SPOTIFY
                 </h2>
                 <p className="spotify-modal-desc">
-                  No pudimos confirmar la reproducción completa del tema. Asegurate de tener una sesión activa de Spotify para poder disputar la batalla sin cortes.
+                  No pudimos confirmar la reproducción completa del tema oficial. Podés intentar vincular tu cuenta o jugar utilizando el audio local de alta definición.
                 </p>
                 <div className="spotify-modal-buttons">
                   <button 
@@ -897,6 +969,19 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     onClick={handleConnectSpotifyFromGame}
                   >
                     <span>VINCULAR / INICIAR SESIÓN</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-retry-spotify"
+                    onClick={() => {
+                      setUseLocalAudio(true);
+                      setSpotifyVerificationState('success');
+                      showToast('🎵 Modo Beats Locales HQ Activado');
+                    }}
+                    style={{ background: 'rgba(0, 245, 255, 0.15)', borderColor: 'var(--neon-teal)', color: '#fff' }}
+                  >
+                    <Music size={16} color="var(--neon-teal)" />
+                    <span>Jugar con Instrumental Local HQ (Sin cortes)</span>
                   </button>
                   <button 
                     type="button" 
@@ -1235,18 +1320,35 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               <span>INST. BEAT ({activeBeat.bpm} BPM)</span>
                             </div>
 
-                            <div className="spotify-embed-card-container fade-in">
-                              <iframe
-                                title={activeBeat.name}
-                                src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
-                                width="100%"
-                                height="100%"
-                                frameBorder="0"
-                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                loading="lazy"
-                                className="spotify-official-embed-iframe"
-                              />
-                            </div>
+                            {useLocalAudio ? (
+                              <div className="spotify-embed-card-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(10, 11, 14, 0.95)', textAlign: 'center' }}>
+                                <div 
+                                  className={`spotify-vinyl-container ${isBeatPlaying ? 'spinning' : ''}`}
+                                  onClick={() => togglePlayBeat(activeBeat)}
+                                  style={{ cursor: 'pointer', width: '80px', height: '80px', margin: '0 auto 10px' }}
+                                >
+                                  <div className="spotify-vinyl-disc">
+                                    <div className="spotify-vinyl-center"></div>
+                                  </div>
+                                </div>
+                                <h4 style={{ margin: '4px 0', color: '#fff', fontSize: '1rem', fontWeight: 800 }}>{activeBeat.name}</h4>
+                                <span style={{ color: 'var(--neon-teal)', fontSize: '0.75rem', fontWeight: 700 }}>{activeBeat.bpm} BPM • Instrumental Completa HQ</span>
+                                <span style={{ color: '#1DB954', fontSize: '0.7rem', marginTop: '6px', fontWeight: 600 }}>● Modo Audio Local Oficial</span>
+                              </div>
+                            ) : (
+                              <div className="spotify-embed-card-container fade-in">
+                                <iframe
+                                  title={activeBeat.name}
+                                  src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
+                                  width="100%"
+                                  height="100%"
+                                  frameBorder="0"
+                                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                  loading="lazy"
+                                  className="spotify-official-embed-iframe"
+                                />
+                              </div>
+                            )}
 
                             <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', zIndex: 10, position: 'relative' }}>
                               <button

@@ -42,10 +42,28 @@ export async function connectSpotify(returnStep?: string) {
   const stateVal = isMobile ? `${token}:app` : token;
   const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
 
-  // Realizar la navegación SIEMPRE dentro de la propia WebView de la app.
-  // De este modo, la sesión y cookies de spotify.com quedan en el CookieManager del WebView,
-  // permitiendo que el reproductor oficial Embed (iframe) reconozca la cuenta y genere regalías oficiales.
-  window.location.href = authUrl;
+  console.log('🔗 [BARRZ Spotify] Iniciando conexión OAuth...', { isMobile, returnStep });
+
+  if (!isMobile) {
+    // En Web de escritorio: Abrir ventana emergente (popup) para NO reiniciar el estado ni recargar la partida
+    const width = 500;
+    const height = 720;
+    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+    const popup = window.open(
+      authUrl,
+      'barrz_spotify_login',
+      `width=${width},height=${height},left=${left},top=${top},status=no,toolbar=no,menubar=no`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      console.warn('⚠️ Popup bloqueado por el navegador. Redirigiendo...');
+      window.location.href = authUrl;
+    }
+  } else {
+    // En Móvil: Dentro del WebView para que CookieManager capture las cookies
+    window.location.href = authUrl;
+  }
 }
 
 /**
