@@ -88,8 +88,15 @@ const getUserProfileData = async (userId) => {
   }
 };
 
-// Helper: Consultar y guardar perfil completo de Spotify
+// Helper: Consultar y guardar perfil completo de Spotify (con caché de 30 segundos para evitar saturación de API)
+const spotifyProfileMemoryCache = new Map(); // userId -> { data, timestamp }
+
 const fetchAndSaveSpotifyProfile = async (userId, accessToken) => {
+  const cached = spotifyProfileMemoryCache.get(userId);
+  if (cached && (Date.now() - cached.timestamp < 30000)) {
+    return cached.data;
+  }
+
   try {
     const meRes = await fetch('https://api.spotify.com/v1/me', {
       headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -111,15 +118,31 @@ const fetchAndSaveSpotifyProfile = async (userId, accessToken) => {
         [spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl, userId]
       );
 
-      return {
+      const profile = {
         display_name: spotifyDisplayName,
         email: spotifyEmail,
         product: spotifyProduct,
         avatar_url: spotifyAvatarUrl
       };
+      spotifyProfileMemoryCache.set(userId, { data: profile, timestamp: Date.now() });
+      return profile;
     } else {
       const errText = await meRes.text();
       console.error(`❌ [SPOTIFY ME ERROR] HTTP ${meRes.status} para usuario ${userId}:`, errText);
+      let errorResult = null;
+      if (errText.includes('not registered')) {
+        errorResult = {
+          error: 'user_not_registered',
+          message: 'Tu cuenta de Spotify no está registrada en "User Management" de tu app en developer.spotify.com/dashboard'
+        };
+      } else {
+        errorResult = {
+          error: 'spotify_api_error',
+          message: `Error al consultar Spotify (${meRes.status})`
+        };
+      }
+      spotifyProfileMemoryCache.set(userId, { data: errorResult, timestamp: Date.now() });
+      return errorResult;
     }
   } catch (err) {
     console.error('Error al sincronizar perfil de Spotify:', err);
@@ -1031,12 +1054,15 @@ app.get('/api/spotify/status', async (req, res) => {
     }
 
     const isLinked = !!(user && user.spotify_refresh_token);
+    const hasError = !!spotifyUserData?.error;
     const userProduct = (spotifyUserData?.product || user?.spotify_product || 'none').toUpperCase();
-    console.log(`🔍 [SPOTIFY STATUS] User ID: ${decoded.id} | Linked: ${isLinked} | Plan: "${userProduct}" | User: "${spotifyUserData?.display_name || user?.spotify_display_name || 'N/A'}"`);
+    console.log(`🔍 [SPOTIFY STATUS] User ID: ${decoded.id} | Linked: ${isLinked} | Plan: "${userProduct}" | User: "${spotifyUserData?.display_name || user?.spotify_display_name || 'N/A'}"${hasError ? ' | Error: ' + spotifyUserData.error : ''}`);
 
     res.json({
       linked: isLinked,
-      spotify_user: spotifyUserData
+      spotify_user: hasError ? null : spotifyUserData,
+      spotify_error: spotifyUserData?.error || null,
+      spotify_error_message: spotifyUserData?.message || null
     });
   } catch (err) {
     console.warn('⚠️ [SPOTIFY STATUS] Error de autenticación en token:', err.message);
@@ -1197,13 +1223,44 @@ app.post('/api/spotify/control', async (req, res) => {
 
 
 
+// Bloqueo de seguridad para archivos sensibles (evitar escaneos de .env, etc.)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/.') || req.path.includes('.env') || req.path.includes('wp-login') || req.path.includes('wp-admin')) {
+    return res.status(404).send('Not Found');
+  }
+  next();
+});
+
+// Endpoint para consulta de versión y actualización remota
+app.get('/api/app/version', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.json({
+    version: '3.1.0',
+    build: '2026.10',
+    min_required_apk: '1.0',
+    github_repo: 'https://github.com/rontubot/prototipo',
+    download_url: 'https://github.com/rontubot/prototipo/releases/latest'
+  });
+});
+
 // --- SERVICIO DE ARCHIVOS ESTÁTICOS EN PRODUCCIÓN ---
 
 // Servir la compilación de producción del cliente
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../dist'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  }
+}));
 
 // Ruta comodín para SPA (Single Page Application)
 app.get('*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 

@@ -91,7 +91,12 @@ export async function disconnectSpotify(): Promise<boolean> {
  * Comprobar el estado real de vinculación de Spotify con el servidor.
  * Protegido contra fallos transitorios de red para no perder la sesión localmente.
  */
-export async function checkSpotifyStatus(): Promise<{ linked: boolean; spotify_user?: any }> {
+export async function checkSpotifyStatus(): Promise<{ 
+  linked: boolean; 
+  spotify_user?: any;
+  spotify_error?: string | null;
+  spotify_error_message?: string | null;
+}> {
   const token = localStorage.getItem('barrz_token');
   if (!token) {
     return { linked: false };
@@ -104,12 +109,25 @@ export async function checkSpotifyStatus(): Promise<{ linked: boolean; spotify_u
       const data = await res.json();
       if (data && data.linked) {
         localStorage.setItem('barrz_spotify_linked', 'true');
-        spotifyPlayer.init();
-        return { linked: true, spotify_user: data.spotify_user };
+        if (!data.spotify_error && data.spotify_user?.product === 'premium') {
+          spotifyPlayer.init();
+        } else if (data.spotify_error) {
+          spotifyPlayer.disconnect();
+        }
+        return { 
+          linked: true, 
+          spotify_user: data.spotify_user,
+          spotify_error: data.spotify_error,
+          spotify_error_message: data.spotify_error_message
+        };
       } else if (data && data.linked === false) {
         localStorage.removeItem('barrz_spotify_linked');
         spotifyPlayer.disconnect();
-        return { linked: false };
+        return { 
+          linked: false,
+          spotify_error: data.spotify_error,
+          spotify_error_message: data.spotify_error_message
+        };
       }
     }
   } catch (err) {

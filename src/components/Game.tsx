@@ -143,6 +143,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [spotifyVerificationState, setSpotifyVerificationState] = useState<'verifying' | 'sample_detected' | 'failed' | 'success'>('verifying');
   const [verificationProgressMsg, setVerificationProgressMsg] = useState('Verificando persistencia de cuenta...');
   const [spotifyUserData, setSpotifyUserData] = useState<any>(null);
+  const [spotifyDevModeError, setSpotifyDevModeError] = useState<string | null>(null);
   const verifierControllerRef = useRef<any>(null);
   const verifierTimeoutRef = useRef<any>(null);
   const verifierContainerRef = useRef<HTMLDivElement | null>(null);
@@ -215,20 +216,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
     setVerificationProgressMsg('Verificando reproductor de audio...');
 
-    // Comprobar estado en servidor en segundo plano
-    checkSpotifyStatus().then((res) => {
-      console.log('🔍 [BARRZ Game] checkSpotifyStatus:', res);
-      if (res && res.linked === false) {
-        onVerified(false);
-      } else if (res && res.spotify_user) {
-        setSpotifyUserData(res.spotify_user);
-        if (res.spotify_user.product === 'free') {
-          console.warn('⚠️ [BARRZ Game] Cuenta Free de Spotify detectada. Solo emitirá muestra de 30s.');
-          onVerified(false);
-        }
-      }
-    }).catch(() => {});
-
     let verificationResolved = false;
 
     const onVerified = (isFullTrack: boolean) => {
@@ -257,6 +244,23 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         setSpotifyVerificationState('sample_detected');
       }
     };
+
+    // Comprobar estado en servidor en segundo plano
+    checkSpotifyStatus().then((res) => {
+      console.log('🔍 [BARRZ Game] checkSpotifyStatus:', res);
+      if (res && res.spotify_error === 'user_not_registered') {
+        setSpotifyDevModeError(res.spotify_error_message || 'The user is not registered for this application');
+        onVerified(false);
+      } else if (res && res.linked === false) {
+        onVerified(false);
+      } else if (res && res.spotify_user) {
+        setSpotifyUserData(res.spotify_user);
+        if (res.spotify_user.product === 'free') {
+          console.warn('⚠️ [BARRZ Game] Cuenta Free de Spotify detectada. Solo emitirá muestra de 30s.');
+          onVerified(false);
+        }
+      }
+    }).catch(() => {});
 
     // Escuchar mensajes postMessage directos de Spotify embed
     const onWindowMessage = (e: MessageEvent) => {
@@ -875,15 +879,25 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             {spotifyVerificationState === 'sample_detected' && (
               <>
                 <h2 className="font-graffiti text-glow-pink" style={{ fontSize: '1.35rem', color: '#ff007f', margin: '10px 0' }}>
-                  {spotifyUserData?.product === 'free' ? 'CUENTA SPOTIFY FREE DETECTADA' : 'SESIÓN DE SPOTIFY NO FUNCIONAL'}
+                  {spotifyDevModeError 
+                    ? 'APP EN MODO DESARROLLO DE SPOTIFY' 
+                    : (spotifyUserData?.product === 'free' ? 'CUENTA SPOTIFY FREE DETECTADA' : 'SESIÓN DE SPOTIFY NO FUNCIONAL')}
                 </h2>
                 <div style={{ background: 'rgba(255, 0, 127, 0.12)', border: '1px solid rgba(255, 0, 127, 0.35)', borderRadius: '12px', padding: '10px 14px', margin: '8px 0', width: '100%' }}>
                   <span style={{ color: '#ff66a3', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.5px' }}>
-                    ⚠️ SOLO MUESTRA DETECTADA (30s) {spotifyUserData?.product ? `• PLAN ${spotifyUserData.product.toUpperCase()}` : ''}
+                    {spotifyDevModeError 
+                      ? '⚠️ CUENTA NO REGISTRADA EN SPOTIFY DEVELOPER DASHBOARD' 
+                      : `⚠️ SOLO MUESTRA DETECTADA (30s) ${spotifyUserData?.product ? `• PLAN ${spotifyUserData.product.toUpperCase()}` : ''}`}
                   </span>
                 </div>
                 <p className="spotify-modal-desc" style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>
-                  {spotifyUserData?.product === 'free' ? (
+                  {spotifyDevModeError ? (
+                    <>
+                      Tu aplicación de Spotify está en <strong>Modo Desarrollo</strong>. En este modo, Spotify bloquea el acceso a todas las cuentas que no estén registradas en la lista blanca del Dashboard.
+                      <br /><br />
+                      Para habilitarla, ingresá a <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: '#1DB954', fontWeight: 700, textDecoration: 'underline' }}>developer.spotify.com/dashboard</a> ➔ Tu App ➔ <strong>Settings ➔ User Management</strong> y agregá el correo de tu cuenta de Spotify. Luego haz clic en <strong>Reintentar Comprobación</strong>.
+                    </>
+                  ) : spotifyUserData?.product === 'free' ? (
                     <>
                       Tu cuenta vinculada (<strong>{spotifyUserData.display_name || spotifyUserData.email || 'Free'}</strong>) es una cuenta Free. Para que los temas suenen completos durante la batalla y generen regalías oficiales a los beatmakers, Spotify exige una cuenta <strong>Spotify Premium</strong>. Vinculá una cuenta Premium para poder iniciar la partida.
                     </>
@@ -899,7 +913,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     className="btn-spotify-connect-action pulse-teal-anim"
                     onClick={handleConnectSpotifyFromGame}
                   >
-                    <span>{spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'INICIAR SESIÓN EN SPOTIFY'}</span>
+                    <span>{spotifyDevModeError ? 'RECONECTAR SPOTIFY' : (spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'INICIAR SESIÓN EN SPOTIFY')}</span>
                   </button>
                   <button 
                     type="button" 
