@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
-import { spotifyPlayer } from '../services/spotifyPlayer';
+import { spotifyPlayer, connectSpotify, checkSpotifyStatus } from '../services/spotifyPlayer';
 import { useI18n } from '../i18n/LanguageContext';
 import './Game.css';
 
@@ -139,6 +139,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Diálogos de confirmación
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showSpotifyRequiredModal, setShowSpotifyRequiredModal] = useState(false);
+  const [isSpotifyChecking, setIsSpotifyChecking] = useState(false);
 
   // Temporizador para desafíos
   const [timerSeconds, setTimerSeconds] = useState(60);
@@ -171,23 +173,58 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Estado de reproducción del beat
   const [isBeatPlaying, setIsBeatPlaying] = useState(false);
 
+  const handleConnectSpotifyFromGame = async () => {
+    try {
+      await connectSpotify('game');
+    } catch (err: any) {
+      alert(err.message || t.auth.spotify_need_auth);
+    }
+  };
+
+  const handleRecheckSpotify = async () => {
+    setIsSpotifyChecking(true);
+    try {
+      const status = await checkSpotifyStatus();
+      if (status.linked) {
+        setShowSpotifyRequiredModal(false);
+        await spotifyPlayer.init();
+      } else {
+        setShowSpotifyRequiredModal(true);
+        spotifyPlayer.disconnect();
+      }
+    } catch (e) {
+      console.warn('Error verificando estado de Spotify:', e);
+      setShowSpotifyRequiredModal(true);
+    } finally {
+      setIsSpotifyChecking(false);
+    }
+  };
+
   // Escuchar cambios de estado de Spotify y del reproductor en tiempo real
   useEffect(() => {
     const onSpotifyStatusChange = (e: any) => {
       const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
       if (linked) {
+        setShowSpotifyRequiredModal(false);
         spotifyPlayer.init();
+      } else {
+        setShowSpotifyRequiredModal(true);
       }
     };
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
 
     const isLinked = localStorage.getItem('barrz_spotify_linked') === 'true';
-    if (isLinked) {
-      spotifyPlayer.init();
+    if (!isLinked) {
+      setShowSpotifyRequiredModal(true);
+    } else {
+      handleRecheckSpotify();
     }
 
     const unsubscribe = spotifyPlayer.subscribe((state) => {
       setIsBeatPlaying(state.isPlaying);
+      if (state.error && (state.error.includes('expirada') || state.error.includes('Premium'))) {
+        setShowSpotifyRequiredModal(true);
+      }
     });
 
     return () => {
@@ -649,6 +686,50 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         onCancel={() => setShowResetConfirm(false)}
       />
 
+      {/* MODAL DE VERIFICACIÓN DE SESIÓN DE SPOTIFY */}
+      {showSpotifyRequiredModal && (
+        <div className="spotify-required-modal-overlay fade-in">
+          <div className="spotify-required-modal glass-panel glow-teal text-center">
+            <div className="spotify-setup-logo-container pulse-teal-anim">
+              <svg className="spotify-setup-icon" viewBox="0 0 24 24" width="56" height="56" fill="#1DB954">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
+              </svg>
+            </div>
+            <h2 className="font-graffiti text-glow-teal mt-10">SESIÓN DE SPOTIFY REQUERIDA</h2>
+            <p className="spotify-modal-desc">
+              Para reproducir las instrumentales oficiales completas en el web overlay con tu cuenta de Spotify y que sumen reproducciones a los beatmakers, necesitás verificar y autorizar los permisos de Spotify.
+            </p>
+            <div className="spotify-modal-buttons">
+              <button 
+                type="button" 
+                className="btn-spotify-connect-action pulse-teal-anim"
+                onClick={handleConnectSpotifyFromGame}
+              >
+                <span>VERIFICAR Y VINCULAR SPOTIFY</span>
+              </button>
+              <button 
+                type="button" 
+                className="btn-retry-spotify"
+                onClick={handleRecheckSpotify}
+                disabled={isSpotifyChecking}
+              >
+                <RefreshCw size={16} className={isSpotifyChecking ? 'spin-anim' : ''} />
+                <span>{isSpotifyChecking ? 'Comprobando sesión...' : 'Reintentar verificación'}</span>
+              </button>
+              <button 
+                type="button" 
+                className="btn-back-to-menu-sub"
+                onClick={() => {
+                  setShowSpotifyRequiredModal(false);
+                  triggerExitToMenu();
+                }}
+              >
+                Volver al Menú Principal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {debugToast && (
         <div style={{
@@ -948,85 +1029,113 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               <span>INST. BEAT ({activeBeat.bpm} BPM)</span>
                             </div>
 
-                            {/* En WEB: Reproductor Embed Oficial iframe de Spotify (como funcionaba originalmente) */}
-                            {/* En APP MÓVIL: Tarjeta nativa limpia con botón para transmitir a Spotify App */}
-                            {!Capacitor.isNativePlatform() ? (
-                              <div className="spotify-embed-card-container fade-in">
-                                <iframe
-                                  title={activeBeat.name}
-                                  src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
-                                  width="100%"
-                                  height="100%"
-                                  frameBorder="0"
-                                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                  loading="lazy"
-                                  className="spotify-official-embed-iframe"
-                                />
-                              </div>
-                            ) : (
-                              <div className="spotify-card-overlay fade-in">
+                            <div className="spotify-embed-card-container fade-in">
+                              <div className="spotify-card-overlay">
                                 <div className="spotify-overlay-header">
                                   <div className="spotify-api-badge">
                                     <span className={`pulse-dot ${isBeatPlaying ? 'pulsing' : ''}`}></span>
-                                    <span>SPOTIFY APP STREAM</span>
+                                    <span>{localStorage.getItem('barrz_spotify_linked') === 'true' ? 'SPOTIFY SYNC' : 'BEAT MASTER HQ'}</span>
                                   </div>
-                                  <span style={{ fontSize: '0.72rem', color: '#1DB954', fontWeight: 800 }}>
-                                    {activeBeat.bpm} BPM
-                                  </span>
+                                  {activeBeat.spotifyUrl && (
+                                    <a 
+                                      href={activeBeat.spotifyUrl} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="btn-open-spotify-external"
+                                      onClick={async (e) => {
+                                        if (Capacitor.isNativePlatform()) {
+                                          e.preventDefault();
+                                          await Browser.open({ url: activeBeat.spotifyUrl, windowName: '_system' });
+                                        }
+                                      }}
+                                    >
+                                      <span>Spotify</span>
+                                      <ExternalLink size={11} />
+                                    </a>
+                                  )}
                                 </div>
 
                                 <div className="spotify-overlay-body">
                                   <div 
-                                    className={`spotify-vinyl-container ${isBeatPlaying ? 'spinning' : ''}`}
-                                    onClick={() => togglePlayBeat(activeBeat)}
+                                    className={`spotify-vinyl-container ${isBeatPlaying ? 'spinning' : ''}`} 
+                                    onClick={() => togglePlayBeat(activeBeat)} 
                                     style={{ cursor: 'pointer' }}
-                                    title="Toca para pausar o reproducir en Spotify"
+                                    title={isBeatPlaying ? "Pausar beat en Spotify" : "Reproducir beat en Spotify"}
                                   >
                                     <div className="spotify-vinyl-disc">
                                       <div className="spotify-vinyl-center"></div>
                                     </div>
                                   </div>
                                   <h4 className="spotify-overlay-title">{activeBeat.name}</h4>
-                                  <span className="spotify-overlay-artist">Instrumental Oficial • Beatmaker</span>
+                                  <span className="spotify-overlay-artist">{activeBeat.bpm} BPM • Instrumental Oficial</span>
                                 </div>
 
-                                <div className="spotify-overlay-footer" style={{ alignItems: 'center' }}>
-                                  <button
-                                    type="button"
-                                    className="btn-spotify-app-direct pulse-teal-anim"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenInSpotify(activeBeat);
-                                    }}
-                                    style={{
-                                      background: '#1DB954',
-                                      color: '#000',
-                                      fontWeight: 900,
-                                      fontSize: '0.85rem',
-                                      border: 'none',
-                                      borderRadius: '24px',
-                                      padding: '12px 20px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      gap: '8px',
-                                      width: '100%',
-                                      cursor: 'pointer',
-                                      boxShadow: '0 0 16px rgba(29, 185, 84, 0.45)',
-                                      letterSpacing: '0.5px'
-                                    }}
-                                  >
-                                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
-                                    </svg>
-                                    <span>TRANSMITIR EN SPOTIFY</span>
-                                  </button>
-                                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'center' }}>
-                                    Requiere tener la app de Spotify instalada
-                                  </span>
+                                <div className="spotify-overlay-footer">
+                                  <div className="spotify-stream-indicator" style={{ textAlign: 'center', fontSize: '0.72rem', color: isBeatPlaying ? '#1DB954' : 'var(--text-muted)', fontWeight: 700 }}>
+                                    {isBeatPlaying ? '● Reproduciendo en Spotify' : 'Pausado en Spotify'}
+                                  </div>
+
+                                  <div className="spotify-controls">
+                                    <button 
+                                      type="button" 
+                                      className="spotify-btn-sub" 
+                                      onClick={handlePrevBeat}
+                                      title={t.game.prev_beat}
+                                    >
+                                      <ChevronLeft size={20} />
+                                    </button>
+
+                                    <button 
+                                      type="button" 
+                                      className="spotify-btn-play-pause" 
+                                      onClick={() => togglePlayBeat(activeBeat)}
+                                      title={isBeatPlaying ? "Pausar beat" : "Reproducir beat en Spotify"}
+                                    >
+                                      {isBeatPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
+                                    </button>
+
+                                    <button 
+                                      type="button" 
+                                      className="spotify-btn-sub" 
+                                      onClick={handleNextBeat}
+                                      title={t.game.next_beat}
+                                    >
+                                      <ChevronRight size={20} />
+                                    </button>
+                                  </div>
+
+                                  {Capacitor.isNativePlatform() && (
+                                    <button
+                                      type="button"
+                                      className="btn-spotify-app-direct pulse-teal-anim"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenInSpotify(activeBeat);
+                                      }}
+                                      style={{
+                                        marginTop: '6px',
+                                        background: '#1DB954',
+                                        color: '#000',
+                                        fontWeight: 900,
+                                        fontSize: '0.75rem',
+                                        border: 'none',
+                                        borderRadius: '20px',
+                                        padding: '8px 14px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        width: '100%',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      <Play size={14} fill="currentColor" />
+                                      <span>ABRIR EN SPOTIFY APP</span>
+                                    </button>
+                                  )}
                                 </div>
                               </div>
-                            )}
+                            </div>
                           </div>
                         </div>
                       </div>
