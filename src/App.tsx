@@ -243,15 +243,15 @@ function App() {
     }
   }, []);
 
-  // Secuencia de carga: 3s logo solo + 4s barra de carga
+  // Secuencia de carga inicial fluida
   useEffect(() => {
     const showBarTimer = setTimeout(() => {
       setShowLoaderBar(true);
-    }, 3000);
+    }, 1200);
 
     const finishLoadingTimer = setTimeout(() => {
       setIsLoading(false);
-    }, 7000);
+    }, 2800);
 
     return () => {
       clearTimeout(showBarTimer);
@@ -314,10 +314,24 @@ function App() {
               }
             }
 
-            const savedSettings = localStorage.getItem('barrz_active_game_settings');
+            const savedSettingsRaw = localStorage.getItem('barrz_active_game_settings');
             const returnStep = localStorage.getItem('barrz_spotify_return_step');
-            if (returnStep === 'game' || savedSettings) {
+            localStorage.removeItem('barrz_spotify_return_step');
+
+            let validSettings: GameSettings | null = null;
+            if (savedSettingsRaw) {
+              try {
+                validSettings = JSON.parse(savedSettingsRaw);
+              } catch {
+                localStorage.removeItem('barrz_active_game_settings');
+              }
+            }
+
+            if (validSettings && (returnStep === 'game' || savedSettingsRaw)) {
+              setGameSettings(validSettings);
               setGameState('game');
+            } else if (returnStep && returnStep !== 'game') {
+              setGameState(returnStep as GameState);
             } else {
               setGameState('splash');
             }
@@ -326,18 +340,14 @@ function App() {
             localStorage.removeItem('barrz_session');
             localStorage.removeItem('barrz_spotify_linked');
             localStorage.removeItem('barrz_active_game_settings');
+            localStorage.removeItem('barrz_spotify_return_step');
             spotifyPlayer.disconnect();
             setGameState('auth_choice');
           }
         } catch (e) {
           if (savedSession) {
             setUserSession(JSON.parse(savedSession));
-            const savedSettings = localStorage.getItem('barrz_active_game_settings');
-            if (savedSettings) {
-              setGameState('game');
-            } else {
-              setGameState('splash');
-            }
+            setGameState('splash');
           } else {
             setGameState('auth_choice');
           }
@@ -345,12 +355,7 @@ function App() {
       } else {
         if (savedSession) {
           setUserSession(JSON.parse(savedSession));
-          const savedSettings = localStorage.getItem('barrz_active_game_settings');
-          if (savedSettings) {
-            setGameState('game');
-          } else {
-            setGameState('splash');
-          }
+          setGameState('splash');
         } else {
           setGameState('auth_choice');
         }
@@ -546,16 +551,8 @@ function App() {
   // 4. Zona de Juego Activa (Gameplay & Resultados)
   else if (gameState === 'game') {
     if (!gameSettings) {
-      return (
-        <div className="loader-screen">
-          <div className="grunge-overlay"></div>
-          <div className="loader-content">
-            <div className="loader-bar-container">
-              <div className="loader-bar"></div>
-            </div>
-          </div>
-        </div>
-      );
+      setTimeout(() => setGameState('splash'), 0);
+      return null;
     }
     mainContent = (
       <Game
