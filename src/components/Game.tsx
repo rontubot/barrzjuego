@@ -1443,24 +1443,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                       )}
                     </div>
                   )}
-
-                  {activeCardType === 'beat' && activeBeat && (
-                    <div className="card-controls-group fade-in">
-                      <div className="beat-nav-row">
-                        <button className="btn-beat-nav" onClick={handlePrevBeat} title={t.game.prev_beat}>
-                          <ChevronLeft size={18} />
-                          <span>{t.game.prev_beat}</span>
-                        </button>
-                        <span className="beat-counter-tag">
-                          {BEATS_DECK.findIndex(b => b.id === activeBeat.id) + 1} / {BEATS_DECK.length}
-                        </span>
-                        <button className="btn-beat-nav" onClick={handleNextBeat} title={t.game.next_beat}>
-                          <span>{t.game.next_beat}</span>
-                          <ChevronRight size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
