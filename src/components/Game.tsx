@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, X } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
@@ -147,6 +147,34 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const verifierTimeoutRef = useRef<any>(null);
   const verifierContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Advertencia emergente no bloqueante y recuadro de alerta de Spotify
+  const [hasSpotifyWarning, setHasSpotifyWarning] = useState(false);
+  const [showSpotifyWarningModal, setShowSpotifyWarningModal] = useState(false);
+  const warningFadeTimerRef = useRef<any>(null);
+
+  const triggerWarningNotice = () => {
+    setHasSpotifyWarning(true);
+    setShowSpotifyWarningModal(true);
+    if (warningFadeTimerRef.current) {
+      clearTimeout(warningFadeTimerRef.current);
+    }
+    // Sale los primeros segundos y luego se desvanece automáticamente (6.5 segundos)
+    warningFadeTimerRef.current = setTimeout(() => {
+      setShowSpotifyWarningModal(false);
+    }, 6500);
+  };
+
+  const toggleSpotifyWarningModal = () => {
+    setShowSpotifyWarningModal(prev => {
+      const nextState = !prev;
+      if (warningFadeTimerRef.current) {
+        clearTimeout(warningFadeTimerRef.current);
+        warningFadeTimerRef.current = null;
+      }
+      return nextState;
+    });
+  };
+
   // Temporizador para desafíos
   const [timerSeconds, setTimerSeconds] = useState(60);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -210,6 +238,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const isLinked = localStorage.getItem('barrz_spotify_linked') === 'true';
     if (!isLinked) {
       setSpotifyVerificationState('sample_detected');
+      triggerWarningNotice();
       return;
     }
 
@@ -238,9 +267,16 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         setVerificationProgressMsg('¡Reproducción completa verificada!');
         setTimeout(() => {
           setSpotifyVerificationState('success');
+          setHasSpotifyWarning(false);
+          setShowSpotifyWarningModal(false);
+          if (warningFadeTimerRef.current) {
+            clearTimeout(warningFadeTimerRef.current);
+            warningFadeTimerRef.current = null;
+          }
         }, 400);
       } else {
         setSpotifyVerificationState('sample_detected');
+        triggerWarningNotice();
       }
     };
 
@@ -359,6 +395,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         runSpotifyVerification();
       } else {
         setSpotifyVerificationState('sample_detected');
+        triggerWarningNotice();
       }
     };
     window.addEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
@@ -375,6 +412,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       setIsBeatPlaying(state.isPlaying);
       if (state.error && (state.error.includes('expirada') || state.error.includes('Premium'))) {
         setSpotifyVerificationState('sample_detected');
+        triggerWarningNotice();
       }
     });
 
@@ -382,6 +420,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
       window.removeEventListener('message', onPopupMessage);
       unsubscribe();
+      if (warningFadeTimerRef.current) {
+        clearTimeout(warningFadeTimerRef.current);
+      }
       if (verifierTimeoutRef.current) {
         clearTimeout(verifierTimeoutRef.current);
       }
@@ -714,6 +755,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       handleOpenInSpotify(beatToPlay);
     }
     setSpotifyVerificationState('success');
+    setShowSpotifyWarningModal(false);
     if (Capacitor.isNativePlatform()) {
       showToast('🟢 Beat abierto en Spotify App. ¡A rapear!');
     } else {
@@ -886,165 +928,77 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         onCancel={() => setShowResetConfirm(false)}
       />
 
-      {/* PANTALLA DE CARGA Y VERIFICACIÓN PRE-PARTIDA DE SPOTIFY */}
-      {spotifyVerificationState !== 'success' && (
-        <div className="spotify-required-modal-overlay fade-in" style={{ zIndex: 10000 }}>
-          <div className="spotify-required-modal glass-panel glow-teal text-center" style={{ padding: '36px 28px', maxWidth: '460px' }}>
-            <div className="spotify-setup-logo-container pulse-teal-anim" style={{ marginBottom: '10px' }}>
-              <svg className="spotify-setup-icon" viewBox="0 0 24 24" width="56" height="56" fill="#1DB954">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
-              </svg>
+      {/* RECUADRO FLOTANTE DE ALERTA DE SESIÓN SPOTIFY */}
+      {hasSpotifyWarning && (
+        <button
+          type="button"
+          className={`spotify-alert-badge ${showSpotifyWarningModal ? 'active' : ''}`}
+          onClick={toggleSpotifyWarningModal}
+          title={showSpotifyWarningModal ? "Ocultar advertencia de Spotify" : "Mostrar advertencia de sesión de Spotify"}
+          aria-label="Alerta de sesión de Spotify"
+        >
+          <span className="spotify-alert-badge-icon">
+            <AlertTriangle size={15} />
+          </span>
+          <span className="spotify-alert-badge-label">SESIÓN SPOTIFY</span>
+          <span className="spotify-alert-badge-pulse" />
+        </button>
+      )}
+
+      {/* CUADRO EMERGENTE DE ADVERTENCIA SPOTIFY (AUTO-DESVANECIBLE) */}
+      {showSpotifyWarningModal && (
+        <div className="spotify-warning-popup-card glass-panel fade-in">
+          <div className="spotify-warning-popup-header">
+            <div className="spotify-warning-popup-title-wrap">
+              <div className="spotify-warning-popup-icon-glow">
+                <AlertTriangle size={18} color="#ffb300" />
+              </div>
+              <h4 className="spotify-warning-popup-title">SESIÓN NO RECONOCIDA</h4>
             </div>
+            <button
+              type="button"
+              className="spotify-warning-popup-close-btn"
+              onClick={() => setShowSpotifyWarningModal(false)}
+              aria-label="Cerrar advertencia"
+            >
+              <X size={16} />
+            </button>
+          </div>
 
-            {spotifyVerificationState === 'verifying' && (
-              <>
-                <h2 className="font-graffiti text-glow-teal" style={{ fontSize: '1.4rem', margin: '10px 0' }}>
-                  VERIFICANDO SPOTIFY...
-                </h2>
-                <div style={{ margin: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                  <div className="spin-anim" style={{ width: '38px', height: '38px', border: '3px solid rgba(29, 185, 84, 0.2)', borderTopColor: '#1DB954', borderRadius: '50%' }} />
-                  <p style={{ color: '#1DB954', fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>
-                    {verificationProgressMsg}
-                  </p>
-                </div>
-                <p className="spotify-modal-desc" style={{ fontSize: '0.85rem' }}>
-                  Comprobando de forma silenciosa la persistencia de cuenta y que el reproductor oficial tenga acceso a la instrumental completa antes de empezar la partida.
-                </p>
-              </>
-            )}
+          <div className="spotify-warning-popup-body">
+            <p className="spotify-warning-popup-desc">
+              {spotifyVerificationState === 'verifying'
+                ? verificationProgressMsg
+                : 'No se detectó una sesión activa en Spotify o tu cuenta necesita reconexión. Podés reconectar tu cuenta o abrir el beat directamente en Spotify para disfrutar de la instrumental completa y sumar reproducciones oficiales a los beatmakers.'}
+            </p>
+          </div>
 
-            {spotifyVerificationState === 'sample_detected' && (
-              <>
-                <h2 className="font-graffiti text-glow-pink" style={{ fontSize: '1.35rem', color: '#ff007f', margin: '10px 0' }}>
-                  REPRODUCCIÓN DEL BEAT
-                </h2>
-                <div style={{ background: 'rgba(29, 185, 84, 0.12)', border: '1px solid rgba(29, 185, 84, 0.35)', borderRadius: '12px', padding: '10px 14px', margin: '8px 0', width: '100%' }}>
-                  <span style={{ color: '#1ed760', fontWeight: 800, fontSize: '0.82rem', letterSpacing: '0.5px' }}>
-                    🎵 MÚSICA OFICIAL EN SPOTIFY
-                  </span>
-                </div>
-                <p className="spotify-modal-desc" style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>
-                  {spotifyUserData?.product === 'free' ? (
-                    <>
-                      Tu cuenta vinculada es <strong>Spotify Free</strong>. Para que las instrumentales suenen completas y sumen reproducciones oficiales a los beatmakers, podés abrir el beat directamente en tu app de Spotify o conectar una cuenta <strong>Spotify Premium</strong>.
-                    </>
-                  ) : (
-                    <>
-                      Para disfrutar de las instrumentales completas y sumar streams oficiales a los beatmakers, podés abrir el beat directamente en tu app de Spotify o reconectar tu cuenta.
-                    </>
-                  )}
-                </p>
-                <div className="spotify-modal-buttons">
-                  <button 
-                    type="button" 
-                    className="btn-spotify-play-direct pulse-teal-anim"
-                    onClick={handleBypassWithSpotifyApp}
-                    style={{
-                      background: 'linear-gradient(135deg, #1DB954 0%, #1ed760 100%)',
-                      color: '#000',
-                      fontWeight: 900,
-                      fontSize: '0.9rem',
-                      padding: '12px 18px',
-                      borderRadius: '30px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 18px rgba(29, 185, 84, 0.45)',
-                      width: '100%',
-                      marginBottom: '6px'
-                    }}
-                  >
-                    <Play size={18} fill="#000" />
-                    <span>{Capacitor.isNativePlatform() ? 'ABRIR EN APP DE SPOTIFY Y CONTINUAR' : 'ABRIR BEAT EN OTRA PESTAÑA Y CONTINUAR'}</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-spotify-connect-action"
-                    onClick={handleConnectSpotifyFromGame}
-                  >
-                    <span>{spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'CONECTAR SPOTIFY'}</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-retry-spotify"
-                    onClick={runSpotifyVerification}
-                  >
-                    <RefreshCw size={16} />
-                    <span>Reintentar Comprobación</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-back-to-menu-sub"
-                    onClick={triggerExitToMenu}
-                  >
-                    Volver al Menú Principal
-                  </button>
-                </div>
-              </>
-            )}
+          <div className="spotify-warning-popup-actions">
+            <button
+              type="button"
+              className="btn-spotify-popup-connect pulse-teal-anim"
+              onClick={handleConnectSpotifyFromGame}
+            >
+              <span>{spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'VINCULAR / CONECTAR SPOTIFY'}</span>
+            </button>
 
-            {spotifyVerificationState === 'failed' && (
-              <>
-                <h2 className="font-graffiti text-glow-pink" style={{ fontSize: '1.35rem', color: '#ffb300', margin: '10px 0' }}>
-                  NO SE PUDO COMPROBAR SPOTIFY
-                </h2>
-                <p className="spotify-modal-desc" style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>
-                  No se pudo confirmar la reproducción en el reproductor web. Podés abrir el tema directamente en tu app de Spotify para escucharlo completo y sumar streams oficiales a los beatmakers.
-                </p>
-                <div className="spotify-modal-buttons">
-                  <button 
-                    type="button" 
-                    className="btn-spotify-play-direct pulse-teal-anim"
-                    onClick={handleBypassWithSpotifyApp}
-                    style={{
-                      background: 'linear-gradient(135deg, #1DB954 0%, #1ed760 100%)',
-                      color: '#000',
-                      fontWeight: 900,
-                      fontSize: '0.9rem',
-                      padding: '12px 18px',
-                      borderRadius: '30px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 18px rgba(29, 185, 84, 0.45)',
-                      width: '100%',
-                      marginBottom: '6px'
-                    }}
-                  >
-                    <Play size={18} fill="#000" />
-                    <span>{Capacitor.isNativePlatform() ? 'ABRIR EN APP DE SPOTIFY Y CONTINUAR' : 'ABRIR BEAT EN OTRA PESTAÑA Y CONTINUAR'}</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-spotify-connect-action"
-                    onClick={handleConnectSpotifyFromGame}
-                  >
-                    <span>VINCULAR / INICIAR SESIÓN</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-retry-spotify"
-                    onClick={runSpotifyVerification}
-                  >
-                    <RefreshCw size={16} />
-                    <span>Reintentar Comprobación</span>
-                  </button>
-                  <button 
-                    type="button" 
-                    className="btn-back-to-menu-sub"
-                    onClick={triggerExitToMenu}
-                  >
-                    Volver al Menú Principal
-                  </button>
-                </div>
-              </>
-            )}
+            <button
+              type="button"
+              className="btn-spotify-popup-play"
+              onClick={handleBypassWithSpotifyApp}
+            >
+              <Play size={15} fill="#000" />
+              <span>{Capacitor.isNativePlatform() ? 'ABRIR EN APP DE SPOTIFY' : 'ABRIR BEAT EN PESTAÑA'}</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-spotify-popup-retry"
+              onClick={runSpotifyVerification}
+            >
+              <RefreshCw size={13} />
+              <span>Reintentar comprobación</span>
+            </button>
           </div>
         </div>
       )}
