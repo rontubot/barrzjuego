@@ -2,7 +2,21 @@
 import { getApiUrl } from './spotifyPlayer';
 
 export const CURRENT_CLIENT_VERSION = '3.1.0';
-export const CURRENT_BUILD_TIMESTAMP = '2026-10-11';
+export const CURRENT_BUILD_TIMESTAMP = '2026.10';
+
+function isVersionHigher(remote: string, current: string): boolean {
+  const rParts = remote.split('.').map(n => parseInt(n, 10) || 0);
+  const cParts = current.split('.').map(n => parseInt(n, 10) || 0);
+  const maxLen = Math.max(rParts.length, cParts.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const r = rParts[i] || 0;
+    const c = cParts[i] || 0;
+    if (r > c) return true;
+    if (r < c) return false;
+  }
+  return false;
+}
 
 export interface AppVersionInfo {
   version: string;
@@ -45,9 +59,12 @@ export async function checkForUpdates(): Promise<AppVersionInfo | null> {
       const serverVersion = data.version || '1.0.0';
       const serverBuild = data.build || '';
 
-      // Comparación de versiones
-      const isNewer = (serverVersion !== CURRENT_CLIENT_VERSION) || 
-                      (serverBuild && serverBuild !== CURRENT_BUILD_TIMESTAMP);
+      // Comparación real de versiones (SemVer): solo es más nueva si es estrictamente superior
+      const isVersionNewer = isVersionHigher(serverVersion, CURRENT_CLIENT_VERSION);
+      const isSameVersion = serverVersion === CURRENT_CLIENT_VERSION;
+      const isBuildNewer = Boolean(isSameVersion && serverBuild && serverBuild > CURRENT_BUILD_TIMESTAMP);
+
+      const isNewer = isVersionNewer || isBuildNewer;
 
       const info: AppVersionInfo = {
         version: serverVersion,
