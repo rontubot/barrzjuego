@@ -131,9 +131,10 @@ const fetchAndSaveSpotifyProfile = async (userId, accessToken) => {
       console.error(`❌ [SPOTIFY ME ERROR] HTTP ${meRes.status} para usuario ${userId}:`, errText);
       let errorResult = null;
       if (errText.includes('not registered')) {
+        console.warn(`[SPOTIFY DEV LOG] Usuario ${userId} no registrado en User Management de developer.spotify.com/dashboard.`);
         errorResult = {
           error: 'user_not_registered',
-          message: 'Tu cuenta de Spotify no está registrada en "User Management" de tu app en developer.spotify.com/dashboard'
+          message: 'No se pudo sincronizar la cuenta con Spotify'
         };
       } else {
         errorResult = {
