@@ -152,6 +152,8 @@ function App() {
         sessionStorage.removeItem('barrz_spotify_return_step');
         if (returnStep) {
           setGameState(returnStep as GameState);
+        } else if (urlParams.get('is_login') === 'true') {
+          setGameState('splash');
         }
       } else if (urlParams.get('spotify_error')) {
         const err = urlParams.get('spotify_error');

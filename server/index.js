@@ -728,12 +728,9 @@ app.post('/api/auth/save-game', async (req, res) => {
 
 // 8. SPOTIFY INTEGRATION — AUTHENTICATION & WEB PLAYBACK SDK ROUTING
 
-// Endpoint para iniciar la autenticación de Spotify
+// Endpoint para iniciar la autenticación de Spotify (Login o Vinculación)
 app.get('/api/spotify/login', (req, res) => {
-  const userToken = req.query.state; // JWT de la app para asociar con la cuenta
-  if (!userToken) {
-    return res.status(400).send('Falta token de usuario.');
-  }
+  const userToken = req.query.state || 'login'; // Si no viene, por defecto es flujo de login/registro
 
   const client_id = process.env.SPOTIFY_CLIENT_ID;
   const redirect_uri = process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:5000/api/spotify/callback';
@@ -766,7 +763,8 @@ app.get('/api/spotify/callback', async (req, res) => {
   const frontendUrl = process.env.FRONTEND_URL || 'https://barrzjuego.com';
   
   const isApp = (rawState || '').includes(':app');
-  const userToken = (rawState || '').replace(':app', '');
+  const cleanState = (rawState || '').replace(':app', '');
+  const isLoginFlow = !cleanState || cleanState === 'login';
 
   const sendResponse = (params) => {
     if (isApp) {
@@ -854,7 +852,7 @@ app.get('/api/spotify/callback', async (req, res) => {
             <svg class="logo" viewBox="0 0 24 24" fill="#1DB954">
               <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
             </svg>
-            <h2>¡Cuenta de Spotify Vinculada!</h2>
+            <h2>¡Spotify Conectado!</h2>
             <p>Regresando a Barrz Freestyle...</p>
             <a id="open-app-btn" class="btn" href="${appUrl}" onclick="window.location.replace('${appUrl}'); window.location.href='${deepLink}';">VOLVER A LA APP</a>
           </div>
@@ -899,7 +897,7 @@ app.get('/api/spotify/callback', async (req, res) => {
       <body>
         <div class="card">
           <h2>¡Spotify Conectado con Éxito!</h2>
-          <p>Sincronizando con la partida de BARRZ...</p>
+          <p>Sincronizando con Barrz Freestyle...</p>
         </div>
         <script>
           try {
@@ -918,7 +916,7 @@ app.get('/api/spotify/callback', async (req, res) => {
     `);
   };
 
-  if (error || !code || !userToken) {
+  if (error || !code) {
     console.error('⚠️ [SPOTIFY CALLBACK] Error o cancelación:', error);
     return sendResponse(`spotify_error=${encodeURIComponent(error || 'cancelled')}`);
   }
@@ -933,11 +931,8 @@ app.get('/api/spotify/callback', async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(userToken, JWT_SECRET);
-    const userId = decoded.id;
-
     console.log(`\n========================================`);
-    console.log(`📥 [SPOTIFY CALLBACK] Callback recibido para usuario ID: ${userId}`);
+    console.log(`📥 [SPOTIFY CALLBACK] Callback recibido (isLoginFlow: ${isLoginFlow})`);
 
     // Intercambiar el código de autorización por tokens
     const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
@@ -963,28 +958,135 @@ app.get('/api/spotify/callback', async (req, res) => {
     const { access_token, refresh_token, expires_in } = tokenData;
     const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-    // Guardar tokens de Spotify en la tabla de usuarios
-    await db.query(
-      `UPDATE users 
-       SET spotify_access_token = $1, 
-           spotify_refresh_token = $2, 
-           spotify_token_expires_at = $3
-       WHERE id = $4`,
-      [access_token, refresh_token, expiresAt, userId]
-    );
+    // Consultar información del perfil de Spotify (/v1/me)
+    const meRes = await fetch('https://api.spotify.com/v1/me', {
+      headers: { 'Authorization': `Bearer ${access_token}` }
+    });
+    
+    if (!meRes.ok) {
+      const meErr = await meRes.text();
+      console.error('❌ [SPOTIFY CALLBACK] Error al obtener perfil /v1/me:', meErr);
+      if (meErr.includes('not registered')) {
+        return sendResponse('spotify_error=user_not_registered');
+      }
+      return sendResponse('spotify_error=spotify_api_error');
+    }
 
-    // Obtener y guardar información del perfil del usuario de Spotify
-    const profile = await fetchAndSaveSpotifyProfile(userId, access_token);
-    console.log(`👤 [SPOTIFY PERFIL] Usuario: "${profile?.display_name}" | Email: "${profile?.email}" | Plan: "${(profile?.product || 'free').toUpperCase()}" | Premium: ${profile?.product === 'premium' ? '✅ SÍ' : '❌ NO (FREE)'}`);
+    const meData = await meRes.json();
+    const spotifyId = meData.id;
+    const spotifyDisplayName = meData.display_name || spotifyId || 'Usuario Spotify';
+    const spotifyEmail = meData.email || `${spotifyId}@spotify.barrzjuego.com`;
+    const spotifyProduct = meData.product || 'free';
+    const spotifyAvatarUrl = (meData.images && meData.images.length > 0) ? meData.images[0].url : null;
+
+    let targetUserId = null;
+    let finalUserToken = null;
+
+    if (isLoginFlow) {
+      // Flujo de Login o Registro
+      let userQuery = await db.query(
+        'SELECT * FROM users WHERE spotify_id = $1 OR email = $2',
+        [spotifyId, spotifyEmail]
+      );
+
+      let user;
+      if (userQuery.rows.length === 0) {
+        // Crear nuevo usuario
+        const cleanName = spotifyDisplayName.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 15) || 'Freestyler';
+        const defaultUsername = cleanName + '_' + Math.floor(100 + Math.random() * 900);
+
+        const insertRes = await db.query(
+          `INSERT INTO users (
+            email, username, avatar, avatar_type, custom_avatar_url,
+            spotify_id, spotify_access_token, spotify_refresh_token, spotify_token_expires_at,
+            spotify_display_name, spotify_email, spotify_product, spotify_avatar_url
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          RETURNING id, email, username`,
+          [
+            spotifyEmail, defaultUsername, '', 'preset', spotifyAvatarUrl,
+            spotifyId, access_token, refresh_token, expiresAt,
+            spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl
+          ]
+        );
+        user = insertRes.rows[0];
+        console.log(`✨ [SPOTIFY REGISTRO] Nuevo usuario registrado vía Spotify ID: ${user.id} (${spotifyEmail})`);
+      } else {
+        user = userQuery.rows[0];
+        // Actualizar datos del usuario existente
+        await db.query(
+          `UPDATE users 
+           SET spotify_id = COALESCE(spotify_id, $1),
+               spotify_access_token = $2, 
+               spotify_refresh_token = $3, 
+               spotify_token_expires_at = $4,
+               spotify_display_name = $5,
+               spotify_email = $6,
+               spotify_product = $7,
+               spotify_avatar_url = COALESCE(spotify_avatar_url, $8)
+           WHERE id = $9`,
+          [
+            spotifyId, access_token, refresh_token, expiresAt,
+            spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl,
+            user.id
+          ]
+        );
+        console.log(`🔑 [SPOTIFY LOGIN] Usuario existente logueado vía Spotify ID: ${user.id} (${user.email})`);
+      }
+
+      targetUserId = user.id;
+      finalUserToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    } else {
+      // Flujo de vinculación a una cuenta ya autenticada
+      try {
+        const decoded = jwt.verify(cleanState, JWT_SECRET);
+        targetUserId = decoded.id;
+        finalUserToken = cleanState;
+
+        await db.query(
+          `UPDATE users 
+           SET spotify_id = $1,
+               spotify_access_token = $2, 
+               spotify_refresh_token = $3, 
+               spotify_token_expires_at = $4,
+               spotify_display_name = $5,
+               spotify_email = $6,
+               spotify_product = $7,
+               spotify_avatar_url = $8
+           WHERE id = $9`,
+          [
+            spotifyId, access_token, refresh_token, expiresAt,
+            spotifyDisplayName, spotifyEmail, spotifyProduct, spotifyAvatarUrl,
+            targetUserId
+          ]
+        );
+        console.log(`🔗 [SPOTIFY VINCULACIÓN] Cuenta vinculada con éxito para usuario ID: ${targetUserId}`);
+      } catch (jwtErr) {
+        console.error('❌ [SPOTIFY CALLBACK] Error verificando JWT de usuario para vinculación:', jwtErr);
+        return sendResponse('spotify_error=invalid_user_token');
+      }
+    }
+
+    // Cachear en memoria
+    spotifyProfileMemoryCache.set(targetUserId, {
+      data: {
+        display_name: spotifyDisplayName,
+        email: spotifyEmail,
+        product: spotifyProduct,
+        avatar_url: spotifyAvatarUrl
+      },
+      timestamp: Date.now()
+    });
+
+    console.log(`👤 [SPOTIFY PERFIL] Usuario: "${spotifyDisplayName}" | Plan: "${spotifyProduct.toUpperCase()}" | Premium: ${spotifyProduct === 'premium' ? '✅ SÍ' : '❌ NO'}`);
     console.log(`========================================\n`);
 
-    // Redirigir o responder indicando éxito
-    return sendResponse(`spotify_success=true&token=${encodeURIComponent(userToken)}`);
+    return sendResponse(`spotify_success=true&is_login=${isLoginFlow}&token=${encodeURIComponent(finalUserToken)}`);
   } catch (err) {
     console.error('❌ [SPOTIFY CALLBACK] Error inesperado:', err);
     return sendResponse(`spotify_error=${encodeURIComponent(err.message || 'server_auth_error')}`);
   }
 });
+
 
 // Desvincular Spotify de la cuenta de usuario de forma explícita
 app.post('/api/spotify/unlink', async (req, res) => {

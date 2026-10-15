@@ -25,7 +25,37 @@ export interface SpotifyPlayerState {
 type StateListener = (state: SpotifyPlayerState) => void;
 
 /**
+ * Iniciar sesión o registrarse directamente con Spotify OAuth 2.0
+ */
+export async function loginWithSpotify() {
+  const isMobile = Capacitor.isNativePlatform();
+  const stateVal = isMobile ? 'login:app' : 'login';
+  const authUrl = getApiUrl(`/api/spotify/login?state=${encodeURIComponent(stateVal)}`);
+
+  console.log('🔑 [BARRZ Spotify] Iniciando Login Social con Spotify...', { isMobile });
+
+  if (!isMobile) {
+    const width = 500;
+    const height = 720;
+    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+    const popup = window.open(
+      authUrl,
+      'barrz_spotify_auth',
+      `width=${width},height=${height},left=${left},top=${top},status=no,toolbar=no,menubar=no`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      window.location.href = authUrl;
+    }
+  } else {
+    window.location.href = authUrl;
+  }
+}
+
+/**
  * Conectar cuenta de Spotify mediante OAuth 2.0
+
  * En móvil (Android/iOS) utiliza Chrome Custom Tabs / In-App Browser y deep link custom scheme.
  * En Web realiza la redirección estándar.
  */

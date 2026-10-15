@@ -672,16 +672,23 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             });
           }
         }, 1000);
-      } else if (beat.spotifyUrl) {
-        Browser.open({ url: beat.spotifyUrl, windowName: '_system' }).catch(() => {
-          window.open(beat.spotifyUrl, '_system');
-        });
       }
     } else {
-      if (beat.spotifyUrl) {
+      if (beat.spotifyUri) {
+        window.location.href = beat.spotifyUri;
+      } else if (beat.spotifyUrl) {
         window.open(beat.spotifyUrl, '_blank');
       }
     }
+  };
+
+  const handleBypassWithSpotifyApp = () => {
+    const beatToPlay = activeBeat || gameSettings?.initialBeat || BEATS_DECK[0];
+    if (beatToPlay) {
+      handleOpenInSpotify(beatToPlay);
+    }
+    setSpotifyVerificationState('success');
+    showToast('🟢 Beat abierto en Spotify. ¡A rapear!');
   };
 
   const togglePlayBeat = async (beat: BeatCard | null) => {
@@ -910,7 +917,32 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                 <div className="spotify-modal-buttons">
                   <button 
                     type="button" 
-                    className="btn-spotify-connect-action pulse-teal-anim"
+                    className="btn-spotify-play-direct pulse-teal-anim"
+                    onClick={handleBypassWithSpotifyApp}
+                    style={{
+                      background: 'linear-gradient(135deg, #1DB954 0%, #1ed760 100%)',
+                      color: '#000',
+                      fontWeight: 900,
+                      fontSize: '0.9rem',
+                      padding: '12px 18px',
+                      borderRadius: '30px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 18px rgba(29, 185, 84, 0.45)',
+                      width: '100%',
+                      marginBottom: '6px'
+                    }}
+                  >
+                    <Play size={18} fill="#000" />
+                    <span>ABRIR BEAT EN SPOTIFY Y CONTINUAR</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-spotify-connect-action"
                     onClick={handleConnectSpotifyFromGame}
                   >
                     <span>{spotifyDevModeError ? 'RECONECTAR SPOTIFY' : (spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'INICIAR SESIÓN EN SPOTIFY')}</span>
@@ -940,12 +972,37 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                   NO SE PUDO COMPROBAR SPOTIFY
                 </h2>
                 <p className="spotify-modal-desc" style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>
-                  No se pudo confirmar la reproducción completa del tema oficial en Spotify. Para garantizar que los beats se reproduzcan completos y generen regalías oficiales a los beatmakers, es necesario validar la sesión antes de comenzar la partida.
+                  No se pudo confirmar la reproducción en el reproductor web. Podés abrir el tema directamente en tu app de Spotify para escucharlo completo y sumar streams oficiales a los beatmakers.
                 </p>
                 <div className="spotify-modal-buttons">
                   <button 
                     type="button" 
-                    className="btn-spotify-connect-action pulse-teal-anim"
+                    className="btn-spotify-play-direct pulse-teal-anim"
+                    onClick={handleBypassWithSpotifyApp}
+                    style={{
+                      background: 'linear-gradient(135deg, #1DB954 0%, #1ed760 100%)',
+                      color: '#000',
+                      fontWeight: 900,
+                      fontSize: '0.9rem',
+                      padding: '12px 18px',
+                      borderRadius: '30px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 18px rgba(29, 185, 84, 0.45)',
+                      width: '100%',
+                      marginBottom: '6px'
+                    }}
+                  >
+                    <Play size={18} fill="#000" />
+                    <span>ABRIR BEAT EN SPOTIFY Y CONTINUAR</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-spotify-connect-action"
                     onClick={handleConnectSpotifyFromGame}
                   >
                     <span>VINCULAR / INICIAR SESIÓN</span>
@@ -1361,32 +1418,31 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               >
                                 <ChevronRight size={18} />
                               </button>
-                              {Capacitor.isNativePlatform() && (
-                                <button
-                                  type="button"
-                                  className="btn-spotify-app-direct pulse-teal-anim"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenInSpotify(activeBeat);
-                                  }}
-                                  style={{
-                                    background: '#1DB954',
-                                    color: '#000',
-                                    fontWeight: 900,
-                                    fontSize: '0.75rem',
-                                    border: 'none',
-                                    borderRadius: '20px',
-                                    padding: '6px 14px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    cursor: 'pointer'
-                                  }}
-                                >
-                                  <span>Abrir App</span>
-                                  <ExternalLink size={12} />
-                                </button>
-                              )}
+                              <button
+                                type="button"
+                                className="btn-spotify-app-direct pulse-teal-anim"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenInSpotify(activeBeat);
+                                }}
+                                style={{
+                                  background: '#1DB954',
+                                  color: '#000',
+                                  fontWeight: 900,
+                                  fontSize: '0.75rem',
+                                  border: 'none',
+                                  borderRadius: '20px',
+                                  padding: '6px 14px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Abrir tema oficial en Spotify"
+                              >
+                                <span>Abrir en Spotify</span>
+                                <ExternalLink size={12} />
+                              </button>
                             </div>
                           </div>
                         </div>
