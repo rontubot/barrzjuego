@@ -659,24 +659,51 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   const handleOpenInSpotify = (beat: BeatCard | null) => {
     if (!beat) return;
-    showToast('🟢 Transmitiendo a Spotify App...');
     setIsBeatPlaying(true);
+
     if (Capacitor.isNativePlatform()) {
+      showToast('🟢 Abriendo en Spotify App...');
+      const playStoreMarketUrl = 'market://details?id=com.spotify.music';
+      const playStoreWebUrl = 'https://play.google.com/store/apps/details?id=com.spotify.music';
+
       if (beat.spotifyUri) {
+        // Intentar abrir la app nativa instalada mediante esquema spotify:
         window.location.href = beat.spotifyUri;
-        setTimeout(() => {
-          if (beat.spotifyUrl) {
-            Browser.open({ url: beat.spotifyUrl, windowName: '_system' }).catch(() => {
-              window.open(beat.spotifyUrl, '_system');
+
+        // Fallback: Si tras 1.5s la app de Barrz sigue visible, la app oficial de Spotify no está instalada
+        const fallbackTimer = setTimeout(() => {
+          if (!document.hidden) {
+            console.info('ℹ️ [Spotify] App no detectada en móvil, abriendo Play Store...');
+            Browser.open({ url: playStoreMarketUrl, windowName: '_system' }).catch(() => {
+              Browser.open({ url: playStoreWebUrl, windowName: '_system' }).catch(() => {
+                if (beat.spotifyUrl) {
+                  window.open(beat.spotifyUrl, '_system');
+                }
+              });
             });
           }
-        }, 1000);
+        }, 1500);
+
+        const onVisibilityChange = () => {
+          if (document.hidden) {
+            clearTimeout(fallbackTimer);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+          }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+      } else if (beat.spotifyUrl) {
+        Browser.open({ url: beat.spotifyUrl, windowName: '_system' }).catch(() => {
+          window.open(beat.spotifyUrl, '_blank');
+        });
       }
     } else {
-      if (beat.spotifyUri) {
-        window.location.href = beat.spotifyUri;
-      } else if (beat.spotifyUrl) {
-        window.open(beat.spotifyUrl, '_blank');
+      // En Navegador Web: Abrir en OTRA PESTAÑA la URL oficial de Spotify
+      showToast('🟢 Abriendo tema en otra pestaña de Spotify...');
+      if (beat.spotifyUrl) {
+        window.open(beat.spotifyUrl, '_blank', 'noopener,noreferrer');
+      } else if (beat.spotifyUri) {
+        const trackId = beat.spotifyUri.replace('spotify:track:', '');
+        window.open(`https://open.spotify.com/track/${trackId}`, '_blank', 'noopener,noreferrer');
       }
     }
   };
@@ -687,7 +714,11 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       handleOpenInSpotify(beatToPlay);
     }
     setSpotifyVerificationState('success');
-    showToast('🟢 Beat abierto en Spotify. ¡A rapear!');
+    if (Capacitor.isNativePlatform()) {
+      showToast('🟢 Beat abierto en Spotify App. ¡A rapear!');
+    } else {
+      showToast('🟢 Beat abierto en pestaña de Spotify. ¡A rapear!');
+    }
   };
 
   const togglePlayBeat = async (beat: BeatCard | null) => {
@@ -927,7 +958,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     }}
                   >
                     <Play size={18} fill="#000" />
-                    <span>ABRIR BEAT EN SPOTIFY Y CONTINUAR</span>
+                    <span>{Capacitor.isNativePlatform() ? 'ABRIR EN APP DE SPOTIFY Y CONTINUAR' : 'ABRIR BEAT EN OTRA PESTAÑA Y CONTINUAR'}</span>
                   </button>
                   <button 
                     type="button" 
@@ -987,7 +1018,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                     }}
                   >
                     <Play size={18} fill="#000" />
-                    <span>ABRIR BEAT EN SPOTIFY Y CONTINUAR</span>
+                    <span>{Capacitor.isNativePlatform() ? 'ABRIR EN APP DE SPOTIFY Y CONTINUAR' : 'ABRIR BEAT EN OTRA PESTAÑA Y CONTINUAR'}</span>
                   </button>
                   <button 
                     type="button" 
@@ -1427,9 +1458,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                   gap: '6px',
                                   cursor: 'pointer'
                                 }}
-                                title="Abrir tema oficial en Spotify"
+                                title={Capacitor.isNativePlatform() ? "Abrir en Spotify App" : "Abrir tema en otra pestaña"}
                               >
-                                <span>Abrir en Spotify</span>
+                                <span>{Capacitor.isNativePlatform() ? 'Abrir App' : 'Abrir en pestaña'}</span>
                                 <ExternalLink size={12} />
                               </button>
                             </div>
