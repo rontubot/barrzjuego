@@ -749,20 +749,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
   };
 
-  const handleBypassWithSpotifyApp = () => {
-    const beatToPlay = activeBeat || gameSettings?.initialBeat || BEATS_DECK[0];
-    if (beatToPlay) {
-      handleOpenInSpotify(beatToPlay);
-    }
-    setSpotifyVerificationState('success');
-    setShowSpotifyWarningModal(false);
-    if (Capacitor.isNativePlatform()) {
-      showToast('🟢 Beat abierto en Spotify App. ¡A rapear!');
-    } else {
-      showToast('🟢 Beat abierto en pestaña de Spotify. ¡A rapear!');
-    }
-  };
-
   const togglePlayBeat = async (beat: BeatCard | null) => {
     if (!beat) return;
 
@@ -969,7 +955,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             <p className="spotify-warning-popup-desc">
               {spotifyVerificationState === 'verifying'
                 ? verificationProgressMsg
-                : 'No se detectó una sesión activa en Spotify o tu cuenta necesita reconexión. Podés reconectar tu cuenta o abrir el beat directamente en Spotify para disfrutar de la instrumental completa y sumar reproducciones oficiales a los beatmakers.'}
+                : 'No se detectó una sesión activa en Spotify o tu cuenta necesita reconexión. Conectá tu cuenta para disfrutar de las instrumentales completas y sumar reproducciones oficiales a los beatmakers.'}
             </p>
           </div>
 
@@ -980,15 +966,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
               onClick={handleConnectSpotifyFromGame}
             >
               <span>{spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'VINCULAR / CONECTAR SPOTIFY'}</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-spotify-popup-play"
-              onClick={handleBypassWithSpotifyApp}
-            >
-              <Play size={15} fill="#000" />
-              <span>{Capacitor.isNativePlatform() ? 'ABRIR EN APP DE SPOTIFY' : 'ABRIR BEAT EN PESTAÑA'}</span>
             </button>
 
             <button
