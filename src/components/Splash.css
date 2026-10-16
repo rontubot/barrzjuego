@@ -38,19 +38,18 @@
   height: auto;
   margin: 0 auto 10px auto;
   display: block;
-  transform: rotate(-2deg);
+  transform: rotate(-2deg) translateZ(0);
   filter: drop-shadow(0 0 15px rgba(255, 0, 127, 0.5)) drop-shadow(2px 2px 2px var(--bg-darker));
   animation: logo-float 3.5s infinite alternate ease-in-out;
+  will-change: transform;
 }
 
 @keyframes logo-float {
   0% {
-    transform: rotate(-2deg) translateY(0px) scale(1);
-    filter: drop-shadow(0 0 12px rgba(255, 0, 127, 0.4)) drop-shadow(2px 2px 2px var(--bg-darker));
+    transform: rotate(-2deg) translate3d(0, 0, 0) scale(1);
   }
   100% {
-    transform: rotate(-1.5deg) translateY(-8px) scale(1.02);
-    filter: drop-shadow(0 0 22px rgba(255, 0, 127, 0.7)) drop-shadow(3px 3px 3px var(--bg-darker));
+    transform: rotate(-1.5deg) translate3d(0, -6px, 0) scale(1.02);
   }
 }
 
@@ -499,69 +498,73 @@
 }
 
 .fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
+  animation: fadeIn 0.35s ease-out forwards;
+  will-change: opacity, transform;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translate3d(0, 10px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
 /* Animación de lanzamiento: los botones caen hacia abajo */
 .menu-section.launching {
-  animation: launchExit 0.65s cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
+  animation: launchExit 0.55s cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
   pointer-events: none;
+  will-change: opacity, transform;
 }
 
 @keyframes launchExit {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   30% {
     opacity: 1;
-    transform: translateY(-12px) scale(1.03);
+    transform: translate3d(0, -10px, 0) scale(1.02);
   }
   100% {
     opacity: 0;
-    transform: translateY(120px) scale(0.9);
+    transform: translate3d(0, 100px, 0) scale(0.92);
   }
 }
 
 /* Animación de entrada del logo cuando se lanza */
 .logo-section.launching-logo {
-  animation: logoZoom 0.65s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  animation: logoZoom 0.55s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+  will-change: opacity, transform;
 }
 
 @keyframes logoZoom {
   0% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1) translate3d(0, 0, 0);
   }
   100% {
     opacity: 0;
-    transform: scale(1.15) translateY(-30px);
+    transform: scale(1.12) translate3d(0, -25px, 0);
   }
 }
 
 /* Animación de regreso desde el juego: los elementos caen desde arriba */
 .return-from-game {
-  animation: returnFromGame 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: returnFromGame 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, transform;
 }
 
 @keyframes returnFromGame {
   from {
     opacity: 0;
-    transform: translateY(-60px) scale(0.97);
+    transform: translate3d(0, -50px, 0) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }

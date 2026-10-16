@@ -48,6 +48,9 @@ public class MainActivity extends BridgeActivity {
             WebView webView = this.bridge.getWebView();
             WebSettings settings = webView.getSettings();
             
+            // Habilitar aceleración de renderizado por hardware en WebView
+            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+
             // Permitir almacenamiento y ventanas para OAuth y Spotify
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);

@@ -44,6 +44,21 @@ body {
   overflow-x: hidden;
   min-height: 100vh;
   min-height: 100dvh;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Capa de fondo fija aislada en GPU para evitar repintados continuos al hacer scroll o animaciones */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background-image: 
     radial-gradient(circle at 10% 20%, rgba(255, 0, 127, 0.08) 0%, transparent 45%),
     radial-gradient(circle at 90% 80%, rgba(0, 245, 171, 0.08) 0%, transparent 45%),
@@ -51,7 +66,10 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  pointer-events: none;
+  z-index: -1;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Custom Scrollbar */
@@ -74,13 +92,14 @@ body {
   text-align: center !important;
 }
 
-/* Glassmorphism Classes */
+/* Glassmorphism Classes optimizado con capa de composición GPU */
 .glass-panel {
   background: var(--card-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
+  transform: translateZ(0);
 }
 
 .glow-pink {
@@ -106,22 +125,23 @@ body {
   letter-spacing: 1px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.25s ease, box-shadow 0.25s ease;
   box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  transform: translateZ(0);
 }
 
 .btn-neon-pink:hover {
   background: var(--neon-pink);
   box-shadow: var(--shadow-neon-pink);
-  transform: translateY(-2px);
+  transform: translateY(-2px) translateZ(0);
 }
 
 .btn-neon-pink:active {
-  transform: translateY(1px);
+  transform: translateY(1px) translateZ(0);
 }
 
 .btn-neon-teal {
@@ -136,19 +156,20 @@ body {
   letter-spacing: 1px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.25s ease, box-shadow 0.25s ease;
   box-shadow: 0 0 10px rgba(0, 245, 171, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  transform: translateZ(0);
 }
 
 .btn-neon-teal:hover {
   background: var(--neon-teal);
   color: var(--bg-darker);
   box-shadow: var(--shadow-neon-teal);
-  transform: translateY(-2px);
+  transform: translateY(-2px) translateZ(0);
 }
 
 .btn-neon-teal:hover svg {
@@ -156,37 +177,43 @@ body {
 }
 
 .btn-neon-teal:active {
-  transform: translateY(1px);
+  transform: translateY(1px) translateZ(0);
 }
 
-/* Animations */
+/* Animations optimizadas para el hilo de composición de la GPU (sin repintado de box-shadow continuo) */
 @keyframes pulse-pink {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(255, 0, 127, 0.25), inset 0 0 10px rgba(255, 0, 127, 0.1);
+    transform: scale(1) translateZ(0);
+    filter: brightness(1) drop-shadow(0 0 8px rgba(255, 0, 127, 0.3));
   }
   50% {
-    box-shadow: 0 0 30px rgba(255, 0, 127, 0.6), inset 0 0 15px rgba(255, 0, 127, 0.3);
+    transform: scale(1.025) translateZ(0);
+    filter: brightness(1.15) drop-shadow(0 0 16px rgba(255, 0, 127, 0.6));
   }
 }
 
 @keyframes pulse-teal {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(0, 245, 171, 0.25), inset 0 0 10px rgba(0, 245, 171, 0.1);
+    transform: scale(1) translateZ(0);
+    filter: brightness(1) drop-shadow(0 0 8px rgba(0, 245, 171, 0.3));
   }
   50% {
-    box-shadow: 0 0 30px rgba(0, 245, 171, 0.6), inset 0 0 15px rgba(0, 245, 171, 0.3);
+    transform: scale(1.025) translateZ(0);
+    filter: brightness(1.15) drop-shadow(0 0 16px rgba(0, 245, 171, 0.6));
   }
 }
 
 .pulse-pink-anim {
   animation: pulse-pink 2s infinite ease-in-out;
+  will-change: transform;
 }
 
 .pulse-teal-anim {
   animation: pulse-teal 2s infinite ease-in-out;
+  will-change: transform;
 }
 
-/* Spraypaint grunge effect */
+/* Spraypaint grunge effect con capa aislada */
 .grunge-overlay {
   position: absolute;
   top: 0;
@@ -198,28 +225,34 @@ body {
   background-size: 8px 8px, 16px 16px;
   pointer-events: none;
   z-index: 1;
+  transform: translateZ(0);
 }
 
-/* Card 3D Flip Mechanics */
+/* Card 3D Flip Mechanics acelerada por GPU */
 .card-container-3d {
   perspective: 1200px;
+  -webkit-perspective: 1200px;
   width: 100%;
   max-width: 320px;
   height: 460px;
   margin: 0 auto;
+  transform: translateZ(0);
 }
 
 .card-inner-3d {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   cursor: pointer;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .card-inner-3d.flipped {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(0);
 }
 
 .card-face {
@@ -233,6 +266,8 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .card-back {
@@ -242,11 +277,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform: rotateY(0deg);
+  transform: rotateY(0deg) translateZ(0);
 }
 
 .card-front {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(0);
   background: #11131c;
   background-image: 
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.03) 0%, transparent 60%);

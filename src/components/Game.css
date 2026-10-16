@@ -12,38 +12,41 @@
   overflow-x: hidden;
   z-index: 2;
   box-sizing: border-box;
-  animation: gameEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: gameEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateZ(0);
+  will-change: transform, opacity;
 }
 
 @keyframes gameEnter {
   from {
     opacity: 0;
-    transform: translateY(60px) scale(0.97);
+    transform: translate3d(0, 40px, 0) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 /* Animación de salida del juego (volver al menú) */
 .game-container.exiting {
-  animation: gameExit 0.55s cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
+  animation: gameExit 0.45s cubic-bezier(0.4, 0, 0.8, 0.2) forwards;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 @keyframes gameExit {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   25% {
     opacity: 1;
-    transform: translateY(-10px) scale(1.02);
+    transform: translate3d(0, -8px, 0) scale(1.01);
   }
   100% {
     opacity: 0;
-    transform: translateY(100px) scale(0.93);
+    transform: translate3d(0, 70px, 0) scale(0.95);
   }
 }
 
@@ -209,20 +212,23 @@
   justify-content: center;
   align-items: center;
   perspective: 1200px;
-  animation: cardEntry 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  -webkit-perspective: 1200px;
+  animation: cardEntry 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform: translateZ(0);
+  will-change: transform, opacity;
 }
 
 @keyframes cardEntry {
   0% {
     opacity: 0;
-    transform: translateY(80px) scale(0.8) rotate(-4deg);
+    transform: translate3d(0, 60px, 0) scale(0.85) rotate(-3deg);
   }
-  60% {
-    transform: translateY(-10px) scale(1.02) rotate(2deg);
+  65% {
+    transform: translate3d(0, -6px, 0) scale(1.01) rotate(1deg);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1) rotate(0deg);
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
   }
 }
 
@@ -231,10 +237,14 @@
   top: 15px;
   left: 0;
   width: 100%;
-  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, filter 0.6s ease;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.45s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .carousel-card-tag {
@@ -245,7 +255,8 @@
   text-transform: uppercase;
   margin-bottom: 12px;
   text-align: center;
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  transform: translateZ(0);
 }
 
 /* Front Card */
@@ -253,16 +264,14 @@
   z-index: 10;
   transform: translate3d(0, 0, 0) scale(1);
   opacity: 1;
-  filter: blur(0);
   pointer-events: auto;
 }
 
-/* Back Card (Floating behind) */
+/* Back Card (Floating behind sin filtro blur pesado) */
 .carousel-card-wrapper.back-card {
   z-index: 5;
-  transform: translate3d(0, -35px, -100px) scale(0.84);
-  opacity: 0.45;
-  filter: blur(2px);
+  transform: translate3d(0, -35px, -80px) scale(0.85);
+  opacity: 0.42;
   cursor: pointer;
 }
 
@@ -275,25 +284,27 @@
   transform: scale(0.9);
 }
 
-/* Float Animations for children */
+/* Float Animations for children aceleradas por GPU */
 .carousel-card-wrapper.front-card .card-container-3d,
 .carousel-card-wrapper.front-card .deck-pile {
   animation: float-front 4s infinite alternate ease-in-out;
+  will-change: transform;
 }
 
 .carousel-card-wrapper.back-card .card-container-3d,
 .carousel-card-wrapper.back-card .deck-pile {
   animation: float-back 4s infinite alternate ease-in-out;
+  will-change: transform;
 }
 
 @keyframes float-front {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-8px); }
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, -6px, 0); }
 }
 
 @keyframes float-back {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-4px); }
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(0, -4px, 0); }
 }
 
 /* Card Back Logo styling */
