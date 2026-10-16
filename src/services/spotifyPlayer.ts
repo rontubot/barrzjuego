@@ -1,5 +1,5 @@
-// Spotify Web Playback SDK & API Service for BARRZ
 import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 declare global {
   interface Window {
@@ -49,15 +49,17 @@ export async function loginWithSpotify() {
       window.location.href = authUrl;
     }
   } else {
-    window.location.href = authUrl;
+    // En Móvil: Abrir en Chrome Custom Tabs / Navegador del sistema seguro.
+    // Esto permite abrir la App oficial de Spotify de inmediato si está instalada,
+    // o acceder a Chrome con las cuentas de Google vinculadas de forma 100% segura y verificada.
+    await Browser.open({ url: authUrl, windowName: '_system' });
   }
 }
 
 /**
  * Conectar cuenta de Spotify mediante OAuth 2.0
-
- * En móvil (Android/iOS) utiliza Chrome Custom Tabs / In-App Browser y deep link custom scheme.
- * En Web realiza la redirección estándar.
+ * En móvil (Android/iOS) utiliza Chrome Custom Tabs / Navegador del sistema y deep link custom scheme.
+ * En Web realiza la redirección estándar o popup.
  */
 export async function connectSpotify(returnStep?: string) {
   const token = localStorage.getItem('barrz_token');
@@ -91,8 +93,8 @@ export async function connectSpotify(returnStep?: string) {
       window.location.href = authUrl;
     }
   } else {
-    // En Móvil: Dentro del WebView para que CookieManager capture las cookies
-    window.location.href = authUrl;
+    // En Móvil: Abrir en Chrome Custom Tabs / Navegador del sistema seguro
+    await Browser.open({ url: authUrl, windowName: '_system' });
   }
 }
 

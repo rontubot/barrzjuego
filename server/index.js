@@ -777,7 +777,7 @@ app.get('/api/spotify/callback', async (req, res) => {
         <html>
         <head>
           <meta charset="utf-8">
-          <meta http-equiv="refresh" content="0;url=${appUrl}">
+          <meta http-equiv="refresh" content="0;url=${deepLink}">
           <title>BARRZ Freestyle - Spotify</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
@@ -833,16 +833,15 @@ app.get('/api/spotify/callback', async (req, res) => {
             }
           </style>
           <script>
-            var target = (window.location.href.indexOf('localhost') !== -1) ? "${localUrl}" : "${appUrl}";
             try {
-              window.location.replace(target);
-            } catch(e) {
-              window.location.href = target;
-            }
+              window.location.href = "${deepLink}";
+            } catch(e) {}
             setTimeout(function() {
               try {
-                window.location.href = "${deepLink}";
+                window.location.replace("${deepLink}");
               } catch(e) {}
+            }, 100);
+            setTimeout(function() {
               var btn = document.getElementById('open-app-btn');
               if (btn) btn.style.display = 'inline-block';
             }, 800);
@@ -855,7 +854,7 @@ app.get('/api/spotify/callback', async (req, res) => {
             </svg>
             <h2>¡Spotify Conectado!</h2>
             <p>Regresando a Barrz Freestyle...</p>
-            <a id="open-app-btn" class="btn" href="${appUrl}" onclick="window.location.replace('${appUrl}'); window.location.href='${deepLink}';">VOLVER A LA APP</a>
+            <a id="open-app-btn" class="btn" href="${deepLink}">VOLVER A LA APP</a>
           </div>
         </body>
         </html>

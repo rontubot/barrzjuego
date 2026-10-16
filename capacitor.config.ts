@@ -9,25 +9,13 @@ const config: CapacitorConfig = {
     cleartext: true,
     androidScheme: 'https',
     allowNavigation: [
-      'accounts.spotify.com',
-      'open.spotify.com',
-      'api.spotify.com',
       'barrzjuego.com',
       '*.barrzjuego.com',
-      '*.spotify.com',
+      'open.spotify.com',
+      'api.spotify.com',
       '*.scdn.co',
       '*.spotifycdn.com',
-      'spclient.wg.spotify.com',
-      '*.spotify.net',
-      'accounts.google.com',
-      '*.google.com',
-      '*.googleusercontent.com',
-      '*.gstatic.com',
-      'apis.google.com',
-      'appleid.apple.com',
-      '*.apple.com',
-      '*.facebook.com',
-      '*.fbcdn.net'
+      'spclient.wg.spotify.com'
     ]
   },
   plugins: {
