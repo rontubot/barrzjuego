@@ -5,7 +5,7 @@ import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
-import { spotifyPlayer, connectSpotify, checkSpotifyStatus } from '../services/spotifyPlayer';
+import { spotifyPlayer, checkSpotifyStatus } from '../services/spotifyPlayer';
 import { useI18n } from '../i18n/LanguageContext';
 import './Game.css';
 
@@ -140,15 +140,17 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   // Estados para la Pantalla de Carga y Verificación Pre-Partida de Spotify
-  const [spotifyVerificationState, setSpotifyVerificationState] = useState<'verifying' | 'sample_detected' | 'failed' | 'success'>('verifying');
+  const [spotifyVerificationState, setSpotifyVerificationState] = useState<'verifying' | 'sample_detected' | 'failed' | 'success'>(() => {
+    const isLinked = typeof window !== 'undefined' && localStorage.getItem('barrz_spotify_linked') === 'true';
+    return isLinked ? 'verifying' : 'sample_detected';
+  });
   const [verificationProgressMsg, setVerificationProgressMsg] = useState('Verificando persistencia de cuenta...');
-  const [spotifyUserData, setSpotifyUserData] = useState<any>(null);
-  const verifierControllerRef = useRef<any>(null);
   const verifierTimeoutRef = useRef<any>(null);
-  const verifierContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Advertencia emergente no bloqueante y recuadro de alerta de Spotify
-  const [hasSpotifyWarning, setHasSpotifyWarning] = useState(false);
+  const [hasSpotifyWarning, setHasSpotifyWarning] = useState(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('barrz_spotify_linked') !== 'true';
+  });
   const [showSpotifyWarningModal, setShowSpotifyWarningModal] = useState(false);
   const warningFadeTimerRef = useRef<any>(null);
 
@@ -206,34 +208,11 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Estado de reproducción del beat
   const [isBeatPlaying, setIsBeatPlaying] = useState(false);
 
-  const handleConnectSpotifyFromGame = async () => {
-    try {
-      await connectSpotify('game');
-    } catch (err: any) {
-      alert(err.message || t.auth.spotify_need_auth);
-    }
-  };
-
   const runSpotifyVerification = () => {
     if (verifierTimeoutRef.current) {
       clearTimeout(verifierTimeoutRef.current);
       verifierTimeoutRef.current = null;
     }
-
-    if (verifierControllerRef.current) {
-      try {
-        verifierControllerRef.current.pause();
-        verifierControllerRef.current.destroy();
-      } catch {}
-      verifierControllerRef.current = null;
-    }
-
-    if (verifierContainerRef.current) {
-      verifierContainerRef.current.innerHTML = '<div id="spotify-verifier-target"></div>';
-    }
-
-    setSpotifyVerificationState('verifying');
-    setVerificationProgressMsg('Comprobando cuenta vinculada...');
 
     const isLinked = localStorage.getItem('barrz_spotify_linked') === 'true';
     if (!isLinked) {
@@ -242,7 +221,8 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       return;
     }
 
-    setVerificationProgressMsg('Verificando reproductor de audio...');
+    setSpotifyVerificationState('verifying');
+    setVerificationProgressMsg('Comprobando cuenta vinculada...');
 
     let verificationResolved = false;
 
@@ -255,14 +235,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
         verifierTimeoutRef.current = null;
       }
 
-      if (verifierControllerRef.current) {
-        try {
-          verifierControllerRef.current.pause();
-          verifierControllerRef.current.destroy();
-        } catch {}
-        verifierControllerRef.current = null;
-      }
-
       if (isFullTrack) {
         setVerificationProgressMsg('¡Reproducción completa verificada!');
         setTimeout(() => {
@@ -273,116 +245,39 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             clearTimeout(warningFadeTimerRef.current);
             warningFadeTimerRef.current = null;
           }
-        }, 400);
+        }, 300);
       } else {
         setSpotifyVerificationState('sample_detected');
         triggerWarningNotice();
       }
     };
 
+    // Timeout de seguridad rápido para evitar bloqueos
+    verifierTimeoutRef.current = setTimeout(() => {
+      if (!verificationResolved) {
+        onVerified(false);
+      }
+    }, 3500);
+
     // Comprobar estado en servidor en segundo plano
     checkSpotifyStatus().then((res) => {
       console.log('🔍 [BARRZ Game] checkSpotifyStatus:', res);
-      if (res && res.spotify_error === 'user_not_registered') {
-        console.warn('🛠️ [DEV LOG] Usuario no registrado en Spotify Developer Dashboard (User Management).');
-        onVerified(false);
-      } else if (res && res.linked === false) {
+      if (res && (res.spotify_error || res.linked === false)) {
+        console.warn('🛠️ [DEV LOG] Sesión de Spotify no reconocida o API en modo desarrollo:', res.spotify_error);
         onVerified(false);
       } else if (res && res.spotify_user) {
-        setSpotifyUserData(res.spotify_user);
-        if (res.spotify_user.product === 'free') {
-          console.warn('⚠️ [BARRZ Game] Cuenta Free de Spotify detectada. Solo emitirá muestra de 30s.');
+        if (res.spotify_user.product === 'premium') {
+          onVerified(true);
+        } else {
+          console.warn('⚠️ [BARRZ Game] Cuenta Free de Spotify detectada.');
           onVerified(false);
         }
-      }
-    }).catch(() => {});
-
-    // Escuchar mensajes postMessage directos de Spotify embed
-    const onWindowMessage = (e: MessageEvent) => {
-      if (!e.origin || !e.origin.includes('spotify.com')) return;
-      try {
-        let payload = e.data;
-        if (typeof payload === 'string' && payload.startsWith('{')) {
-          payload = JSON.parse(payload);
-        }
-        const dur = payload?.data?.duration || payload?.payload?.duration || payload?.duration;
-        if (typeof dur === 'number' && dur > 0) {
-          if (dur > 35000) {
-            onVerified(true);
-          } else {
-            onVerified(false);
-          }
-        }
-      } catch {}
-    };
-    window.addEventListener('message', onWindowMessage);
-
-    // Timeout de seguridad: si tras 8.5 segundos no hay confirmación de tema completo
-    verifierTimeoutRef.current = setTimeout(() => {
-      if (!verificationResolved) {
-        window.removeEventListener('message', onWindowMessage);
+      } else {
         onVerified(false);
       }
-    }, 8500);
-
-    // Inicializar Spotify Iframe API si está disponible
-    const testUri = activeBeat?.spotifyUri || 'spotify:track:1rX4oWJVtGturbpUriWRI0';
-
-    const mountVerifierController = (IFrameAPI: any) => {
-      const target = document.getElementById('spotify-verifier-target');
-      if (!target || verificationResolved) return;
-
-      try {
-        IFrameAPI.createController(target, { uri: testUri, width: 250, height: 250 }, (controller: any) => {
-          verifierControllerRef.current = controller;
-
-          controller.addListener('ready', () => {
-            if (verificationResolved) return;
-            setVerificationProgressMsg('Comprobando duración de pista...');
-            try {
-              controller.play();
-            } catch {}
-          });
-
-          controller.addListener('playback_update', (e: any) => {
-            const duration = e?.data?.duration;
-            if (typeof duration === 'number' && duration > 0) {
-              try { controller.pause(); } catch {}
-              if (duration > 35000) {
-                onVerified(true);
-              } else {
-                onVerified(false);
-              }
-            }
-          });
-
-          controller.addListener('playback_started', () => {
-            try { controller.pause(); } catch {}
-          });
-
-          controller.addListener('error', () => {
-            onVerified(false);
-          });
-        });
-      } catch (err) {
-        console.warn('Error montando controlador de prueba Spotify:', err);
-      }
-    };
-
-    if ((window as any).SpotifyIframeApi) {
-      mountVerifierController((window as any).SpotifyIframeApi);
-    } else {
-      (window as any).onSpotifyIframeApiReady = (IFrameAPI: any) => {
-        mountVerifierController(IFrameAPI);
-      };
-      if (!document.getElementById('spotify-iframeapi-script')) {
-        const s = document.createElement('script');
-        s.id = 'spotify-iframeapi-script';
-        s.src = 'https://open.spotify.com/embed/iframe-api/v1';
-        s.async = true;
-        document.head.appendChild(s);
-      }
-    }
+    }).catch(() => {
+      onVerified(false);
+    });
   };
 
   // Escuchar cambios de estado de Spotify y ejecutar verificación
@@ -425,12 +320,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       }
       if (verifierTimeoutRef.current) {
         clearTimeout(verifierTimeoutRef.current);
-      }
-      if (verifierControllerRef.current) {
-        try {
-          verifierControllerRef.current.pause();
-          verifierControllerRef.current.destroy();
-        } catch {}
       }
       stopBeatAudio();
       spotifyPlayer.pauseTrack();
@@ -955,47 +844,36 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             <p className="spotify-warning-popup-desc">
               {spotifyVerificationState === 'verifying'
                 ? verificationProgressMsg
-                : 'No se detectó una sesión activa en Spotify o tu cuenta necesita reconexión. Conectá tu cuenta para disfrutar de las instrumentales completas y sumar reproducciones oficiales a los beatmakers.'}
+                : 'La API de Spotify se encuentra en modo desarrollo o no se detectó una sesión activa en este dispositivo. Para escuchar el tema completo y sumar regalías a los beatmakers, colócalo directamente desde tu app de Spotify.'}
             </p>
           </div>
 
           <div className="spotify-warning-popup-actions">
-            <button
-              type="button"
-              className="btn-spotify-popup-connect pulse-teal-anim"
-              onClick={handleConnectSpotifyFromGame}
-            >
-              <span>{spotifyUserData?.product === 'free' ? 'VINCULAR CUENTA PREMIUM' : 'VINCULAR / CONECTAR SPOTIFY'}</span>
-            </button>
+            {activeBeat && (
+              <button
+                type="button"
+                className="btn-spotify-popup-connect pulse-teal-anim"
+                onClick={() => {
+                  handleOpenInSpotify(activeBeat);
+                  setShowSpotifyWarningModal(false);
+                }}
+                style={{ background: '#1DB954', color: '#000', fontWeight: 900 }}
+              >
+                <Play size={16} fill="currentColor" />
+                <span>COLOCAR TEMA EN SPOTIFY</span>
+              </button>
+            )}
 
             <button
               type="button"
               className="btn-spotify-popup-retry"
-              onClick={runSpotifyVerification}
+              onClick={() => setShowSpotifyWarningModal(false)}
             >
-              <RefreshCw size={13} />
-              <span>Reintentar comprobación</span>
+              <span>Entendido</span>
             </button>
           </div>
         </div>
       )}
-
-      {/* CONTENEDOR SILENCIOSO INVISIBLE PARA TEST DE REPRODUCCIÓN */}
-      <div 
-        ref={verifierContainerRef}
-        style={{
-          position: 'fixed',
-          left: '-9999px',
-          top: '-9999px',
-          width: '300px',
-          height: '300px',
-          opacity: 0,
-          pointerEvents: 'none',
-          zIndex: -9999
-        }}
-      >
-        <div id="spotify-verifier-target" />
-      </div>
 
       {debugToast && (
         <div style={{
@@ -1295,106 +1173,185 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               <span>INST. BEAT ({activeBeat.bpm} BPM)</span>
                             </div>
 
-                            <div className="spotify-embed-card-container fade-in">
-                              <iframe
-                                title={activeBeat.name}
-                                src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
-                                width="100%"
-                                height="100%"
-                                frameBorder="0"
-                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                loading="lazy"
-                                className="spotify-official-embed-iframe"
-                              />
-                            </div>
+                            {/* REPRODUCCIÓN SPOTIFY: CONDICIONAL SEGÚN ESTADO DE SESIÓN */}
+                            {spotifyVerificationState === 'success' ? (
+                              <>
+                                {/* SESIÓN VERIFICADA: REPRODUCTOR EMBED OFICIAL */}
+                                <div className="spotify-embed-card-container fade-in">
+                                  <iframe
+                                    title={activeBeat.name}
+                                    src={`https://open.spotify.com/embed/track/${activeBeat.spotifyUri?.replace('spotify:track:', '') || activeBeat.spotifyUrl?.split('/track/')[1]?.split('?')[0]}?utm_source=generator&theme=0`}
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                    loading="lazy"
+                                    className="spotify-official-embed-iframe"
+                                  />
+                                </div>
 
-                            <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', zIndex: 10, position: 'relative' }}>
-                              <button
-                                type="button"
-                                className="spotify-btn-sub"
-                                onClick={handlePrevBeat}
-                                title={t.game.prev_beat}
-                                style={{
-                                  background: 'rgba(255, 255, 255, 0.08)',
-                                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                                  color: '#fff',
-                                  borderRadius: '50%',
-                                  width: '36px',
-                                  height: '36px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <ChevronLeft size={18} />
-                              </button>
-                              <button
-                                type="button"
-                                className="spotify-btn-sub"
-                                onClick={() => togglePlayBeat(activeBeat)}
-                                title={isBeatPlaying ? "Pausar beat" : "Reproducir beat"}
-                                style={{
-                                  background: isBeatPlaying ? 'rgba(29, 185, 84, 0.25)' : 'rgba(255, 255, 255, 0.08)',
-                                  border: `1px solid ${isBeatPlaying ? '#1DB954' : 'rgba(255, 255, 255, 0.15)'}`,
-                                  color: isBeatPlaying ? '#1DB954' : '#fff',
-                                  borderRadius: '50%',
-                                  width: '36px',
-                                  height: '36px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {isBeatPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
-                              </button>
-                              <button
-                                type="button"
-                                className="spotify-btn-sub"
-                                onClick={handleNextBeat}
-                                title={t.game.next_beat}
-                                style={{
-                                  background: 'rgba(255, 255, 255, 0.08)',
-                                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                                  color: '#fff',
-                                  borderRadius: '50%',
-                                  width: '36px',
-                                  height: '36px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                <ChevronRight size={18} />
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-spotify-app-direct pulse-teal-anim"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenInSpotify(activeBeat);
-                                }}
-                                style={{
-                                  background: '#1DB954',
-                                  color: '#000',
-                                  fontWeight: 900,
-                                  fontSize: '0.75rem',
-                                  border: 'none',
-                                  borderRadius: '20px',
-                                  padding: '6px 14px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  cursor: 'pointer'
-                                }}
-                                title={Capacitor.isNativePlatform() ? "Abrir en Spotify App" : "Abrir tema en otra pestaña"}
-                              >
-                                <span>{Capacitor.isNativePlatform() ? 'Abrir App' : 'Abrir en pestaña'}</span>
-                                <ExternalLink size={12} />
-                              </button>
-                            </div>
+                                <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', zIndex: 10, position: 'relative' }}>
+                                  <button
+                                    type="button"
+                                    className="spotify-btn-sub"
+                                    onClick={handlePrevBeat}
+                                    title={t.game.prev_beat}
+                                    style={{
+                                      background: 'rgba(255, 255, 255, 0.08)',
+                                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                                      color: '#fff',
+                                      borderRadius: '50%',
+                                      width: '36px',
+                                      height: '36px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <ChevronLeft size={18} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="spotify-btn-sub"
+                                    onClick={() => togglePlayBeat(activeBeat)}
+                                    title={isBeatPlaying ? "Pausar beat" : "Reproducir beat"}
+                                    style={{
+                                      background: isBeatPlaying ? 'rgba(29, 185, 84, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                                      border: `1px solid ${isBeatPlaying ? '#1DB954' : 'rgba(255, 255, 255, 0.15)'}`,
+                                      color: isBeatPlaying ? '#1DB954' : '#fff',
+                                      borderRadius: '50%',
+                                      width: '36px',
+                                      height: '36px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {isBeatPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="spotify-btn-sub"
+                                    onClick={handleNextBeat}
+                                    title={t.game.next_beat}
+                                    style={{
+                                      background: 'rgba(255, 255, 255, 0.08)',
+                                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                                      color: '#fff',
+                                      borderRadius: '50%',
+                                      width: '36px',
+                                      height: '36px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <ChevronRight size={18} />
+                                  </button>
+
+                                  {/* BOTÓN COMO SEGUNDA OPCIÓN */}
+                                  <button
+                                    type="button"
+                                    className="btn-spotify-app-direct pulse-teal-anim"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenInSpotify(activeBeat);
+                                    }}
+                                    style={{
+                                      background: '#1DB954',
+                                      color: '#000',
+                                      fontWeight: 900,
+                                      fontSize: '0.75rem',
+                                      border: 'none',
+                                      borderRadius: '20px',
+                                      padding: '6px 14px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      cursor: 'pointer'
+                                    }}
+                                    title={Capacitor.isNativePlatform() ? "Abrir en Spotify App" : "Abrir tema en otra pestaña"}
+                                  >
+                                    <span>{Capacitor.isNativePlatform() ? 'Abrir App' : 'Abrir en pestaña'}</span>
+                                    <ExternalLink size={12} />
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                {/* SESIÓN NO DETECTADA / MODO DEV: EVITAMOS LA MUESTRA DE 30s */}
+                                {/* VAMOS PRIMERO CON EL BOTÓN PARA COLOCAR EL TEMA DESDE SPOTIFY */}
+                                <div className="beat-card-direct-spotify fade-in">
+                                  <div className="beat-card-notice-banner">
+                                    <AlertTriangle size={14} className="notice-icon" />
+                                    <span>Sesión no detectada / Modo Dev</span>
+                                  </div>
+
+                                  <div className="beat-card-disc-wrap">
+                                    <div className={`beat-card-vinyl ${isBeatPlaying ? 'spinning' : ''}`}>
+                                      <div className="beat-vinyl-lines"></div>
+                                      <div className="beat-vinyl-core">
+                                        <Music size={16} color="#000" />
+                                      </div>
+                                    </div>
+                                    <h3 className="beat-card-title">{activeBeat.name}</h3>
+                                    <div className="beat-card-badges">
+                                      <span className="badge-bpm">{activeBeat.bpm} BPM</span>
+                                      <span className="badge-royalties">STREAM OFICIAL</span>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    className="btn-spotify-main-cta pulse-green-glow"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenInSpotify(activeBeat);
+                                    }}
+                                    title="Colocar tema en Spotify para reproducción completa y suma de streams"
+                                  >
+                                    <svg className="spotify-icon-svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
+                                    </svg>
+                                    <span>{Capacitor.isNativePlatform() ? 'COLOCAR EN SPOTIFY APP' : 'REPRODUCIR EN SPOTIFY'}</span>
+                                    <ExternalLink size={16} />
+                                  </button>
+
+                                  <p className="beat-card-hint-text">
+                                    Abre la pista en Spotify para escuchar el tema completo y apoyar al productor.
+                                  </p>
+
+                                  <div className="beat-card-bottom-nav">
+                                    <button
+                                      type="button"
+                                      className="btn-beat-sub-nav"
+                                      onClick={handlePrevBeat}
+                                      title={t.game.prev_beat}
+                                    >
+                                      <ChevronLeft size={16} />
+                                      <span>Anterior</span>
+                                    </button>
+
+                                    <span className="beat-nav-counter">
+                                      {BEATS_DECK.findIndex(b => b.id === activeBeat.id) + 1} / {BEATS_DECK.length}
+                                    </span>
+
+                                    <button
+                                      type="button"
+                                      className="btn-beat-sub-nav"
+                                      onClick={handleNextBeat}
+                                      title={t.game.next_beat}
+                                    >
+                                      <span>Siguiente</span>
+                                      <ChevronRight size={16} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
