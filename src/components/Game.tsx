@@ -844,7 +844,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             <p className="spotify-warning-popup-desc">
               {spotifyVerificationState === 'verifying'
                 ? verificationProgressMsg
-                : 'La API de Spotify se encuentra en modo desarrollo o no se detectó una sesión activa en este dispositivo. Para escuchar el tema completo y sumar regalías a los beatmakers, colócalo directamente desde tu app de Spotify.'}
+                : 'No se reconoció la sesión de Spotify. Usar el botón de Spotify para reproducir.'}
             </p>
           </div>
 
@@ -1287,7 +1287,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                 <div className="beat-card-direct-spotify fade-in">
                                   <div className="beat-card-notice-banner">
                                     <AlertTriangle size={14} className="notice-icon" />
-                                    <span>Sesión no detectada / Modo Dev</span>
+                                    <span>Sesión no detectada</span>
                                   </div>
 
                                   <div className="beat-card-disc-wrap">
@@ -1321,7 +1321,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                                   </button>
 
                                   <p className="beat-card-hint-text">
-                                    Abre la pista en Spotify para escuchar el tema completo y apoyar al productor.
+                                    Usar el botón de Spotify para reproducir el tema completo.
                                   </p>
 
                                   <div className="beat-card-bottom-nav">
