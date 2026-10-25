@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Play, Pause, Square, Music, Sparkles, User, SkipForward, Home, RotateCcw, ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, X, WifiOff } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
@@ -169,7 +169,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     }
   };
 
+  // Detección de conectividad a internet (online / offline)
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  });
+
   const triggerWarningNotice = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return;
+    }
     setHasSpotifyWarning(true);
 
     // Solo se muestra una única vez. Luego de ocultarse o cerrarse, permanece oculta permanentemente
@@ -209,6 +217,26 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     });
   };
 
+  // Escuchar cambios de conectividad online/offline
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showToast('🌐 Conexión en línea restablecida');
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      showToast('📡 Sin conexión: Pistas locales activas');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Temporizador para desafíos
   const [timerSeconds, setTimerSeconds] = useState(60);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -219,6 +247,36 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     if (beatAudioRef.current) {
       beatAudioRef.current.pause();
       beatAudioRef.current = null;
+    }
+  };
+
+  const playLocalBeat = (beat: BeatCard) => {
+    if (!beat.audioUrl) {
+      showToast('⚠️ Pista local no disponible');
+      return;
+    }
+    stopBeatAudio();
+    try {
+      const audio = new Audio(beat.audioUrl);
+      audio.loop = true;
+      audio.play().then(() => {
+        beatAudioRef.current = audio;
+        setIsBeatPlaying(true);
+        showToast(`🎶 Reproduciendo pista local: ${beat.name}`);
+      }).catch(err => {
+        console.warn('Error al reproducir audio local:', err);
+        showToast('⚠️ No se pudo reproducir la pista local');
+        setIsBeatPlaying(false);
+      });
+      audio.onended = () => {
+        setIsBeatPlaying(false);
+      };
+      audio.onerror = () => {
+        setIsBeatPlaying(false);
+      };
+    } catch (e) {
+      console.warn('Excepción al reproducir audio local:', e);
+      setIsBeatPlaying(false);
     }
   };
 
@@ -241,6 +299,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const [isBeatPlaying, setIsBeatPlaying] = useState(false);
 
   const runSpotifyVerification = () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return;
+    }
     if (verifierTimeoutRef.current) {
       clearTimeout(verifierTimeoutRef.current);
       verifierTimeoutRef.current = null;
@@ -446,8 +507,12 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const prevIndex = (currentIndex - 1 + BEATS_DECK.length) % BEATS_DECK.length;
     const nextBeat = BEATS_DECK[prevIndex];
     setActiveBeat(nextBeat);
-    if (isBeatPlaying && nextBeat.spotifyUri) {
-      spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+    if (isBeatPlaying) {
+      if (!isOnline) {
+        playLocalBeat(nextBeat);
+      } else if (nextBeat.spotifyUri) {
+        spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+      }
     }
   };
 
@@ -456,8 +521,12 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     const nextIndex = (currentIndex + 1) % BEATS_DECK.length;
     const nextBeat = BEATS_DECK[nextIndex];
     setActiveBeat(nextBeat);
-    if (isBeatPlaying && nextBeat.spotifyUri) {
-      spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+    if (isBeatPlaying) {
+      if (!isOnline) {
+        playLocalBeat(nextBeat);
+      } else if (nextBeat.spotifyUri) {
+        spotifyPlayer.playTrack(nextBeat.spotifyUri).catch(() => {});
+      }
     }
   };
 

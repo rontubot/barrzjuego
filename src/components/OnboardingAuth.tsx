@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cloud, ArrowRight, ArrowLeft, Mail, Lock, ShieldCheck, HelpCircle, Compass, Radio } from 'lucide-react';
+import { Cloud, ArrowRight, ArrowLeft, Mail, Lock, ShieldCheck, HelpCircle, Compass, Radio, WifiOff } from 'lucide-react';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
 import { useI18n } from '../i18n/LanguageContext';
@@ -454,6 +454,30 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.49 17.31c-.22.36-.68.48-1.04.26-2.91-1.78-6.58-2.18-10.9-1.2-.42.09-.83-.17-.92-.59-.09-.41.17-.83.59-.92 4.73-1.08 8.78-.62 12.01 1.36.36.21.48.67.26 1.09zm1.46-3.26c-.28.45-.87.6-1.32.32-3.33-2.05-8.41-2.65-12.35-1.45-.51.15-1.04-.14-1.2-.66-.15-.51.14-1.04.66-1.2 4.51-1.37 10.12-.7 13.9 1.63.45.27.6.86.31 1.36zm.1-3.38C15.2 8.35 8.86 8.14 5.17 9.26c-.57.17-1.16-.16-1.33-.73-.17-.57.16-1.16.73-1.33 4.23-1.28 11.23-1.04 15.67 1.59.51.3 1.17.47 1.47-.04.3-.51.13-1.17-.38-1.47z"/>
               </svg>
               <span>Continuar con Spotify</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn-guest-offline w-100 mt-10"
+              onClick={() => onNext('lobby_start', { user: { username: 'Invitado', email: 'offline@barrzjuego.com', loggedIn: true, method: 'guest' } })}
+              style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#aaa',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                marginTop: '12px'
+              }}
+            >
+              <WifiOff size={16} />
+              <span>Jugar sin conexión (Modo Invitado)</span>
             </button>
           </div>
         )}
