@@ -153,9 +153,35 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   });
   const [showSpotifyWarningModal, setShowSpotifyWarningModal] = useState(false);
   const warningFadeTimerRef = useRef<any>(null);
+  const hasShownWarningModalRef = useRef<boolean>(
+    typeof window !== 'undefined' && sessionStorage.getItem('barrz_spotify_warning_dismissed') === 'true'
+  );
+
+  const dismissSpotifyWarningModal = () => {
+    hasShownWarningModalRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('barrz_spotify_warning_dismissed', 'true');
+    }
+    setShowSpotifyWarningModal(false);
+    if (warningFadeTimerRef.current) {
+      clearTimeout(warningFadeTimerRef.current);
+      warningFadeTimerRef.current = null;
+    }
+  };
 
   const triggerWarningNotice = () => {
     setHasSpotifyWarning(true);
+
+    // Solo se muestra una única vez. Luego de ocultarse o cerrarse, permanece oculta permanentemente
+    if (hasShownWarningModalRef.current || (typeof window !== 'undefined' && sessionStorage.getItem('barrz_spotify_warning_dismissed') === 'true')) {
+      return;
+    }
+
+    hasShownWarningModalRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('barrz_spotify_warning_dismissed', 'true');
+    }
+
     setShowSpotifyWarningModal(true);
     if (warningFadeTimerRef.current) {
       clearTimeout(warningFadeTimerRef.current);
@@ -169,6 +195,12 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const toggleSpotifyWarningModal = () => {
     setShowSpotifyWarningModal(prev => {
       const nextState = !prev;
+      if (!nextState) {
+        hasShownWarningModalRef.current = true;
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('barrz_spotify_warning_dismissed', 'true');
+        }
+      }
       if (warningFadeTimerRef.current) {
         clearTimeout(warningFadeTimerRef.current);
         warningFadeTimerRef.current = null;
@@ -332,6 +364,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     spotifyPlayer.pauseTrack();
     setIsBeatPlaying(false);
     setIsExiting(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('barrz_spotify_warning_dismissed');
+    }
     setTimeout(() => {
       onBackToMenu();
     }, 450);
@@ -589,6 +624,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   const handleOpenInSpotify = (beat: BeatCard | null) => {
     if (!beat) return;
+    dismissSpotifyWarningModal();
     setIsBeatPlaying(true);
 
     if (Capacitor.isNativePlatform()) {
@@ -833,7 +869,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             <button
               type="button"
               className="spotify-warning-popup-close-btn"
-              onClick={() => setShowSpotifyWarningModal(false)}
+              onClick={dismissSpotifyWarningModal}
               aria-label="Cerrar advertencia"
             >
               <X size={16} />
@@ -855,7 +891,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                 className="btn-spotify-popup-connect pulse-teal-anim"
                 onClick={() => {
                   handleOpenInSpotify(activeBeat);
-                  setShowSpotifyWarningModal(false);
                 }}
                 style={{ background: '#1DB954', color: '#000', fontWeight: 900 }}
               >
@@ -867,7 +902,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
             <button
               type="button"
               className="btn-spotify-popup-retry"
-              onClick={() => setShowSpotifyWarningModal(false)}
+              onClick={dismissSpotifyWarningModal}
             >
               <span>Entendido</span>
             </button>
