@@ -26,6 +26,31 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
 
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch(getApiUrl('/api/auth/google-login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('barrz_token', data.token);
+        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'google' });
+      } else {
+        setErrorMsg(data.error || t.auth.google_error);
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(t.auth.server_error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     const setupGoogleAuth = async () => {
       try {
@@ -47,16 +72,14 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
             });
           } else {
             const initGoogle = () => {
-              // @ts-ignore
-              if (window.google?.accounts?.id) {
-                // @ts-ignore
-                window.google.accounts.id.initialize({
+              const google = (window as any).google;
+              if (google?.accounts?.id) {
+                google.accounts.id.initialize({
                   client_id: clientId,
                   callback: handleGoogleCredentialResponse
                 });
                 
-                // @ts-ignore
-                window.google.accounts.id.renderButton(
+                google.accounts.id.renderButton(
                   document.getElementById('google-signin-btn-container'),
                   { 
                     theme: 'outline', 
@@ -223,31 +246,6 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'email' });
       } else {
         setErrorMsg(data.error || t.auth.wrong_code);
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(t.auth.server_error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleCredentialResponse = async (response: any) => {
-    setIsSubmitting(true);
-    setErrorMsg('');
-    try {
-      const res = await fetch(getApiUrl('/api/auth/google-login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: response.credential })
-      });
-      
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem('barrz_token', data.token);
-        onNext('lobby_start', { email: data.email, username: data.username, avatar: data.avatar, avatar_type: data.avatar_type, custom_avatar_url: data.custom_avatar_url, stats: data.stats, history: data.history, spotify_linked: data.spotify_linked, spotify_user: data.spotify_user, loggedIn: true, method: 'google' });
-      } else {
-        setErrorMsg(data.error || t.auth.google_error);
       }
     } catch (err) {
       console.error(err);
@@ -459,7 +457,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
             <button
               type="button"
               className="btn-guest-offline w-100 mt-10"
-              onClick={() => onNext('lobby_start', { user: { username: 'Invitado', email: 'offline@barrzjuego.com', loggedIn: true, method: 'guest' } })}
+              onClick={() => onNext('lobby_start', { username: 'Invitado', email: 'offline@barrzjuego.com', loggedIn: true, method: 'guest', avatar: '🎤' })}
               style={{
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.15)',

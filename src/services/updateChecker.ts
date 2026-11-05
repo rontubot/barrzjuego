@@ -1,8 +1,10 @@
 // Servicio de Detección de Actualizaciones y Sincronización Automática con GitHub / Servidor
+import { Capacitor } from '@capacitor/core';
 import { getApiUrl } from './spotifyPlayer';
 
 export const CURRENT_CLIENT_VERSION = '3.1.0';
 export const CURRENT_BUILD_TIMESTAMP = '2026.10';
+export const CURRENT_CLIENT_COMMIT = '1762834'; // Commit base del build empaquetado
 
 function isVersionHigher(remote: string, current: string): boolean {
   const rParts = remote.split('.').map(n => parseInt(n, 10) || 0);
@@ -21,6 +23,10 @@ function isVersionHigher(remote: string, current: string): boolean {
 export interface AppVersionInfo {
   version: string;
   build: string;
+  commit?: string;
+  commitMessage?: string;
+  commitDate?: string;
+  liveWebUrl?: string;
   min_required_apk?: string;
   github_repo?: string;
   download_url?: string;
@@ -58,17 +64,23 @@ export async function checkForUpdates(): Promise<AppVersionInfo | null> {
       const data = await res.json();
       const serverVersion = data.version || '1.0.0';
       const serverBuild = data.build || '';
+      const serverCommit = data.commit || '';
 
-      // Comparación real de versiones (SemVer): solo es más nueva si es estrictamente superior
+      // Comparación real de versiones (SemVer, timestamp o nuevo commit en GitHub)
       const isVersionNewer = isVersionHigher(serverVersion, CURRENT_CLIENT_VERSION);
       const isSameVersion = serverVersion === CURRENT_CLIENT_VERSION;
       const isBuildNewer = Boolean(isSameVersion && serverBuild && serverBuild > CURRENT_BUILD_TIMESTAMP);
+      const isCommitNewer = Boolean(serverCommit && serverCommit !== CURRENT_CLIENT_COMMIT);
 
-      const isNewer = isVersionNewer || isBuildNewer;
+      const isNewer = isVersionNewer || isBuildNewer || isCommitNewer;
 
       const info: AppVersionInfo = {
         version: serverVersion,
         build: serverBuild,
+        commit: serverCommit,
+        commitMessage: data.commitMessage,
+        commitDate: data.commitDate,
+        liveWebUrl: data.live_web_url || 'https://barrzjuego.com',
         min_required_apk: data.min_required_apk,
         github_repo: data.github_repo,
         download_url: data.download_url,
@@ -76,7 +88,7 @@ export async function checkForUpdates(): Promise<AppVersionInfo | null> {
       };
 
       if (isNewer) {
-        console.log('⚡ [BARRZ UPDATER] Nueva versión detectada en GitHub/Servidor:', info);
+        console.log('⚡ [BARRZ UPDATER] Nuevo parche detectado en GitHub/Servidor:', info);
         notifyListeners(info);
       }
 
@@ -89,9 +101,9 @@ export async function checkForUpdates(): Promise<AppVersionInfo | null> {
 }
 
 /**
- * Recarga la aplicación limpiando cachés en segundo plano
+ * Aplica el parche remoto cargando la última versión web desde el servidor
  */
-export function applyWebUpdate() {
+export function applyWebUpdate(patchInfo?: AppVersionInfo | null) {
   if (typeof window !== 'undefined') {
     if ('caches' in window) {
       caches.keys().then((names) => {
@@ -100,8 +112,17 @@ export function applyWebUpdate() {
         });
       });
     }
-    // Forzar recarga completa desde servidor
-    window.location.reload();
+
+    const targetCommit = patchInfo?.commit || Date.now().toString();
+    localStorage.setItem('barrz_last_patch_applied', targetCommit);
+
+    // En Capacitor Nativo (APK): Redirige a la versión viva en barrzjuego.com con el parche
+    if (Capacitor.isNativePlatform()) {
+      const baseUrl = patchInfo?.liveWebUrl || 'https://barrzjuego.com';
+      window.location.href = `${baseUrl}?patch=${targetCommit}&t=${Date.now()}`;
+    } else {
+      window.location.reload();
+    }
   }
 }
 

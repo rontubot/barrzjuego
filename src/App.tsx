@@ -344,7 +344,7 @@ function App() {
             spotifyPlayer.disconnect();
             setGameState('auth_choice');
           }
-        } catch (e) {
+        } catch {
           if (savedSession) {
             setUserSession(JSON.parse(savedSession));
             setGameState('splash');
@@ -392,28 +392,29 @@ function App() {
   // Enrutador de avance de pantallas
   const handleNextStep = (nextStep: string, data?: any) => {
     if (data) {
+      const userData = data.user || data;
       // Registrar sesión de usuario
-      if (data.loggedIn) {
+      if (userData.loggedIn) {
         const session: UserSession = {
-          email: data.email,
-          username: data.username,
-          avatar: data.avatar,
-          avatar_type: data.avatar_type,
-          custom_avatar_url: data.custom_avatar_url,
-          spotify_linked: data.spotify_linked,
-          spotify_user: data.spotify_user,
-          stats: data.stats,
-          history: data.history,
+          email: userData.email,
+          username: userData.username,
+          avatar: userData.avatar,
+          avatar_type: userData.avatar_type,
+          custom_avatar_url: userData.custom_avatar_url,
+          spotify_linked: userData.spotify_linked,
+          spotify_user: userData.spotify_user,
+          stats: userData.stats,
+          history: userData.history,
           loggedIn: true,
-          method: data.method
+          method: userData.method
         };
         setUserSession(session);
         localStorage.setItem('barrz_session', JSON.stringify(session));
 
-        if (data.spotify_linked) {
+        if (userData.spotify_linked) {
           localStorage.setItem('barrz_spotify_linked', 'true');
           spotifyPlayer.init();
-        } else if (data.spotify_linked === false) {
+        } else if (userData.spotify_linked === false) {
           localStorage.removeItem('barrz_spotify_linked');
           spotifyPlayer.disconnect();
         }
@@ -590,7 +591,7 @@ function App() {
       {pendingUpdate && pendingUpdate.isNewer && (
         <div 
           className="update-available-pill pulse-teal-anim"
-          onClick={applyWebUpdate}
+          onClick={() => applyWebUpdate(pendingUpdate)}
           style={{
             position: 'fixed',
             bottom: '48px',
@@ -610,9 +611,9 @@ function App() {
             fontSize: '0.85rem',
             border: '1px solid rgba(255, 255, 255, 0.6)'
           }}
-          title="Toca para cargar la última versión de BARRZ"
+          title="Toca para cargar el último parche de BARRZ desde GitHub/Servidor"
         >
-          <span>⚡ Nueva versión ({pendingUpdate.version})</span>
+          <span>⚡ Parche GitHub ({pendingUpdate.commit || pendingUpdate.version})</span>
           <span style={{ 
             background: '#0a0b0e', 
             color: '#00f0ff', 
@@ -621,7 +622,7 @@ function App() {
             fontSize: '0.75rem',
             textTransform: 'uppercase'
           }}>
-            Actualizar
+            Parchear
           </span>
         </div>
       )}

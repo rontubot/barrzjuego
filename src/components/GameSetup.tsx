@@ -112,12 +112,6 @@ export const GameSetup: React.FC<GameSetupProps> = ({ step, userSession, onNext,
   const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
   const [spotifyUser, setSpotifyUser] = useState<any>(() => userSession?.spotify_user || null);
 
-  useEffect(() => {
-    if (userSession?.spotify_user) {
-      setSpotifyUser(userSession.spotify_user);
-    }
-  }, [userSession]);
-
   const handleSpotifyConnect = async () => {
     try {
       await connectSpotify(step);

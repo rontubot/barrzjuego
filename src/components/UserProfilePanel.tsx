@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2, Globe } from 'lucide-react';
+import { User, Settings, History, X, LogOut, Sliders, Flame, Award, Edit2, Check, Camera, Trash2, Globe, RefreshCw, Sparkles } from 'lucide-react';
 import { BattleDetailView } from './BattleDetailView';
 import { useI18n } from '../i18n/LanguageContext';
 import { connectSpotify, disconnectSpotify, checkSpotifyStatus } from '../services/spotifyPlayer';
+import { checkForUpdates, applyWebUpdate, CURRENT_CLIENT_VERSION, CURRENT_CLIENT_COMMIT, type AppVersionInfo } from '../services/updateChecker';
 import './UserProfilePanel.css';
 
 const getApiUrl = (path: string) => {
@@ -33,11 +34,29 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
   const [isSpotifyLinked, setIsSpotifyLinked] = useState(() => localStorage.getItem('barrz_spotify_linked') === 'true');
   const [spotifyUser, setSpotifyUser] = useState<any>(() => userSession?.spotify_user || null);
 
-  useEffect(() => {
-    if (userSession?.spotify_user) {
-      setSpotifyUser(userSession.spotify_user);
+  // Estados para el sistema de actualización y parches
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateStatusMsg, setUpdateStatusMsg] = useState('');
+  const [availablePatch, setAvailablePatch] = useState<AppVersionInfo | null>(null);
+
+  const handleCheckManualUpdates = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateStatusMsg('Consultando GitHub y servidor...');
+    try {
+      const info = await checkForUpdates();
+      if (info && info.isNewer) {
+        setAvailablePatch(info);
+        setUpdateStatusMsg(`⚡ Parche disponible: ${info.commitMessage || info.commit || info.version}`);
+      } else {
+        setAvailablePatch(null);
+        setUpdateStatusMsg('✓ Tu app ya tiene la versión más reciente.');
+      }
+    } catch {
+      setUpdateStatusMsg('No se pudo conectar con el servidor.');
+    } finally {
+      setIsCheckingUpdate(false);
     }
-  }, [userSession]);
+  };
 
   // Verificar estado de vinculación de Spotify al abrir el panel
   useEffect(() => {
@@ -81,7 +100,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
 
   // Estados para la edición de perfil
   const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [tempUsername, setTempUsername] = useState('');
+  const [tempUsername, setTempUsername] = useState(() => userSession?.username || '');
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -90,13 +109,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
 
   // Avatares disponibles (Emojis estilo Hip-Hop y Urbano)
   const avatars = ['🎤', '🔥', '🎧', '👑', '👽', '⚡', '🎸', '🚀', '💀', '💥', '🛹', '🕶️'];
-
-  // Sincronizar campo temporal de nombre cuando cambie la sesión
-  useEffect(() => {
-    if (userSession?.username) {
-      setTempUsername(userSession.username);
-    }
-  }, [userSession]);
 
   // Determinar avatar actual y su tipo (descartar 'crown' por defecto a vacío)
   const rawAvatar = userSession?.loggedIn
@@ -460,7 +472,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                       <button 
                         type="button" 
                         className="btn-username-edit-trigger"
-                        onClick={() => setIsEditingUsername(true)}
+                        onClick={() => {
+                          setTempUsername(userSession?.username || '');
+                          setIsEditingUsername(true);
+                        }}
                         title={t.profile.username_edit}
                       >
                         <Edit2 size={14} />
@@ -720,6 +735,65 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   >
                     {isSpotifyLinked ? t.settings.spotify_btn_disconnect : t.settings.spotify_btn_connect}
                   </button>
+                </div>
+
+                {/* Sistema de Parches y Actualizaciones desde GitHub y Servidor */}
+                <div className="setting-row-vertical" style={{ background: 'rgba(0, 240, 255, 0.06)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(0, 240, 255, 0.25)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <RefreshCw size={18} className="teal-text" />
+                      <span className="setting-title font-base" style={{ fontSize: '0.95rem' }}>Parches y Actualizaciones</span>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#00f0ff', letterSpacing: '0.5px' }}>
+                      v{CURRENT_CLIENT_VERSION} ({CURRENT_CLIENT_COMMIT})
+                    </span>
+                  </div>
+                  <span className="setting-desc mb-10">
+                    Sincroniza parches en vivo desde GitHub y el servidor barrzjuego.com sin necesidad de actualizar la APK desde la tienda.
+                  </span>
+                  <div style={{ display: 'flex', gap: '10px', width: '100%', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn-group-option"
+                      onClick={handleCheckManualUpdates}
+                      disabled={isCheckingUpdate}
+                      style={{
+                        flex: '1 1 140px',
+                        borderColor: '#00f0ff',
+                        color: '#00f0ff',
+                        background: 'rgba(0, 0, 0, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <RefreshCw size={14} className={isCheckingUpdate ? 'spinning' : ''} />
+                      <span>{isCheckingUpdate ? 'Buscando...' : 'Buscar Parche'}</span>
+                    </button>
+                    {availablePatch && (
+                      <button
+                        type="button"
+                        className="btn-group-option pulse-teal-anim"
+                        onClick={() => applyWebUpdate(availablePatch)}
+                        style={{
+                          flex: '1 1 140px',
+                          borderColor: '#1DB954',
+                          color: '#000',
+                          background: '#1DB954',
+                          fontWeight: 900
+                        }}
+                      >
+                        <Sparkles size={14} />
+                        <span>Aplicar Parche</span>
+                      </button>
+                    )}
+                  </div>
+                  {updateStatusMsg && (
+                    <p style={{ fontSize: '0.76rem', marginTop: '10px', color: '#00f0ff', fontWeight: 600 }}>
+                      {updateStatusMsg}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

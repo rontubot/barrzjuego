@@ -5,7 +5,7 @@ import { Browser } from '@capacitor/browser';
 import { BEATS_DECK, CHALLENGES_DECK } from '../data/cards';
 import type { BeatCard, ChallengeCard } from '../data/cards';
 import { ConfirmDialog } from './ConfirmDialog';
-import { spotifyPlayer, checkSpotifyStatus } from '../services/spotifyPlayer';
+import { spotifyPlayer, checkSpotifyStatus, getApiUrl } from '../services/spotifyPlayer';
 import { useI18n } from '../i18n/LanguageContext';
 import './Game.css';
 
@@ -131,6 +131,11 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   // Estados de animación de cartas
   const [beatFlipped, setBeatFlipped] = useState(gameSettings?.mode === 'solo');
   const [challengeFlipped, setChallengeFlipped] = useState(gameSettings?.mode === 'solo');
+  const [challengeImgError, setChallengeImgError] = useState(false);
+
+  useEffect(() => {
+    setChallengeImgError(false);
+  }, [activeChallenge?.id]);
 
 
   // Animación de salida global
@@ -217,6 +222,15 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     });
   };
 
+  // Toast flotante de estado en pantalla
+  const [debugToast, setDebugToast] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setDebugToast(msg);
+    setTimeout(() => {
+      setDebugToast(prev => prev === msg ? null : prev);
+    }, 4500);
+  };
+
   // Escuchar cambios de conectividad online/offline
   useEffect(() => {
     const handleOnline = () => {
@@ -278,15 +292,6 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       console.warn('Excepción al reproducir audio local:', e);
       setIsBeatPlaying(false);
     }
-  };
-
-  // Toast flotante de estado en pantalla
-  const [debugToast, setDebugToast] = useState<string | null>(null);
-  const showToast = (msg: string) => {
-    setDebugToast(msg);
-    setTimeout(() => {
-      setDebugToast(prev => prev === msg ? null : prev);
-    }, 4500);
   };
 
   // Lista de competidores activos en la ronda actual (en réplica solo participan los empatados)
@@ -375,7 +380,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   // Escuchar cambios de estado de Spotify y ejecutar verificación
   useEffect(() => {
-    runSpotifyVerification();
+    const timer = setTimeout(() => {
+      runSpotifyVerification();
+    }, 0);
 
     const onSpotifyStatusChange = (e: any) => {
       const linked = e.detail?.linked ?? (localStorage.getItem('barrz_spotify_linked') === 'true');
@@ -405,6 +412,7 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     });
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('barrz_spotify_status_changed', onSpotifyStatusChange);
       window.removeEventListener('message', onPopupMessage);
       unsubscribe();
@@ -462,11 +470,79 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
     return () => clearInterval(timerRef.current);
   }, [timerRunning]);
 
+  const hasSavedGameRef = useRef(false);
+
   useEffect(() => {
-    if (subState === 'game_over' && onGameSaved) {
-      onGameSaved(scores, gameLog);
+    if (subState === 'game_over' && !hasSavedGameRef.current) {
+      hasSavedGameRef.current = true;
+
+      const myName = userSession?.username || (mode === 'solo' ? 'Mi Práctica' : 'Freestyler A');
+      const myPoints = scores[myName] ?? scores[Object.keys(scores)[0]] ?? 0;
+
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      let playerRank = 1;
+      const myIndex = sorted.findIndex(([name]) => name === myName);
+      if (myIndex !== -1) {
+        playerRank = myIndex + 1;
+      }
+
+      const result = mode === 'solo' 
+        ? 'complete' 
+        : (() => {
+            const maxScore = Math.max(...Object.values(scores));
+            const winners = Object.keys(scores).filter(k => scores[k] === maxScore);
+            return winners.includes(myName) ? (winners.length > 1 ? 'draw' : 'win') : 'loss';
+          })();
+
+      const battleRecord = {
+        id: Date.now(),
+        mode,
+        roundsCount: totalRounds,
+        points: myPoints,
+        result,
+        playerRank,
+        players: playerNames,
+        scores,
+        details: gameLog,
+        battleDate: new Date().toISOString()
+      };
+
+      const prevStats = userSession?.stats || { totalBattles: 0, wins: 0, winRate: 0, maxPoints: 0 };
+      const totalBattles = (prevStats.totalBattles || 0) + 1;
+      const wins = (prevStats.wins || 0) + (result === 'win' ? 1 : 0);
+      const winRate = totalBattles > 0 ? Math.round((wins / totalBattles) * 100) : 0;
+      const maxPoints = Math.max(prevStats.maxPoints || 0, myPoints);
+      const localStats = { totalBattles, wins, winRate, maxPoints };
+      const localHistory = [battleRecord, ...(userSession?.history || [])].slice(0, 10);
+
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('barrz_token') : null;
+      if (token && userSession?.loggedIn && userSession?.method !== 'guest') {
+        fetch(getApiUrl('/api/game/save'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(battleRecord)
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.stats && data.history && onGameSaved) {
+              onGameSaved(data.stats, data.history);
+            } else if (onGameSaved) {
+              onGameSaved(localStats, localHistory);
+            }
+          })
+          .catch(() => {
+            if (onGameSaved) {
+              onGameSaved(localStats, localHistory);
+            }
+          });
+      } else if (onGameSaved) {
+        onGameSaved(localStats, localHistory);
+      }
     }
-  }, [subState, onGameSaved, scores, gameLog]);
+  }, [subState, onGameSaved, scores, gameLog, userSession, mode, totalRounds, playerNames]);
 
   // Sacar carta de Beat
   const drawBeat = (delay: number = 0) => {
@@ -752,6 +828,10 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
       await spotifyPlayer.pauseTrack().catch(() => {});
       setIsBeatPlaying(false);
     } else {
+      if (!isOnline) {
+        playLocalBeat(beat);
+        return;
+      }
       if (Capacitor.isNativePlatform()) {
         handleOpenInSpotify(beat);
       } else {
@@ -767,8 +847,12 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
 
   const startTimer = () => {
     setTimerRunning(true);
-    if (activeBeat && !isBeatPlaying && activeBeat.spotifyUri) {
-      spotifyPlayer.playTrack(activeBeat.spotifyUri).catch(() => {});
+    if (activeBeat && !isBeatPlaying) {
+      if (!isOnline) {
+        playLocalBeat(activeBeat);
+      } else if (activeBeat.spotifyUri) {
+        spotifyPlayer.playTrack(activeBeat.spotifyUri).catch(() => {});
+      }
     }
   };
 
@@ -816,12 +900,9 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
   const sortedLeaderboard = Object.entries(scores)
     .sort((a, b) => b[1] - a[1]);
 
-  let currentRank = 1;
-  const ranksList = sortedLeaderboard.map(([name, points], index) => {
-    if (index > 0 && points < sortedLeaderboard[index - 1][1]) {
-      currentRank = index + 1;
-    }
-    return { name, points, rank: currentRank };
+  const ranksList = sortedLeaderboard.map(([name, points]) => {
+    const compRank = sortedLeaderboard.findIndex(([, p]) => p <= points) + 1;
+    return { name, points, rank: compRank };
   });
 
   const getPlayerAvatar = (playerName: string): string => {
@@ -923,6 +1004,25 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
           <span className="spotify-alert-badge-label">SESIÓN SPOTIFY</span>
           <span className="spotify-alert-badge-pulse" />
         </button>
+      )}
+
+      {/* INDICADOR DE MODO SIN CONEXIÓN */}
+      {!isOnline && (
+        <div
+          className="spotify-alert-badge offline-badge"
+          style={{
+            borderColor: 'rgba(255, 100, 100, 0.4)',
+            background: 'rgba(30, 20, 20, 0.85)',
+            color: '#ff8888',
+            cursor: 'default'
+          }}
+          title="Modo sin conexión activo (pistas locales)"
+        >
+          <span className="spotify-alert-badge-icon">
+            <WifiOff size={15} />
+          </span>
+          <span className="spotify-alert-badge-label">SIN CONEXIÓN</span>
+        </div>
       )}
 
       {/* CUADRO EMERGENTE DE ADVERTENCIA SPOTIFY (AUTO-DESVANECIBLE) */}
@@ -1153,12 +1253,16 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                         </div>
 
                         <div className="card-face card-front glow-teal" style={{ borderColor: 'var(--neon-teal)', padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                          {activeChallenge.imageUrl ? (
+                          {activeChallenge.imageUrl && !challengeImgError ? (
                             <div className="image-challenge-card-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
                               <img 
-                                src={activeChallenge.imageUrl} 
+                                src={encodeURI(activeChallenge.imageUrl)} 
                                 alt={activeChallenge.title} 
-                                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                onError={() => {
+                                  console.warn('Imagen de carta no disponible, usando vista enriquecida:', activeChallenge.imageUrl);
+                                  setChallengeImgError(true);
+                                }}
                               />
                             </div>
                           ) : (
@@ -1277,8 +1381,77 @@ export const Game: React.FC<GameProps> = ({ onBackToMenu, onGameSaved, gameSetti
                               <span>INST. BEAT ({activeBeat.bpm} BPM)</span>
                             </div>
 
-                            {/* REPRODUCCIÓN SPOTIFY: CONDICIONAL SEGÚN ESTADO DE SESIÓN */}
-                            {spotifyVerificationState === 'success' ? (
+                            {/* REPRODUCCIÓN SPOTIFY O LOCAL: CONDICIONAL SEGÚN ESTADO DE CONECTIVIDAD Y SESIÓN */}
+                            {!isOnline ? (
+                              <div className="beat-card-direct-spotify fade-in local-beat-player-card">
+                                <div className="beat-card-notice-banner" style={{ background: 'rgba(0, 240, 255, 0.12)', borderColor: 'rgba(0, 240, 255, 0.35)', color: '#00f0ff' }}>
+                                  <WifiOff size={14} className="notice-icon" />
+                                  <span>Modo Offline: Pista Local Activa</span>
+                                </div>
+
+                                <div className="beat-card-disc-wrap">
+                                  <div className={`beat-card-vinyl ${isBeatPlaying ? 'spinning' : ''}`}>
+                                    <div className="beat-vinyl-lines"></div>
+                                    <div className="beat-vinyl-core">
+                                      <Music size={16} color="#000" />
+                                    </div>
+                                  </div>
+                                  <h3 className="beat-card-title">{activeBeat.name}</h3>
+                                  <div className="beat-card-badges">
+                                    <span className="badge-bpm">{activeBeat.bpm} BPM</span>
+                                    <span className="badge-royalties" style={{ background: 'rgba(0, 240, 255, 0.15)', color: '#00f0ff', borderColor: '#00f0ff' }}>PISTA LOCAL</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  className="btn-spotify-main-cta pulse-teal-anim"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    togglePlayBeat(activeBeat);
+                                  }}
+                                  style={{
+                                    background: isBeatPlaying ? 'rgba(255, 50, 100, 0.95)' : 'linear-gradient(135deg, #00f0ff 0%, #1db954 100%)',
+                                    color: '#0a0b0e',
+                                    fontWeight: 900
+                                  }}
+                                  title={isBeatPlaying ? "Pausar pista local" : "Reproducir pista local"}
+                                >
+                                  {isBeatPlaying ? <Pause size={20} /> : <Play size={20} fill="currentColor" />}
+                                  <span>{isBeatPlaying ? 'PAUSAR BEAT' : 'REPRODUCIR BEAT'}</span>
+                                </button>
+
+                                <p className="beat-card-hint-text" style={{ color: '#aaa' }}>
+                                  Pista local WAV lista para improvisar sin conexión.
+                                </p>
+
+                                <div className="beat-card-bottom-nav">
+                                  <button
+                                    type="button"
+                                    className="btn-beat-sub-nav"
+                                    onClick={handlePrevBeat}
+                                    title={t.game.prev_beat}
+                                  >
+                                    <ChevronLeft size={16} />
+                                    <span>Anterior</span>
+                                  </button>
+
+                                  <span className="beat-nav-counter">
+                                    {BEATS_DECK.findIndex(b => b.id === activeBeat.id) + 1} / {BEATS_DECK.length}
+                                  </span>
+
+                                  <button
+                                    type="button"
+                                    className="btn-beat-sub-nav"
+                                    onClick={handleNextBeat}
+                                    title={t.game.next_beat}
+                                  >
+                                    <span>Siguiente</span>
+                                    <ChevronRight size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : spotifyVerificationState === 'success' ? (
                               <>
                                 {/* SESIÓN VERIFICADA: REPRODUCTOR EMBED OFICIAL */}
                                 <div className="spotify-embed-card-container fade-in">

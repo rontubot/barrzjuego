@@ -442,7 +442,9 @@ class SpotifyPlayerService {
     if (this.player) {
       try {
         this.player.disconnect();
-      } catch {}
+      } catch (err) {
+        console.debug('Spotify disconnect ignore:', err);
+      }
       this.player = null;
     }
     this.isReady = false;

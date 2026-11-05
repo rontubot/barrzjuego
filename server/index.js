@@ -29,6 +29,17 @@ const generateCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// Helper: parse seguro de JSON
+const safeJsonParse = (val, fallback) => {
+  if (!val) return fallback;
+  if (typeof val === 'object') return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return fallback;
+  }
+};
+
 // Helper: obtener estadísticas e historial real de un usuario
 const getUserProfileData = async (userId) => {
   try {
@@ -73,9 +84,9 @@ const getUserProfileData = async (userId) => {
         points: row.points,
         result: row.result,
         playerRank: row.player_rank,
-        players: row.players ? JSON.parse(row.players) : [],
-        scores: row.scores ? JSON.parse(row.scores) : {},
-        details: row.details ? JSON.parse(row.details) : [],
+        players: safeJsonParse(row.players, []),
+        scores: safeJsonParse(row.scores, {}),
+        details: safeJsonParse(row.details, []),
         battleDate: row.battle_date
       }))
     };
@@ -1333,15 +1344,60 @@ app.use((req, res, next) => {
   next();
 });
 
+let cachedGitHubInfo = null;
+let lastGitHubCheck = 0;
+
+async function getLatestGitHubPatch() {
+  const now = Date.now();
+  if (cachedGitHubInfo && (now - lastGitHubCheck < 120000)) {
+    return cachedGitHubInfo;
+  }
+  
+  try {
+    const fetchFn = typeof globalThis.fetch === 'function' ? globalThis.fetch : null;
+    if (fetchFn) {
+      const response = await fetchFn('https://api.github.com/repos/rontubot/prototipo/commits/main', {
+        headers: { 'User-Agent': 'Barrz-Freestyle-App' }
+      });
+      if (response && response.ok) {
+        const commitData = await response.json();
+        cachedGitHubInfo = {
+          sha: commitData.sha ? commitData.sha.substring(0, 7) : '',
+          message: commitData.commit?.message?.split('\n')[0] || 'Actualización de sistema',
+          date: commitData.commit?.author?.date || new Date().toISOString()
+        };
+        lastGitHubCheck = now;
+        return cachedGitHubInfo;
+      }
+    }
+  } catch (err) {
+    console.warn('[Updater] Advertencia al consultar GitHub API:', err.message);
+  }
+
+  return cachedGitHubInfo || {
+    sha: process.env.RAILWAY_GIT_COMMIT_SHA?.substring(0, 7) || '1762834',
+    message: 'Versión estable',
+    date: new Date().toISOString()
+  };
+}
+
 // Endpoint para consulta de versión y actualización remota
-app.get('/api/app/version', (req, res) => {
+app.get('/api/app/version', async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  const ghPatch = await getLatestGitHubPatch();
+  const serverVersion = process.env.APP_VERSION || '3.1.0';
+  const serverBuild = process.env.APP_BUILD || '2026.11';
+
   res.json({
-    version: '3.1.0',
-    build: '2026.10',
+    version: serverVersion,
+    build: serverBuild,
+    commit: ghPatch.sha,
+    commitMessage: ghPatch.message,
+    commitDate: ghPatch.date,
     min_required_apk: '1.0',
     github_repo: 'https://github.com/rontubot/prototipo',
-    download_url: 'https://github.com/rontubot/prototipo/releases/latest'
+    download_url: 'https://github.com/rontubot/prototipo/releases/latest',
+    live_web_url: 'https://barrzjuego.com'
   });
 });
 
