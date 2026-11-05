@@ -11,11 +11,10 @@ Se completó la auditoría y afinación de toda la plataforma:
 2. **Audio & Visualización de Cartas Offline:** 
    - Las cartas de Desafío ahora cuentan con codificación segura de URLs (`encodeURI`) y un sistema de fallback automático con renderizado visual enriquecido (`onError`) que garantiza que NUNCA se vea una carta en blanco o rota.
    - Las cartas de Beats en modo sin conexión ahora muestran un reproductor local completo: título del beat, BPM, estado "PISTA LOCAL (OFFLINE)", animación del vinilo giratorio y botones de Reproducir/Pausar, Anterior y Siguiente.
-3. **Sistema de Actualización y Parches en Vivo (OTA desde GitHub):**
-   - El backend (`/api/app/version`) ahora consulta dinámicamente el último commit y release del repositorio GitHub `rontubot/prototipo`.
-   - El cliente (`updateChecker.ts`) compara el commit instalado con el de GitHub/servidor.
-   - Al detectar un nuevo parche, despliega la píldora flotante para actualizar o permite hacerlo desde el panel de Ajustes en "Parches y Actualizaciones".
-   - Al pulsar *"Parchear"*, limpia las cachés e inyecta la versión web actualizada en vivo desde `barrzjuego.com` sin requerir que los usuarios reinstalen la APK ni esperen aprobaciones en tiendas.
+3. **Sistema de Actualización y Parches en Vivo (OTA desde GitHub y Servidor):**
+   - El backend (`/api/app/version`) consulta dinámicamente el último commit y release del repositorio GitHub `rontubot/prototipo`.
+   - Se removió cualquier botón flotante o píldora invasiva tanto de la web como de la app móvil.
+   - Todo el proceso de verificación e invalidación de caché se ejecuta de forma 100% silenciosa en la pantalla de carga inicial (*pestaña de carga*), sincronizando el código nuevo de inmediato sin requerir que los usuarios reinstalen la APK ni pulsen botones manuales.
 4. **Persistencia & Estadísticas:** Guardado dual (servidor `/api/game/save` cuando hay internet y fallback local con cálculo de ratio de victorias e historial para `BattleDetailView`).
 5. **Compilación Nativa Móvil:** Sincronizado en limpio con `npx cap sync android`.
 
@@ -42,12 +41,14 @@ Se completó la auditoría y afinación de toda la plataforma:
   - **Cartas de Beats:** Cuando `!isOnline`, la carta de beat cambia a su interfaz de **Pista Local**: vinilo con giro animado, nombre de la pista, BPM, badge de audio local, botón prominente de `REPRODUCIR BEAT / PAUSAR BEAT` y selectores de pista anterior/siguiente.
 
 ### 🚀 2.5. Sistema de Parches en Vivo desde GitHub y Servidor (OTA)
-- **Problema encontrado:** La APK no tenía un mecanismo autónomo para descargar parches de GitHub sin reinstalar el archivo APK.
+- **Problema encontrado:** La APK requería un mecanismo para sincronizar parches de GitHub sin pasar por la Play Store, pero sin mostrar botones ni píldoras intrusivas que afecten la experiencia estética en la web o en la app móvil.
 - **Acción tomada:**
-  - **Servidor (`server/index.js`):** Se implementó la función `getLatestGitHubPatch()` que consulta la API de GitHub (`https://api.github.com/repos/rontubot/prototipo/commits/main`) con caché de 2 minutos. El endpoint `/api/app/version` ahora retorna el hash del último commit, el mensaje del parche y la fecha.
-  - **Cliente (`updateChecker.ts`):** Compara el commit remoto contra el commit compilado (`1762834`). Si hay un nuevo parche en GitHub, notifica a la interfaz.
-  - **In-App Patcher (`applyWebUpdate`):** Al tocar el botón *"Parchear"* o *"Actualizar"*, borra las cachés del navegador/WebView y navega a la URL viva del servidor (`barrzjuego.com?patch=...`). Esto permite que la APK refleje el código nuevo de inmediato sin pasar por Play Store.
-  - **Panel de Usuario (`UserProfilePanel.tsx`):** Se integró en la pestaña de Ajustes la tarjeta *"Parches y Actualizaciones"*, permitiendo al usuario verificar manualmente si existen parches en GitHub y aplicarlos con un solo toque.
+  - **Servidor (`server/index.js`):** Se implementó la función `getLatestGitHubPatch()` que consulta la API de GitHub (`https://api.github.com/repos/rontubot/prototipo/commits/main`) con caché de 2 minutos. El endpoint `/api/app/version` retorna el hash del último commit, el mensaje del parche y la fecha.
+  - **Eliminación de Botones Flotantes y UI Invasiva:** Se removió la píldora flotante de `App.tsx` y la tarjeta manual de `UserProfilePanel.tsx`. No se muestra ningún botón en la web (que se actualiza de forma autónoma) ni en la app móvil.
+  - **Ejecución Silenciosa en la Pantalla de Carga (`checkAndApplyStartupUpdate`):** Durante la animación del logo inicial en el arranque (*pestaña de carga*), la app consulta silenciosamente el servidor:
+    1. Si está en la Web (`barrzjuego.com`), invalida cachés viejas silenciosamente sin recargas ni botones.
+    2. Si está en Capacitor Android y hay un nuevo commit en GitHub más reciente que el build local empaquetado, carga el parche remoto en vivo durante la misma pantalla de carga sin que el usuario tenga que presionar nada.
+    3. Si está sin conexión, inicia inmediatamente en modo local sin demoras.
 
 ### 🏆 2.6. Guardado de Partidas, Estadísticas e Historial
 - **Problema encontrado:** Al finalizar partida, se enviaban puntajes crudos en vez de formatear estadísticas compatibles con el panel de perfil.
@@ -66,7 +67,7 @@ Se completó la auditoría y afinación de toda la plataforma:
 | **Cartas de Desafío Offline** | ✅ Verificado | 52/52 imágenes con encoding + fallback tipográfico garantizado |
 | **Cartas de Beat Offline** | ✅ Verificado | 15/15 pistas locales con reproductor interactivo en la carta |
 | **Sondeo de Parches GitHub** | ✅ Verificado | Endpoint `/api/app/version` conectado con API de GitHub |
-| **Botón de Parche In-App** | ✅ Verificado | Píldora flotante + sección en Ajustes de Perfil |
+| **Verificación Silenciosa en Loader** | ✅ Verificado | Integrado en la pantalla de carga; cero botones o alertas invasivas |
 | **Compilación Vite / TS** | ✅ Verificado | `tsc -b && vite build` finalizado con éxito (0 errores) |
 | **ESLint** | ✅ Verificado | 0 errores |
 | **Sincronización Capacitor** | ✅ Verificado | `npx cap sync android` ejecutado exitosamente |
@@ -76,9 +77,7 @@ Se completó la auditoría y afinación de toda la plataforma:
 ## 4. Instrucciones de Uso para la Reunión
 1. **Demostración 100% Offline (Sin Conexión):**
    - Pulsa *"Jugar sin conexión (Modo Invitado)"*.
-   - Las cartas de desafío se verán nítidas con sus imágenes y texto.
-   - Las cartas de beats mostrarán el vinilo giratorio y el botón de Play/Pause local con sonido instantáneo.
-2. **Demostración de Parcheo en Vivo:**
-   - Abre la app y dirígete a *"Tu Perfil" > "Ajustes"*.
-   - En la sección *"Parches y Actualizaciones"*, pulsa *"Buscar Parche"*.
-   - Si se ha subido un nuevo commit a GitHub, aparecerá el mensaje con el commit y el botón *"Aplicar Parche"* para sincronizar en caliente.
+   - Las cartas de desafío se verán nítidas con sus imágenes y texto explicativo.
+   - Las cartas de beats mostrarán el vinilo interactivo y el botón de Play/Pause local con sonido instantáneo.
+2. **Actualización Silenciosa:**
+   - La pantalla de carga inicial (*pestaña de carga*) gestiona la validación y sincronización de parches con GitHub/servidor de forma invisible y transparente. Ni en la web ni en la app aparecen botones de parcheo manuales.

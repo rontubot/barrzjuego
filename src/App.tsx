@@ -8,7 +8,7 @@ import { Game } from './components/Game';
 import { MenuAudioPlayer } from './components/MenuAudioPlayer';
 import { UserProfilePanel } from './components/UserProfilePanel';
 import { spotifyPlayer } from './services/spotifyPlayer';
-import { subscribeToUpdates, applyWebUpdate, type AppVersionInfo } from './services/updateChecker';
+import { checkAndApplyStartupUpdate } from './services/updateChecker';
 import './App.css';
 
 const getApiUrl = (path: string) => {
@@ -88,7 +88,6 @@ function App() {
   
   // Datos compartidos de sesión y partida con persistencia para no perder la partida
   const [userSession, setUserSession] = useState<UserSession | null>(null);
-  const [pendingUpdate, setPendingUpdate] = useState<AppVersionInfo | null>(null);
   const [gameSettings, setGameSettingsState] = useState<GameSettings | null>(() => {
     try {
       const saved = localStorage.getItem('barrz_active_game_settings');
@@ -228,14 +227,6 @@ function App() {
     };
   }, []);
 
-  // Escuchar disponibilidad de actualizaciones
-  useEffect(() => {
-    const unsubscribe = subscribeToUpdates((info) => {
-      setPendingUpdate(info);
-    });
-    return () => unsubscribe();
-  }, []);
-
   // Inicializar SDK de Spotify si ya está vinculado
   useEffect(() => {
     if (localStorage.getItem('barrz_spotify_linked') === 'true') {
@@ -243,19 +234,41 @@ function App() {
     }
   }, []);
 
-  // Secuencia de carga inicial fluida
+  // Secuencia de carga inicial fluida y verificación silenciosa de parches desde GitHub y Servidor
   useEffect(() => {
-    const showBarTimer = setTimeout(() => {
-      setShowLoaderBar(true);
-    }, 1200);
+    let isCancelled = false;
 
-    const finishLoadingTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2800);
+    const showBarTimer = setTimeout(() => {
+      if (!isCancelled) {
+        setShowLoaderBar(true);
+      }
+    }, 800);
+
+    const runStartup = async () => {
+      try {
+        // En la pantalla de carga se verifican silenciosamente parches e invalidación de caché
+        const isRedirecting = await checkAndApplyStartupUpdate();
+        if (isRedirecting) {
+          // Si está aplicando un parche móvil nativo redirigiendo, mantener la pantalla de carga
+          return;
+        }
+      } catch (err) {
+        console.debug('[BARRZ Startup] Error en verificación silenciosa de arranque:', err);
+      }
+
+      // Transición fluida de salida del loader
+      setTimeout(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }, 2200);
+    };
+
+    runStartup();
 
     return () => {
+      isCancelled = true;
       clearTimeout(showBarTimer);
-      clearTimeout(finishLoadingTimer);
     };
   }, []);
 
@@ -587,45 +600,6 @@ function App() {
         }}
       />
       <div className="app-version-tag">v3.1</div>
-
-      {pendingUpdate && pendingUpdate.isNewer && (
-        <div 
-          className="update-available-pill pulse-teal-anim"
-          onClick={() => applyWebUpdate(pendingUpdate)}
-          style={{
-            position: 'fixed',
-            bottom: '48px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 99999,
-            background: 'linear-gradient(135deg, #00f0ff 0%, #1db954 100%)',
-            color: '#0a0b0e',
-            padding: '10px 20px',
-            borderRadius: '30px',
-            boxShadow: '0 4px 20px rgba(0, 240, 255, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            cursor: 'pointer',
-            fontWeight: 800,
-            fontSize: '0.85rem',
-            border: '1px solid rgba(255, 255, 255, 0.6)'
-          }}
-          title="Toca para cargar el último parche de BARRZ desde GitHub/Servidor"
-        >
-          <span>⚡ Parche GitHub ({pendingUpdate.commit || pendingUpdate.version})</span>
-          <span style={{ 
-            background: '#0a0b0e', 
-            color: '#00f0ff', 
-            padding: '3px 10px', 
-            borderRadius: '12px', 
-            fontSize: '0.75rem',
-            textTransform: 'uppercase'
-          }}>
-            Parchear
-          </span>
-        </div>
-      )}
     </div>
   );
 }
