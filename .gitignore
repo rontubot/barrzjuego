@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 *.apk
+*.aab
+*.jks
+*.keystore
+android/keystore.properties

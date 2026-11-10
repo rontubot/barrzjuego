@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eliminar Cuenta y Datos — Barrz Freestyle</title>
+  <style>
+    :root {
+      --bg: #08090c;
+      --card: #12141c;
+      --teal: #00f0ff;
+      --pink: #ff007f;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 40px 16px;
+    }
+    .container {
+      max-width: 540px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid rgba(255, 0, 127, 0.35);
+      border-radius: 16px;
+      padding: 32px 26px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+    }
+    h1 {
+      color: var(--pink);
+      font-size: 1.55rem;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    p {
+      color: #d0d4dc;
+      font-size: 0.94rem;
+      margin-bottom: 16px;
+    }
+    .info-box {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid var(--teal);
+      padding: 12px 14px;
+      border-radius: 6px;
+      margin-bottom: 22px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #fff;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: #090a0f;
+      color: #fff;
+      font-size: 0.95rem;
+    }
+    button {
+      width: 100%;
+      padding: 13px;
+      border-radius: 8px;
+      border: none;
+      background: var(--pink);
+      color: #fff;
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #status {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .links {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    .links a { color: var(--teal); text-decoration: none; margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Eliminación de Cuenta — Barrz Freestyle</h1>
+    <p>
+      Utiliza este formulario para eliminar de forma permanente tu cuenta de <strong>Barrz Freestyle</strong> (<code>com.barrz.freestyle</code>) y todos tus datos asociados.
+    </p>
+    <div class="info-box">
+      <strong>Datos que se eliminarán inmediatamente:</strong><br/>
+      • Correo electrónico, nombre de usuario (AKA) y avatar.<br/>
+      • Historial completo de batallas, puntajes y estadísticas.<br/>
+      • Tokens de vinculación con Spotify.<br/>
+      <em>Nota: También puedes eliminar tu cuenta directamente dentro de la app en Perfil &gt; Ajustes &gt; Eliminar Cuenta.</em>
+    </div>
+
+    <form id="deleteForm">
+      <label for="email">Correo electrónico de la cuenta *</label>
+      <input type="email" id="email" required placeholder="tu@correo.com" />
+
+      <label for="password">Contraseña (dejar en blanco si iniciaste con Google)</label>
+      <input type="password" id="password" placeholder="••••••••" />
+
+      <button type="submit" id="submitBtn">Eliminar mi cuenta permanentemente</button>
+    </form>
+
+    <div id="status"></div>
+
+    <div class="links">
+      <a href="/privacidad">Política de Privacidad</a> |
+      <a href="/">Volver a Barrz Freestyle</a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('deleteForm');
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!confirm('¿Estás seguro de que deseas eliminar permanentemente tu cuenta y todos tus datos de Barrz Freestyle? Esta acción no se puede deshacer.')) {
+        return;
+      }
+
+      submitBtn.disabled = true;
+      statusEl.style.color = '#00f0ff';
+      statusEl.textContent = 'Procesando eliminación...';
+
+      try {
+        const res = await fetch('/api/auth/delete-account-web', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          statusEl.style.color = '#1db954';
+          statusEl.textContent = '✓ ' + data.message;
+          form.reset();
+        } else {
+          statusEl.style.color = '#ff4d6d';
+          statusEl.textContent = data.error || 'No se pudo completar la solicitud.';
+        }
+      } catch (err) {
+        statusEl.style.color = '#ff4d6d';
+        statusEl.textContent = 'Error de conexión con el servidor.';
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

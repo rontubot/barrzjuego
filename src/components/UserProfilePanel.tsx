@@ -73,6 +73,47 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
     triggerSaveToast();
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmMsg = language === 'en'
+      ? 'Are you sure you want to permanently delete your account and all battle history? This action cannot be undone.'
+      : '¿Estás seguro de que deseas eliminar permanentemente tu cuenta y todo tu historial de batallas? Esta acción no se puede deshacer.';
+    if (!window.confirm(confirmMsg)) return;
+
+    const token = localStorage.getItem('barrz_token');
+    if (token) {
+      try {
+        const res = await fetch(getApiUrl('/api/auth/delete-account'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || 'No se pudo eliminar la cuenta en el servidor.');
+          return;
+        }
+      } catch {
+        alert('Error de conexión al intentar eliminar la cuenta.');
+        return;
+      }
+    }
+
+    localStorage.removeItem('barrz_session');
+    localStorage.removeItem('barrz_token');
+    localStorage.removeItem('barrz_spotify_linked');
+    localStorage.removeItem('barrz_user_avatar');
+    localStorage.removeItem('barrz_local_history');
+    localStorage.removeItem('barrz_local_stats');
+    setIsOpen(false);
+    if (onLogout) {
+      onLogout();
+    } else {
+      window.location.reload();
+    }
+  };
+
   // Estados para la edición de perfil
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [tempUsername, setTempUsername] = useState(() => userSession?.username || '');
@@ -710,6 +751,42 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ gameState, u
                   >
                     {isSpotifyLinked ? t.settings.spotify_btn_disconnect : t.settings.spotify_btn_connect}
                   </button>
+                </div>
+
+                {/* Privacidad y Gestión de Cuenta (Requisito Google Play Store) */}
+                <div className="setting-row-vertical" style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px' }}>
+                    <a
+                      href="/privacidad.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '0.8rem', color: '#00f0ff', textDecoration: 'none', fontWeight: 700 }}
+                    >
+                      {language === 'en' ? 'Privacy Policy & Terms' : 'Política de Privacidad y Términos'}
+                    </a>
+                  </div>
+
+                  {userSession?.loggedIn && userSession?.method !== 'guest' && (
+                    <button
+                      type="button"
+                      className="btn-group-option"
+                      onClick={handleDeleteAccount}
+                      style={{
+                        width: '100%',
+                        borderColor: 'rgba(255, 77, 109, 0.45)',
+                        color: '#ff4d6d',
+                        background: 'rgba(255, 0, 60, 0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        fontSize: '0.78rem'
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      <span>{language === 'en' ? 'Delete Account Permanently' : 'Eliminar Cuenta Permanentemente'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

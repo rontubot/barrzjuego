@@ -689,6 +689,73 @@ app.post('/api/auth/update-profile', async (req, res) => {
   }
 });
 
+// 6.b Eliminar Cuenta de Usuario (Desde la App con JWT - Requisito Google Play Store)
+app.post('/api/auth/delete-account', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token no provisto.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    await db.query('DELETE FROM game_history WHERE user_id = $1', [decoded.id]);
+    if (decoded.email) {
+      await db.query('DELETE FROM verification_codes WHERE email = $1', [decoded.email]);
+    }
+    await db.query('DELETE FROM users WHERE id = $1', [decoded.id]);
+    spotifyProfileMemoryCache.delete(decoded.id);
+
+    res.json({
+      success: true,
+      message: 'Cuenta y todos los datos asociados han sido eliminados permanentemente.'
+    });
+  } catch (err) {
+    console.error('Error al eliminar cuenta:', err);
+    res.status(401).json({ error: 'No se pudo procesar la eliminación de la cuenta.' });
+  }
+});
+
+// 6.c Eliminar Cuenta de Usuario desde Web Pública (/eliminar-cuenta - Requisito Google Play Data Safety)
+app.post('/api/auth/delete-account-web', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'El correo electrónico es obligatorio.' });
+  }
+
+  try {
+    const userRes = await db.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'No se encontró ninguna cuenta registrada con ese correo.' });
+    }
+
+    const user = userRes.rows[0];
+    if (user.password_hash) {
+      if (!password) {
+        return res.status(400).json({ error: 'Ingresa tu contraseña para confirmar la eliminación.' });
+      }
+      const isMatch = await bcrypt.compare(password, user.password_hash);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Contraseña incorrecta.' });
+      }
+    }
+
+    await db.query('DELETE FROM game_history WHERE user_id = $1', [user.id]);
+    await db.query('DELETE FROM verification_codes WHERE LOWER(email) = LOWER($1)', [email.trim()]);
+    await db.query('DELETE FROM users WHERE id = $1', [user.id]);
+    spotifyProfileMemoryCache.delete(user.id);
+
+    res.json({
+      success: true,
+      message: 'Tu cuenta y todos tus datos han sido eliminados permanentemente de Barrz Freestyle.'
+    });
+  } catch (err) {
+    console.error('Error en eliminación web de cuenta:', err);
+    res.status(500).json({ error: 'Error del servidor al procesar la solicitud.' });
+  }
+});
+
 // 7. Guardar Partida Finalizada
 app.post('/api/auth/save-game', async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -1413,6 +1480,15 @@ app.use(express.static(path.join(__dirname, '../dist'), {
     }
   }
 }));
+
+// Rutas legales públicas exigidas por Google Play Store
+app.get('/privacidad', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/privacidad.html'));
+});
+
+app.get('/eliminar-cuenta', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/eliminar-cuenta.html'));
+});
 
 // Ruta comodín para SPA (Single Page Application)
 app.get('*', (req, res) => {
