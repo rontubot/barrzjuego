@@ -1,0 +1,46 @@
+===============================================================================
+TEXTOS LISTOS PARA COPIAR Y PEGAR EN GOOGLE PLAY CONSOLE — BARRZ FREESTYLE
+===============================================================================
+
+1. NOMBRE DE LA APLICACIÓN (Máximo 30 caracteres):
+Barrz Freestyle
+
+2. DESCRIPCIÓN BREVE (Máximo 80 caracteres — 76 caracteres usados):
+El juego de cartas de freestyle y rap: desafíos, beats y batallas en vivo.
+
+3. DESCRIPCIÓN COMPLETA (Máximo 4000 caracteres):
+¡Entrena tu mente, fluye sobre el beat y demuestra quién manda en la ronda con BARRZ FREESTYLE!
+
+Barrz Freestyle es el juego de cartas definitivo para amantes del rap, el hip-hop y la improvisación. Diseñado tanto para entrenar en solitario como para armar competencias épicas con tus amigos en cualquier lugar, con o sin conexión a internet.
+
+🎤 MODOS DE JUEGO PARA TODOS LOS NIVELES
+• Modo Solitario (Entrenamiento): Practica tus rimas a tu propio ritmo, elige tus categorías favoritas y supera cada desafío contra el reloj.
+• Modo Multijugador (Batalla y Cypher): Agrega a todos los competidores, configura la cantidad de rondas, puntúa el desempeño de cada MC y corona al campeón en la tabla de posiciones final.
+
+🃏 MÁS DE 50 CARTAS DE DESAFÍO EN 6 CATEGORÍAS
+Pon a prueba tu ingenio y vocabulario con retos dinámicos:
+• Palabras y Estímulos: Integra conceptos obligatorios sin perder el flow.
+• Temáticas: Desarrolla historias coherentes sobre situaciones inesperadas.
+• Terminaciones: Domina la métrica y las rimas con estructuras específicas.
+• Cypher y Versus: Dinámicas grupales y duelos cara a cara.
+• Beatbox y Freestyle Libre: Fluye sin ataduras o al ritmo vocal de la ronda.
+
+🎧 BEATS OFICIALES INTEGRADOS (MODO OFFLINE + SPOTIFY)
+• Modo 100% Sin Conexión (Offline): Incluye 15 instrumentales originales de distintos BPM listas para sonar al instante sin gastar datos ni depender de internet.
+• Integración con Spotify: Vincula tu cuenta de Spotify para reproducir los beats oficiales directamente durante la partida.
+
+🏆 PERFIL, HISTORIAL Y ESTADÍSTICAS
+Lleva el registro de tus batallas jugadas, porcentaje de victorias, puntajes máximos y el desglose ronda por ronda de cada competencia.
+
+¡Descarga Barrz Freestyle, dale play al beat y suelta tus mejores barras!
+
+4. NOTAS DE LA VERSIÓN (Release Notes — Versión 3.1.0):
+Lanzamiento oficial de Barrz Freestyle v3.1.0:
+- Más de 50 cartas de desafío divididas en 6 categorías de improvisación.
+- 15 instrumentales (beats) integradas para jugar con o sin conexión a internet.
+- Conexión oficial con Spotify y estadísticas completas de batallas.
+- Modos de entrenamiento individual y competencia multijugador.
+
+5. ENLACES LEGALES OBLIGATORIOS:
+- URL de Política de Privacidad: https://barrzjuego.com/privacidad
+- URL de Eliminación de Cuenta: https://barrzjuego.com/eliminar-cuenta

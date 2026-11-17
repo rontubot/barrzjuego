@@ -18,7 +18,7 @@
    - **Archivo generado:** `android/app/barrz-release-key.jks`
    - **Configuración automática:** `android/keystore.properties` y `android/app/build.gradle`
    - **Alias:** `barrz_upload_key`
-   - **Contraseña del Keystore y de la Llave:** `BarrzPlayStore2026!`
+   - **Contraseña del Keystore y de la Llave:** `B4rrz$Fr33styl3#L4b_98!xK7@2026`
    - **Huella SHA-1 (Certificado de Subida):**
      ```text
      E1:F7:D4:85:63:63:97:FF:18:4E:CF:E7:36:5F:AF:39:07:C4:06:69

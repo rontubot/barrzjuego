@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Cloud, ArrowRight, ArrowLeft, Mail, Lock, ShieldCheck, HelpCircle, Compass, Radio, WifiOff } from 'lucide-react';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { Capacitor } from '@capacitor/core';
@@ -25,6 +25,7 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
+  const googleClientIdRef = useRef<string>(import.meta.env.VITE_GOOGLE_CLIENT_ID || '');
 
   const handleGoogleCredentialResponse = async (response: any) => {
     setIsSubmitting(true);
@@ -60,12 +61,15 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
         const res = await fetch(getApiUrl('/api/auth/google-config')).catch(() => null);
         if (res && res.ok) {
           const data = await res.json().catch(() => ({}));
-          if (data.clientId) clientId = data.clientId;
+          if (data.clientId) {
+            clientId = data.clientId;
+            googleClientIdRef.current = data.clientId;
+          }
         }
 
         if (clientId) {
           if (Capacitor.isNativePlatform()) {
-            GoogleAuth.initialize({
+            await GoogleAuth.initialize({
               clientId: clientId,
               scopes: ['profile', 'email'],
               grantOfflineAccess: true,
@@ -259,6 +263,25 @@ export const OnboardingAuth: React.FC<OnboardingAuthProps> = ({ step, onNext, on
     setIsSubmitting(true);
     setErrorMsg('');
     try {
+      let clientId = googleClientIdRef.current;
+      if (!clientId) {
+        const cfgRes = await fetch(getApiUrl('/api/auth/google-config')).catch(() => null);
+        if (cfgRes && cfgRes.ok) {
+          const cfgData = await cfgRes.json().catch(() => ({}));
+          if (cfgData.clientId) {
+            clientId = cfgData.clientId;
+            googleClientIdRef.current = cfgData.clientId;
+          }
+        }
+      }
+      if (clientId) {
+        await GoogleAuth.initialize({
+          clientId,
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true,
+        });
+      }
+
       const googleUser = await GoogleAuth.signIn();
       const idToken = googleUser?.authentication?.idToken || (googleUser as any)?.idToken;
       if (!idToken) {
